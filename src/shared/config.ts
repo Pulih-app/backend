@@ -29,6 +29,11 @@ export type AppConfig = {
     corsAllowedOrigins: string[];
     requestIdHeader: string;
   };
+  payment: {
+    pakasirProjectSlug: string;
+    pakasirBaseUrl: string;
+    pakasirPaymentBaseUrl: string;
+  };
 };
 
 function requireValue(issues: string[], key: string, value: string | undefined) {
@@ -91,6 +96,9 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     .map((origin) => origin.trim())
     .filter(Boolean);
   const requestIdHeader = requireValue(issues, "REQUEST_ID_HEADER", env.REQUEST_ID_HEADER);
+  const pakasirProjectSlug = env.PAKASIR_PROJECT_SLUG?.trim() || "pulih";
+  const pakasirBaseUrl = env.PAKASIR_BASE_URL?.trim() || "https://app.pakasir.com";
+  const pakasirPaymentBaseUrl = env.PAKASIR_PAYMENT_BASE_URL?.trim() || "https://app.pakasir.com";
 
   if (appEnv && !["local", "development", "staging", "production"].includes(appEnv)) {
     issues.push("APP_ENV must be one of local, development, staging, production");
@@ -128,6 +136,11 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
       passwordHashCost: passwordHashCost as number,
       corsAllowedOrigins: corsAllowedOrigins as string[],
       requestIdHeader: requestIdHeader as string,
+    },
+    payment: {
+      pakasirProjectSlug,
+      pakasirBaseUrl,
+      pakasirPaymentBaseUrl,
     },
   };
 }

@@ -15,6 +15,13 @@
       "when": 1784207628179,
       "tag": "0001_same_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784210642343,
+      "tag": "0002_shallow_mongoose",
+      "breakpoints": true
     }
   ]
 }

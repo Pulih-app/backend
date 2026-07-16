@@ -8,6 +8,8 @@ import type { UsersRepository } from "./modules/users/users.repository";
 import { createPsychologistsRoutes } from "./modules/psychologists/psychologists.routes";
 import type { CredentialStorage, R2Like } from "./modules/psychologists/credential-storage";
 import type { PsychologistsRepository } from "./modules/psychologists/psychologists.repository";
+import { createBookingsRoutes } from "./modules/bookings/bookings.routes";
+import type { BookingsRepository } from "./modules/bookings/bookings.repository";
 import { createHealthRoutes } from "./routes/health.routes";
 import { validationDemoRoutes } from "./routes/validation-demo.routes";
 import { loadConfig } from "./shared/config";
@@ -46,6 +48,7 @@ export type AppOptions = {
   authRepository?: AuthRepository;
   usersRepository?: UsersRepository;
   psychologistsRepository?: PsychologistsRepository;
+  bookingsRepository?: BookingsRepository;
   credentialStorage?: CredentialStorage;
 };
 
@@ -124,6 +127,16 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
     psychologistsRepository: options.psychologistsRepository,
     credentialStorage: options.credentialStorage,
     credentialBucket: bindings.CREDENTIAL_BUCKET,
+  }));
+  app.route("/api/v1", createBookingsRoutes({
+    config,
+    databaseSource: {
+      hyperdrive: bindings.HYPERDRIVE,
+      databaseUrl: runtimeEnv.DATABASE_URL,
+      directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
+    },
+    authRepository: options.authRepository,
+    bookingsRepository: options.bookingsRepository,
   }));
   app.route("/api/v1", validationDemoRoutes);
   app.onError(handleGlobalError);
