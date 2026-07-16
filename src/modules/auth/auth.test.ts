@@ -3,6 +3,7 @@ import { createApp } from "../../app";
 import { hashPassword, verifyPassword } from "./password";
 import { issueAccessToken, verifyAccessToken } from "./token";
 import type { AuthRepository, AuthUserRecord } from "./auth.repository";
+import type { UserProfileRecord, UsersRepository, UserSettingsUpdate } from "../users/users.repository";
 
 const baseEnv = {
   APP_NAME: "pulih-api",
@@ -41,6 +42,51 @@ function createMemoryRepository(seed: AuthUserRecord[] = []): AuthRepository {
     },
     async findById(id) {
       return users.get(id) ?? null;
+    },
+  };
+}
+
+function createMemoryUsersRepository(seed: UserProfileRecord[] = []): UsersRepository {
+  const profiles = new Map(seed.map((profile) => [profile.userId, profile]));
+
+  function baseProfile(userId: string): UserProfileRecord {
+    return profiles.get(userId) ?? {
+      id: crypto.randomUUID(),
+      userId,
+      email: "patient@example.com",
+      role: "patient",
+      status: "active",
+      displayName: null,
+      nickname: null,
+      recoveryGoal: null,
+      checkInTime: null,
+      onboardingCompletedAt: null,
+    };
+  }
+
+  function applyUpdate(userId: string, input: UserSettingsUpdate, onboardingCompletedAt?: Date | null) {
+    const existing = baseProfile(userId);
+    const updated: UserProfileRecord = {
+      ...existing,
+      displayName: input.displayName !== undefined ? input.displayName : existing.displayName,
+      nickname: input.nickname !== undefined ? input.nickname : existing.nickname,
+      recoveryGoal: input.recoveryGoal !== undefined ? input.recoveryGoal : existing.recoveryGoal,
+      checkInTime: input.checkInTime !== undefined ? input.checkInTime : existing.checkInTime,
+      onboardingCompletedAt: onboardingCompletedAt ?? existing.onboardingCompletedAt,
+    };
+    profiles.set(userId, updated);
+    return updated;
+  }
+
+  return {
+    async findCurrentUser(userId) {
+      return profiles.get(userId) ?? baseProfile(userId);
+    },
+    async updateSettings(userId, input) {
+      return applyUpdate(userId, input);
+    },
+    async completeOnboarding(userId, input) {
+      return applyUpdate(userId, input, new Date("2026-01-01T00:00:00.000Z"));
     },
   };
 }
@@ -202,5 +248,91 @@ describe("auth routes", () => {
     expect(valid.status).toBe(200);
     const validBody = await valid.json();
     expect(validBody.data.email).toBe("patient@example.com");
+  });
+});
+
+describe("users routes", () => {
+  test("reads own profile and rejects unknown fields on settings", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const authRepository = createMemoryRepository([{
+      id: "user-1",
+      email: "patient@example.com",
+      passwordHash,
+      role: "patient",
+      status: "active",
+    }]);
+    const usersRepository = createMemoryUsersRepository([{
+      id: "profile-1",
+      userId: "user-1",
+      email: "patient@example.com",
+      role: "patient",
+      status: "active",
+      displayName: "Patient",
+      nickname: null,
+      recoveryGoal: "Recover",
+      checkInTime: "08:00:00",
+      onboardingCompletedAt: null,
+    }]);
+    const app = createApp(baseEnv, {}, { authRepository, usersRepository });
+
+    const login = await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
+    });
+    const loginBody = await login.json();
+
+    const me = await app.request("http://localhost/api/v1/users/me", {
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+    });
+    expect(me.status).toBe(200);
+    const meBody = await me.json();
+    expect(meBody.data.displayName).toBe("Patient");
+
+    const invalid = await app.request("http://localhost/api/v1/users/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      body: JSON.stringify({ displayName: "New", unknownField: true }),
+    });
+    expect(invalid.status).toBe(422);
+  });
+
+  test("updates settings and completes onboarding", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const authRepository = createMemoryRepository([{
+      id: "user-1",
+      email: "patient@example.com",
+      passwordHash,
+      role: "patient",
+      status: "active",
+    }]);
+    const usersRepository = createMemoryUsersRepository();
+    const app = createApp(baseEnv, {}, { authRepository, usersRepository });
+
+    const login = await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
+    });
+    const loginBody = await login.json();
+
+    const settings = await app.request("http://localhost/api/v1/users/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      body: JSON.stringify({ displayName: "New Name", recoveryGoal: "Stay clean", checkInTime: "07:30" }),
+    });
+    expect(settings.status).toBe(200);
+    const settingsBody = await settings.json();
+    expect(settingsBody.data.displayName).toBe("New Name");
+    expect(settingsBody.data.checkInTime).toBe("07:30:00");
+
+    const onboarding = await app.request("http://localhost/api/v1/auth/onboarding", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      body: JSON.stringify({ recoveryGoal: "Stay clean", checkInTime: "07:30" }),
+    });
+    expect(onboarding.status).toBe(200);
+    const onboardingBody = await onboarding.json();
+    expect(onboardingBody.data.onboardingCompletedAt).toBeTruthy();
   });
 });

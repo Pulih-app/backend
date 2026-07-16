@@ -3,6 +3,8 @@ import { HTTPException } from "hono/http-exception";
 import { createDatabaseHandle, type HyperdriveLike } from "./db/client";
 import { createAuthRoutes } from "./modules/auth/auth.routes";
 import type { AuthRepository } from "./modules/auth/auth.repository";
+import { createUsersRoutes } from "./modules/users/users.routes";
+import type { UsersRepository } from "./modules/users/users.repository";
 import { createHealthRoutes } from "./routes/health.routes";
 import { validationDemoRoutes } from "./routes/validation-demo.routes";
 import { loadConfig } from "./shared/config";
@@ -38,6 +40,7 @@ export type AppBindings = {
 export type AppOptions = {
   databaseHealthCheck?: () => Promise<void>;
   authRepository?: AuthRepository;
+  usersRepository?: UsersRepository;
 };
 
 async function createDefaultDatabaseHealthCheck(env: AppEnv, bindings: AppBindings, config = loadConfig(env)) {
@@ -93,6 +96,16 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
     repository: options.authRepository,
+  }));
+  app.route("/api/v1", createUsersRoutes({
+    config,
+    databaseSource: {
+      hyperdrive: bindings.HYPERDRIVE,
+      databaseUrl: runtimeEnv.DATABASE_URL,
+      directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
+    },
+    authRepository: options.authRepository,
+    usersRepository: options.usersRepository,
   }));
   app.route("/api/v1", validationDemoRoutes);
   app.onError(handleGlobalError);
