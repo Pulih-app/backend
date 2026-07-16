@@ -1,6 +1,6 @@
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { achievements, checkIns, communityComments, communityPostLikes, communityPosts, dailyChallenges, dailyMotivations, educationContents, journals, streaks, userAchievementProgress, users } from "../../db/schema";
+import { achievements, checkIns, communityComments, communityPostLikes, communityPosts, dailyChallenges, dailyMotivations, dailyPhysicalChallenges, educationContents, journals, streaks, userAchievementProgress, users } from "../../db/schema";
 
 export type JournalRecord = { id: string; userId: string; content: string; createdAt: string; updatedAt: string };
 export type CommunityPostAuthor = { nickname: string; currentStreak: number };
@@ -8,8 +8,9 @@ export type CommunityPostRecord = { id: string; userId: string; title: string | 
 export type CommunityCommentRecord = { id: string; postId: string; userId: string; parentCommentId: string | null; content: string; depth: number; replyCount: number; createdAt: string };
 export type CommunityCommentNode = CommunityCommentRecord & { replies: CommunityCommentNode[] };
 export type CommunityThreadRecord = { postId: string; comments: CommunityCommentNode[] };
-export type EducationRecord = { id: string; title: string; content: string; category: string; publishedAt: string | null };
-export type DailyContentRecord = { motivation: { id: string; content: string; source: string | null; localDate: string } | null; challenge: { id: string; title: string; description: string; category: string; localDate: string } | null };
+export type EducationRecord = { id: string; title: string; description: string | null; url: string; thumbnailUrl: string | null; category: string; type: string; publishedAt: string | null };
+export type DailyChallengePayload = { title: string; description: string };
+export type DailyContentRecord = { date: string; motivation: string; challenge: DailyChallengePayload; physicalChallenge: DailyChallengePayload };
 export type AchievementRecord = { id: string; key: string; title: string; description: string; criteria: unknown; createdAt: string };
 export type AchievementProgressRecord = { achievement: AchievementRecord; progressValue: number; unlockedAt: string | null };
 
@@ -24,7 +25,11 @@ export type ContentRepository = {
   createReply(input: { postId: string; userId: string; parentCommentId: string; content: string }): Promise<CommunityCommentRecord>;
   toggleLike(postId: string, userId: string): Promise<{ likedCount: number; isLiked: boolean }>;
   listEducation(): Promise<EducationRecord[]>;
-  getDailyContent(localDate: string): Promise<DailyContentRecord>;
+  getDailyContent(): Promise<DailyContentRecord>;
+  findUserById(userId: string): Promise<{ id: string } | null>;
+  listActiveMotivations(): Promise<{ id: string; content: string; isActive: boolean; createdAt: Date }[]>;
+  listActiveChallenges(): Promise<{ id: string; title: string; description: string; content: string; isActive: boolean; createdAt: Date }[]>;
+  listActivePhysicalChallenges(): Promise<{ id: string; title: string; description: string; isActive: boolean; createdAt: Date }[]>;
   listAchievementCatalog(): Promise<AchievementRecord[]>;
   listAchievementProgress(userId: string): Promise<AchievementProgressRecord[]>;
 };
@@ -190,17 +195,34 @@ export function createContentRepository(db: NodePgDatabase): ContentRepository {
       });
     },
 
-    async listEducation() {
-      const rows = await db.select().from(educationContents).where(eq(educationContents.status, "published")).orderBy(desc(educationContents.publishedAt));
-      return rows.map((row) => ({ id: row.id, title: row.title, content: row.content, category: row.category, publishedAt: iso(row.publishedAt) }));
+    async findUserById(userId: string) {
+      const [row] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
+      return row ?? null;
     },
-    async getDailyContent(localDate) {
-      const [motivation] = await db.select().from(dailyMotivations).where(and(eq(dailyMotivations.localDate, localDate), eq(dailyMotivations.status, "published"))).limit(1);
-      const [challenge] = await db.select().from(dailyChallenges).where(and(eq(dailyChallenges.localDate, localDate), eq(dailyChallenges.status, "published"))).limit(1);
-      return {
-        motivation: motivation ? { id: motivation.id, content: motivation.content, source: motivation.source, localDate: motivation.localDate } : null,
-        challenge: challenge ? { id: challenge.id, title: challenge.title, description: challenge.description, category: challenge.category, localDate: challenge.localDate } : null,
-      };
+    async listEducation() {
+      const rows = await db.select().from(educationContents).where(eq(educationContents.isActive, true)).orderBy(asc(educationContents.title));
+      return rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        url: row.url,
+        thumbnailUrl: row.thumbnailUrl ?? null,
+        category: row.category.replace(/_/g, " "),
+        type: row.type === "video" ? "video" : "artikel",
+        publishedAt: iso(row.publishedAt),
+      }));
+    },
+    async listActiveMotivations() {
+      return await db.select().from(dailyMotivations).where(eq(dailyMotivations.isActive, true)).orderBy(asc(dailyMotivations.createdAt), asc(dailyMotivations.id));
+    },
+    async listActiveChallenges() {
+      return await db.select().from(dailyChallenges).where(eq(dailyChallenges.isActive, true)).orderBy(asc(dailyChallenges.createdAt), asc(dailyChallenges.id));
+    },
+    async listActivePhysicalChallenges() {
+      return await db.select().from(dailyPhysicalChallenges).where(eq(dailyPhysicalChallenges.isActive, true)).orderBy(asc(dailyPhysicalChallenges.createdAt), asc(dailyPhysicalChallenges.id));
+    },
+    async getDailyContent() {
+      return { date: "", motivation: "", challenge: { title: "", description: "" }, physicalChallenge: { title: "", description: "" } };
     },
     async listAchievementCatalog() { return (await db.select().from(achievements).orderBy(achievements.key)).map(mapAchievement); },
     async listAchievementProgress(userId) {

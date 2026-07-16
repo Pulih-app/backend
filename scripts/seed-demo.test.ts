@@ -12,9 +12,9 @@ import {
 
 describe("demo seed data", () => {
   test("meets content breadth targets", () => {
-    expect(demoEducationContents).toHaveLength(16);
-    expect(demoDailyMotivations).toHaveLength(30);
-    expect(demoDailyChallenges).toHaveLength(30);
+    expect(demoEducationContents).toHaveLength(31);
+    expect(demoDailyMotivations).toHaveLength(35);
+    expect(demoDailyChallenges).toHaveLength(70);
     expect(demoAchievements).toHaveLength(12);
     expect(demoCommunityPosts).toHaveLength(6);
     expect(demoCommunityComments).toHaveLength(12);
@@ -22,10 +22,10 @@ describe("demo seed data", () => {
     expect(demoSessionSlots).toHaveLength(3);
   });
 
-  test("uses synthetic English content", () => {
-    expect(demoEducationContents[0]?.title).toContain("Understanding");
-    expect(demoDailyMotivations[0]).toContain("progress");
-    expect(demoDailyChallenges[0].description).toContain("Pause");
+  test("uses Recova-aligned English content", () => {
+    expect(demoEducationContents[0]?.title).toContain("Addiction");
+    expect(demoDailyMotivations[0]).toContain("better version");
+    expect(demoDailyChallenges[0].description).toContain("Wake up");
     expect(demoCommunityPosts[0]?.content).toContain("routine");
   });
 });

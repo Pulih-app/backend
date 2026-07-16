@@ -15,11 +15,28 @@ function memoryRepository(): ContentRepository {
   const journals: JournalRecord[] = [];
   const posts: CommunityPostRecord[] = [];
   const comments: CommunityCommentRecord[] = [];
-  const likes = new Map<string, boolean>(); // key: postId:userId -> isLiked
-  const education: EducationRecord[] = [{ id: "edu-1", title: "Safe Recovery", content: "Small safe steps.", category: "recovery", publishedAt: new Date().toISOString() }];
-  const daily: DailyContentRecord = { motivation: { id: "mot-1", content: "Stay steady.", source: "Pulih", localDate: "2026-01-01" }, challenge: { id: "chal-1", title: "Ground", description: "Breathe slowly.", category: "grounding", localDate: "2026-01-01" } };
+  const likes = new Map<string, boolean>();
+  const education: EducationRecord[] = [
+    { id: "edu-1", title: "Safe Recovery", description: "Small safe steps.", url: "https://example.com/recovery", thumbnailUrl: null, category: "recovery", type: "artikel", publishedAt: new Date().toISOString() },
+  ];
+  const dailyContent: DailyContentRecord = {
+    date: "2026-01-01",
+    motivation: "Stay steady.",
+    challenge: { title: "Ground", description: "Breathe slowly." },
+    physicalChallenge: { title: "Light Movement", description: "Walk 10 minutes." },
+  };
   const catalog: AchievementRecord[] = [{ id: "ach-1", key: "first_journal", title: "First Journal", description: "Write first journal.", criteria: { type: "journal_count", target: 1 }, createdAt: new Date().toISOString() }];
   const progress: AchievementProgressRecord[] = [{ achievement: catalog[0], progressValue: 1, unlockedAt: new Date().toISOString() }];
+  const motivations: { id: string; content: string; isActive: boolean; createdAt: Date }[] = [
+    { id: "mot-1", content: "Stay steady.", isActive: true, createdAt: new Date() },
+    { id: "mot-2", content: "Keep moving forward.", isActive: true, createdAt: new Date() },
+  ];
+  const challenges: { id: string; title: string; description: string; content: string; isActive: boolean; createdAt: Date }[] = [
+    { id: "chal-1", title: "Ground", description: "Breathe slowly.", content: "Breathe exercise", isActive: true, createdAt: new Date() },
+  ];
+  const physicalChallenges: { id: string; title: string; description: string; isActive: boolean; createdAt: Date }[] = [
+    { id: "phy-1", title: "Light Movement", description: "Walk 10 minutes.", isActive: true, createdAt: new Date() },
+  ];
 
   function computeLikeCount(postId: string) {
     let count = 0;
@@ -96,8 +113,15 @@ function memoryRepository(): ContentRepository {
       return { likedCount: computeLikeCount(postId), isLiked: !isLiked };
     },
 
+    async findUserById(userId: string) {
+      if (userId === AUTH_USER.id) return { id: AUTH_USER.id };
+      return null;
+    },
     async listEducation() { return education; },
-    async getDailyContent() { return daily; },
+    async listActiveMotivations() { return motivations; },
+    async listActiveChallenges() { return challenges; },
+    async listActivePhysicalChallenges() { return physicalChallenges; },
+    async getDailyContent() { return dailyContent; },
     async listAchievementCatalog() { return catalog; },
     async listAchievementProgress() { return progress; },
   };
@@ -188,17 +212,14 @@ describe("content routes", () => {
 
       const post = await (await app.request("/api/v1/community", { method: "POST", headers, body: JSON.stringify({ category: "story", content: "Content for like test with enough length." }) })).json() as any;
 
-      // Like
       const like1 = await (await app.request(`/api/v1/community/${post.data.id}/like`, { method: "POST", headers })).json() as any;
       expect(like1.data.isLiked).toBe(true);
       expect(like1.data.likedCount).toBe(1);
 
-      // Unlike
       const like2 = await (await app.request(`/api/v1/community/${post.data.id}/like`, { method: "POST", headers })).json() as any;
       expect(like2.data.isLiked).toBe(false);
       expect(like2.data.likedCount).toBe(0);
 
-      // Like again
       const like3 = await (await app.request(`/api/v1/community/${post.data.id}/like`, { method: "POST", headers })).json() as any;
       expect(like3.data.isLiked).toBe(true);
       expect(like3.data.likedCount).toBe(1);
@@ -236,16 +257,90 @@ describe("content routes", () => {
       const r2 = await r2Res.json() as any;
       expect(r2Res.status).toBe(201);
 
-      // Depth 3 should be rejected
       const r3 = await app.request(`/api/v1/community/${post.data.id}/comments/${r2.data.id}/replies`, { method: "POST", headers, body: JSON.stringify({ content: "This is too deep now" }) });
       expect(r3.status).toBe(422);
     });
   });
 
-  test("serves education, daily content, and achievements", async () => {
+  describe("education", () => {
+    test("returns education with Recova-aligned shape", async () => {
+      const { app, headers } = await authedApp(memoryRepository());
+      const res = await app.request("/api/v1/education", { headers });
+      expect(res.status).toBe(200);
+      const body = await res.json() as any;
+      expect(body.data).toBeArray();
+      expect(body.data[0].id).toBe("edu-1");
+      expect(body.data[0].title).toBe("Safe Recovery");
+      expect(body.data[0].description).toBe("Small safe steps.");
+      expect(body.data[0].url).toBe("https://example.com/recovery");
+      expect(body.data[0].type).toBe("artikel");
+    });
+
+    test("returns 404 for unknown user", async () => {
+      const repository = memoryRepository();
+      // Override findUserById to return null for this user
+      const origFindUserById = repository.findUserById.bind(repository);
+      repository.findUserById = async (id: string) => {
+        if (id === "99999999-9999-4999-8999-999999999999") return null;
+        return origFindUserById(id);
+      };
+      const token = await issueAccessToken({ user: { ...AUTH_USER, id: "99999999-9999-4999-8999-999999999999", email: "unknown@test.com" }, secret: TEST_ENV.JWT_ACCESS_SECRET, ttlSeconds: 60 });
+      const app = createApp(TEST_ENV, {}, {
+        authRepository: { async createPatient() { throw new Error("not used"); }, async findByEmail() { return null; }, async findByUsername() { return null; }, async findByLoginIdentifier() { return null; }, async findById(id: string) { return id === "99999999-9999-4999-8999-999999999999" ? { id, email: "unknown@test.com", username: null, role: "patient" as const, status: "active", passwordHash: "hash" } : null; } },
+        contentRepository: repository,
+      });
+      const res = await app.request("/api/v1/education", { headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe("daily content", () => {
+    test("returns daily content with Recova-aligned shape", async () => {
+      const { app, headers } = await authedApp(memoryRepository());
+      const res = await app.request("/api/v1/content/daily", { headers });
+      expect(res.status).toBe(200);
+      const body = await res.json() as any;
+      expect(body.data.date).toBeString();
+      expect(body.data.motivation).toBeString();
+      expect(body.data.challenge.title).toBeString();
+      expect(body.data.challenge.description).toBeString();
+      expect(body.data.physicalChallenge.title).toBeString();
+      expect(body.data.physicalChallenge.description).toBeString();
+    });
+
+    test("daily content uses fallback when no active items", async () => {
+      const repository = memoryRepository();
+      // Override with empty lists
+      (repository as any).listActiveMotivations = async () => [];
+      (repository as any).listActiveChallenges = async () => [];
+      (repository as any).listActivePhysicalChallenges = async () => [];
+      const { app, headers } = await authedApp(repository);
+      const res = await app.request("/api/v1/content/daily", { headers });
+      expect(res.status).toBe(200);
+      const body = await res.json() as any;
+      expect(body.data.motivation).toBeString();
+      expect(body.data.motivation.length).toBeGreaterThan(0);
+      expect(body.data.challenge.title).toBeString();
+      expect(body.data.challenge.description).toBeString();
+      expect(body.data.physicalChallenge.title).toBeString();
+      expect(body.data.physicalChallenge.description).toBeString();
+    });
+
+    test("daily content uses deterministic rotation", async () => {
+      const repository = memoryRepository();
+      const { app, headers } = await authedApp(repository);
+      const res1 = await app.request("/api/v1/content/daily", { headers });
+      const res2 = await app.request("/api/v1/content/daily", { headers });
+      const body1 = await res1.json() as any;
+      const body2 = await res2.json() as any;
+      // Same date should return same content (deterministic)
+      expect(body1.data.date).toBe(body2.data.date);
+      expect(body1.data.motivation).toBe(body2.data.motivation);
+    });
+  });
+
+  test("serves achievements endpoints", async () => {
     const { app, headers } = await authedApp(memoryRepository());
-    expect((await app.request("/api/v1/education", { headers })).status).toBe(200);
-    expect((await app.request("/api/v1/content/daily", { headers })).status).toBe(200);
     expect((await app.request("/api/v1/achievements/catalog", { headers })).status).toBe(200);
     expect((await app.request("/api/v1/achievements/progress", { headers })).status).toBe(200);
     expect((await app.request("/api/v1/achievements/unlocked", { headers })).status).toBe(200);

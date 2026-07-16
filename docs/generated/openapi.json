@@ -10492,7 +10492,7 @@
           "education"
         ],
         "summary": "List education content",
-        "description": "Returns seeded education content catalog.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns active education content sorted by title. Each item includes type (artikel/video), url, optional thumbnail, and category.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_education",
         "responses": {
           "200": {
@@ -10546,10 +10546,13 @@
                       "data": [
                         {
                           "id": "edu_001",
-                          "title": "Understanding triggers",
-                          "summary": "Short guide to noticing recovery triggers.",
-                          "body": "Triggers are signals, not failures...",
-                          "category": "recovery-basics"
+                          "title": "Understanding Triggers",
+                          "description": "Short guide to noticing recovery triggers.",
+                          "url": "https://pulih.app/education/understanding-triggers",
+                          "thumbnail_url": null,
+                          "category": "Recovery Basics",
+                          "type": "artikel",
+                          "published_at": "2026-07-16T00:00:00.000Z"
                         }
                       ],
                       "meta": null
@@ -10661,7 +10664,7 @@
           "content"
         ],
         "summary": "Read daily content",
-        "description": "Returns daily motivation/challenge content.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns deterministic daily motivation, mental challenge, and physical challenge using UTC-based rotation with fallback.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_content_daily",
         "responses": {
           "200": {
@@ -10712,7 +10715,14 @@
                       "data": {
                         "date": "2026-07-16",
                         "motivation": "Small steps still count.",
-                        "challenge": "Write one supportive sentence to yourself."
+                        "challenge": {
+                          "title": "Five-minute grounding",
+                          "description": "Pause, breathe, and name five things you can see."
+                        },
+                        "physicalChallenge": {
+                          "title": "Morning Stretch",
+                          "description": "Stretch your entire body for 10 minutes after waking up."
+                        }
                       },
                       "meta": null
                     }
@@ -15230,14 +15240,31 @@
           }
         }
       },
+      "DailyChallengePayload": {
+        "type": "object",
+        "required": [
+          "title",
+          "description"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Five-minute grounding"
+          },
+          "description": {
+            "type": "string",
+            "example": "Pause, breathe, and name five things you can see."
+          }
+        }
+      },
       "EducationContent": {
         "type": "object",
         "required": [
           "id",
           "title",
-          "summary",
-          "body",
-          "category"
+          "url",
+          "category",
+          "type"
         ],
         "properties": {
           "id": {
@@ -15246,19 +15273,47 @@
           },
           "title": {
             "type": "string",
-            "example": "Understanding triggers"
+            "example": "Understanding Triggers"
           },
-          "summary": {
-            "type": "string",
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
             "example": "Short guide to noticing recovery triggers."
           },
-          "body": {
+          "url": {
             "type": "string",
-            "example": "Triggers are signals, not failures..."
+            "format": "uri",
+            "example": "https://pulih.app/education/understanding-triggers"
+          },
+          "thumbnail_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "format": "uri"
           },
           "category": {
             "type": "string",
-            "example": "recovery-basics"
+            "example": "Recovery Basics"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "artikel",
+              "video"
+            ],
+            "example": "artikel"
+          },
+          "published_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2026-07-16T00:00:00.000Z",
+            "format": "date-time"
           }
         }
       },
@@ -15267,7 +15322,8 @@
         "required": [
           "date",
           "motivation",
-          "challenge"
+          "challenge",
+          "physicalChallenge"
         ],
         "properties": {
           "date": {
@@ -15280,8 +15336,10 @@
             "example": "Small steps still count."
           },
           "challenge": {
-            "type": "string",
-            "example": "Write one supportive sentence to yourself."
+            "$ref": "#/components/schemas/DailyChallengePayload"
+          },
+          "physicalChallenge": {
+            "$ref": "#/components/schemas/DailyChallengePayload"
           }
         }
       },

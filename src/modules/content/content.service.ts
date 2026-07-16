@@ -1,11 +1,24 @@
 import { AppError, AppErrorCode } from "../../shared/errors";
 import type { CommunityCommentInput, CommunityPostInput, CommunityReplyInput, JournalInput } from "./content.schema";
-import type { ContentRepository } from "./content.repository";
+import type { ContentRepository, DailyChallengePayload } from "./content.repository";
 
 export type ContentService = ReturnType<typeof createContentService>;
 
-function jakartaDate(now = new Date()) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+const FALLBACK_MOTIVATION = "Keep going, no matter how small your step.";
+const FALLBACK_CHALLENGE_TITLE = "Daily Reflection";
+const FALLBACK_CHALLENGE_DESCRIPTION = "Write down one thing you are grateful for today.";
+const FALLBACK_PHYSICAL_TITLE = "Light Daily Movement";
+const FALLBACK_PHYSICAL_DESCRIPTION = "Take a 10-minute walk to reset your focus.";
+
+function dayStartUTC(now: Date): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+}
+
+function stableIndexForDate(date: Date, length: number): number {
+  if (length <= 0) return 0;
+  let serial = Math.floor(date.getTime() / 86400000);
+  if (serial < 0) serial = -serial;
+  return serial % length;
 }
 
 export function createContentService(repository: ContentRepository) {
@@ -35,8 +48,55 @@ export function createContentService(repository: ContentRepository) {
 
     toggleCommunityLike(userId: string, postId: string) { return repository.toggleLike(postId, userId); },
 
-    listEducation() { return repository.listEducation(); },
-    getDailyContent(localDate = jakartaDate()) { return repository.getDailyContent(localDate); },
+    async listEducation(userId: string) {
+      const user = await repository.findUserById(userId);
+      if (!user) throw new AppError(AppErrorCode.NotFound, "User not found.", ["user_id: User not found."]);
+      return repository.listEducation();
+    },
+
+    async getDailyContent(userId: string) {
+      const user = await repository.findUserById(userId);
+      if (!user) throw new AppError(AppErrorCode.NotFound, "User not found.", ["user_id: User not found."]);
+
+      const [motivations, challenges, physicalChallenges] = await Promise.all([
+        repository.listActiveMotivations(),
+        repository.listActiveChallenges(),
+        repository.listActivePhysicalChallenges(),
+      ]);
+
+      const today = dayStartUTC(new Date());
+      const dateKey = today.toISOString().slice(0, 10);
+
+      let motivation = FALLBACK_MOTIVATION;
+      if (motivations.length > 0) {
+        const idx = stableIndexForDate(today, motivations.length);
+        const candidate = motivations[idx].content.trim();
+        if (candidate !== "") motivation = candidate;
+      }
+
+      let challenge: DailyChallengePayload = { title: FALLBACK_CHALLENGE_TITLE, description: FALLBACK_CHALLENGE_DESCRIPTION };
+      if (challenges.length > 0) {
+        const idx = stableIndexForDate(today, challenges.length);
+        const selected = challenges[idx];
+        const title = selected.title.trim() || FALLBACK_CHALLENGE_TITLE;
+        let description = selected.description.trim();
+        if (!description) description = selected.content.trim();
+        if (!description) description = FALLBACK_CHALLENGE_DESCRIPTION;
+        challenge = { title, description };
+      }
+
+      let physicalChallenge: DailyChallengePayload = { title: FALLBACK_PHYSICAL_TITLE, description: FALLBACK_PHYSICAL_DESCRIPTION };
+      if (physicalChallenges.length > 0) {
+        const idx = stableIndexForDate(today, physicalChallenges.length);
+        const selected = physicalChallenges[idx];
+        const title = selected.title.trim() || FALLBACK_PHYSICAL_TITLE;
+        const description = selected.description.trim() || FALLBACK_PHYSICAL_DESCRIPTION;
+        physicalChallenge = { title, description };
+      }
+
+      return { date: dateKey, motivation, challenge, physicalChallenge };
+    },
+
     listAchievementCatalog() { return repository.listAchievementCatalog(); },
     listAchievementProgress(userId: string) { return repository.listAchievementProgress(userId); },
     async listUnlockedAchievements(userId: string) { return (await repository.listAchievementProgress(userId)).filter((item) => item.unlockedAt !== null); },

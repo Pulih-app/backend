@@ -10,6 +10,7 @@ import {
   communityPosts,
   dailyChallenges,
   dailyMotivations,
+  dailyPhysicalChallenges,
   educationContents,
   profiles,
   psychologistCredentialFiles,
@@ -30,9 +31,9 @@ import {
   demoCommunityPosts,
   demoCredentialFiles,
   demoDailyChallenges,
-  demoDailyDates,
   demoDailyMotivations,
   demoEducationContents,
+  demoPhysicalChallenges,
   demoProfiles,
   demoPsychologistProfile,
   demoPracticePlaces,
@@ -180,9 +181,12 @@ async function main() {
       await tx.insert(educationContents).values(demoEducationContents.map((item) => ({
         id: item.id,
         title: item.title,
-        content: item.content,
+        description: item.description,
+        url: item.url,
+        thumbnailUrl: item.thumbnail_url,
         category: item.category,
-        status: "published" as const,
+        type: item.type,
+        isActive: true,
         publishedAt: DEMO_NOW,
         createdAt: DEMO_NOW,
         updatedAt: DEMO_NOW,
@@ -190,9 +194,11 @@ async function main() {
         target: educationContents.id,
         set: {
           title: sql`excluded.title`,
-          content: sql`excluded.content`,
+          description: sql`excluded.description`,
+          url: sql`excluded.url`,
+          thumbnailUrl: sql`excluded.thumbnail_url`,
           category: sql`excluded.category`,
-          status: sql`excluded.status`,
+          type: sql`excluded.type`,
           publishedAt: sql`excluded.published_at`,
           updatedAt: DEMO_NOW,
         },
@@ -201,19 +207,13 @@ async function main() {
       await tx.insert(dailyMotivations).values(demoDailyMotivations.map((content, index) => ({
         id: DEMO_IDS.motivations[index],
         content,
-        source: "Pulih",
-        localDate: demoDailyDates[index],
-        status: "published" as const,
+        isActive: true,
         createdAt: DEMO_NOW,
-        updatedAt: DEMO_NOW,
       }))).onConflictDoUpdate({
-        target: dailyMotivations.localDate,
+        target: dailyMotivations.id,
         set: {
-          id: sql`excluded.id`,
           content: sql`excluded.content`,
-          source: sql`excluded.source`,
-          status: sql`excluded.status`,
-          updatedAt: DEMO_NOW,
+          isActive: sql`excluded.is_active`,
         },
       });
 
@@ -221,22 +221,25 @@ async function main() {
         id: DEMO_IDS.challenges[index],
         title: item.title,
         description: item.description,
-        category: item.category,
-        localDate: demoDailyDates[index],
-        status: "published" as const,
+        content: item.content,
+        isActive: true,
         createdAt: DEMO_NOW,
-        updatedAt: DEMO_NOW,
       }))).onConflictDoUpdate({
-        target: dailyChallenges.localDate,
+        target: dailyChallenges.id,
         set: {
-          id: sql`excluded.id`,
           title: sql`excluded.title`,
           description: sql`excluded.description`,
-          category: sql`excluded.category`,
-          status: sql`excluded.status`,
-          updatedAt: DEMO_NOW,
+          content: sql`excluded.content`,
+          isActive: sql`excluded.is_active`,
         },
       });
+
+      await tx.insert(dailyPhysicalChallenges).values(demoPhysicalChallenges.map((item) => ({
+        title: item.title,
+        description: item.description,
+        isActive: true,
+        createdAt: DEMO_NOW,
+      }))).onConflictDoNothing();
 
       await tx.insert(achievements).values(demoAchievements.map((achievement, index) => ({
         id: DEMO_IDS.achievements[index],
@@ -307,7 +310,7 @@ async function main() {
     console.log("Demo seed complete.");
     console.log("Patient: patient.demo@pulih.local / PulihDemo123!");
     console.log("Psychologist: psychologist.demo@pulih.local / PulihDemo123!");
-    console.log(`Seeded content: ${demoEducationContents.length} education, ${demoDailyMotivations.length} motivations, ${demoDailyChallenges.length} challenges, ${demoAchievements.length} achievements, ${demoCommunityPosts.length} community posts.`);
+    console.log(`Seeded content: ${demoEducationContents.length} education, ${demoDailyMotivations.length} motivations, ${demoDailyChallenges.length} challenges, ${demoPhysicalChallenges.length} physical challenges, ${demoAchievements.length} achievements, ${demoCommunityPosts.length} community posts.`);
   } finally {
     await client.end();
   }

@@ -12,7 +12,7 @@ export const paymentStatusEnum = pgEnum("payment_status", ["created", "pending",
 export const notificationEventTypeEnum = pgEnum("notification_event_type", ["payment_success_patient", "booking_received_psychologist", "booking_confirmed_session_ready", "booking_rescheduled"]);
 export const notificationStatusEnum = pgEnum("notification_status", ["pending", "sent", "failed", "retrying", "cancelled"]);
 export const communityPostCategoryEnum = pgEnum("community_post_category", ["advice", "motivation", "story", "question", "help"]);
-export const contentStatusEnum = pgEnum("content_status", ["draft", "published", "archived"]);
+
 export const aiChatRoleEnum = pgEnum("ai_chat_role", ["user", "assistant"]);
 export const aiPersonaToneEnum = pgEnum("ai_persona_tone", ["gentle", "direct", "balanced"]);
 
@@ -315,34 +315,32 @@ export const communityPostLikes = pgTable("community_post_likes", {
 export const educationContents = pgTable("education_contents", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
-  content: text("content").notNull(),
+  description: text("description"),
+  url: text("url").notNull().default(""),
+  thumbnailUrl: text("thumbnail_url"),
   category: varchar("category", { length: 64 }).notNull(),
-  status: contentStatusEnum("status").notNull().default("draft"),
+  type: varchar("type", { length: 32 }).notNull().default("artikel"),
+  isActive: boolean("is_active").notNull().default(true),
   publishedAt: timestamp("published_at", { withTimezone: true, mode: "date" }),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-}, (table) => ({ statusIndex: index("idx_education_contents_status").on(table.status) }));
+});
 
 export const dailyMotivations = pgTable("daily_motivations", {
   id: uuid("id").defaultRandom().primaryKey(),
-  content: text("content").notNull(),
-  source: varchar("source", { length: 255 }),
-  localDate: date("local_date", { mode: "string" }).notNull(),
-  status: contentStatusEnum("status").notNull().default("draft"),
+  content: text("content").notNull().unique(),
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-}, (table) => ({ localDateUnique: uniqueIndex("uq_daily_motivations_local_date").on(table.localDate) }));
+});
 
 export const dailyChallenges = pgTable("daily_challenges", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description").notNull(),
-  category: varchar("category", { length: 64 }).notNull(),
-  localDate: date("local_date", { mode: "string" }).notNull(),
-  status: contentStatusEnum("status").notNull().default("draft"),
+  content: text("content").notNull().unique(),
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-}, (table) => ({ localDateUnique: uniqueIndex("uq_daily_challenges_local_date").on(table.localDate) }));
+});
 
 export const achievements = pgTable("achievements", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -393,6 +391,16 @@ export const notificationEvents = pgTable("notification_events", {
   statusIndex: index("idx_notification_events_status").on(table.status),
 }));
 
+export const dailyPhysicalChallenges = pgTable("daily_physical_challenges", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({
+  titleDescUnique: uniqueIndex("uq_daily_physical_challenges_title_description").on(table.title, table.description),
+}));
+
 export const schema = {
   users,
   profiles,
@@ -420,6 +428,7 @@ export const schema = {
   educationContents,
   dailyMotivations,
   dailyChallenges,
+  dailyPhysicalChallenges,
   achievements,
   userAchievementProgress,
 } as const;

@@ -85,13 +85,13 @@ export function createContentRoutes(options: ContentRoutesOptions) {
   }));
 
   routes.get("/education", (context) => withContentService(options, async (service, authService) => {
-    await requireAuth(context, options, authService);
-    return context.json(createSuccessResponse({ message: "Education content retrieved successfully", data: await service.listEducation() }));
+    const auth = await requireAuth(context, options, authService);
+    return context.json(createSuccessResponse({ message: "Education content retrieved successfully", data: await service.listEducation(auth.id) }));
   }));
 
   routes.get("/content/daily", (context) => withContentService(options, async (service, authService) => {
-    await requireAuth(context, options, authService);
-    return context.json(createSuccessResponse({ message: "Daily content retrieved successfully", data: await service.getDailyContent() }));
+    const auth = await requireAuth(context, options, authService);
+    return context.json(createSuccessResponse({ message: "Daily content retrieved successfully", data: await service.getDailyContent(auth.id) }));
   }));
 
   routes.get("/achievements/catalog", (context) => withContentService(options, async (service, authService) => {
