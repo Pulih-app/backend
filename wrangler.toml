@@ -6,14 +6,14 @@ workers_dev = true
 
 # Placeholder bindings for later phases.
 # Add real resource IDs/names in Cloudflare dashboard or env-specific config.
-#
-# [[hyperdrive]]
-# binding = "DB"
-# id = "<HYPERDRIVE_ID>"
-#
-# [[r2_buckets]]
-# binding = "CREDENTIAL_FILES"
-# bucket_name = "<R2_BUCKET_NAME>"
-#
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "e060159928b44391ab425876959565e4"
+
+[[r2_buckets]]
+binding = "CREDENTIAL_BUCKET"
+bucket_name = "pulih"
+
 # [vars]
 # ENVIRONMENT = "development"
