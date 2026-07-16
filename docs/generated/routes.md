@@ -49,6 +49,7 @@ Source of truth: `src/routes/api-route-inventory.ts`. OpenAPI operations are gen
 | `GET` | `/api/v1/community/:postId/comments` | `bearer` | Yes | `/api/v1/community/{postId}/comments` |
 | `POST` | `/api/v1/community/:postId/comments` | `bearer` | Yes | `/api/v1/community/{postId}/comments` |
 | `POST` | `/api/v1/community/:postId/like` | `bearer` | Yes | `/api/v1/community/{postId}/like` |
+| `POST` | `/api/v1/community/:postId/comments/:commentId/replies` | `bearer` | Yes | `/api/v1/community/{postId}/comments/{commentId}/replies` |
 | `GET` | `/api/v1/education` | `bearer` | Yes | `/api/v1/education` |
 | `GET` | `/api/v1/content/daily` | `bearer` | Yes | `/api/v1/content/daily` |
 | `GET` | `/api/v1/achievements/catalog` | `bearer` | Yes | `/api/v1/achievements/catalog` |

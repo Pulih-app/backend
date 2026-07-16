@@ -81,7 +81,7 @@ export function createRoutineRoutes(options: RoutineRoutesOptions) {
     const raw = context.req.query("window_days");
     const { ok, value: windowDays, issues } = normalizeActivitySummaryWindow(raw);
     if (!ok) {
-      throw new AppError(AppErrorCode.ValidationError, "Invalid window_days parameter", issues);
+      throw new AppError(AppErrorCode.ValidationError, "Invalid window_days parameter", issues.map((i) => `${i.field}: ${i.message}`));
     }
     const data = await service.getActivitySummary(auth.id, windowDays);
     return context.json(createSuccessResponse({ message: "Routine activity summary retrieved successfully", data }));

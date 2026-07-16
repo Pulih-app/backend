@@ -1,12 +1,84 @@
+import { AppError, AppErrorCode } from "../../shared/errors";
 import type { AiProvider } from "./ai-provider";
-import { buildCrisisFallback, buildMessages, CRISIS_ESCALATION_COPY } from "./ai-safety";
+import {
+  buildCoachMessages,
+  buildCrisisFallback,
+  buildOnboardingAnalysisMessages,
+  buildPreventionMessages,
+  buildRelapseSolutionMessages,
+  DEFAULT_PERSONA,
+  type Persona,
+} from "./ai-safety";
 import type { OnboardingAnalysisInput, PersonaPreferencesInput, RelapsePreventionPlanInput, RelapseSolutionInput } from "./ai.schema";
 import type { AiRepository } from "./ai.repository";
 
 export type AiService = ReturnType<typeof createAiService>;
 
-function safeJoin(items?: string[]) {
-  return items?.slice(0, 5).map((item) => item.trim()).filter(Boolean).join(", ");
+export type AskCoachResponse = { response: string; persona_used: Persona };
+export type RelapseSolutionResponse = { title: string; analysis: string; summary: string };
+export type OnboardingAnalysisResponse = { level: "Low" | "Moderate" | "High"; title: string; level_description: string; pattern_analysis: string; encouragement: string };
+export type PersonaPreferencesResponse = { persona: Persona; fallback_persona: Persona };
+
+const DEFAULT_SUMMARY = "New insights for you will be available soon. Keep writing your daily journals!";
+
+// ---------- JSON parsers ----------
+
+export function parseOnboardingAnalysisResponse(raw: string): OnboardingAnalysisResponse {
+  const parsed = parseStructuredJSON(raw);
+
+  const level = String(parsed.level ?? "").trim();
+  const title = String(parsed.title ?? "").trim();
+  const levelDescription = String(parsed.level_description ?? "").trim();
+  const patternAnalysis = String(parsed.pattern_analysis ?? "").trim();
+  const encouragement = String(parsed.encouragement ?? "").trim();
+
+  if (!["Low", "Moderate", "High"].includes(level)) throw new AppError(AppErrorCode.DownstreamError, "AI onboarding analysis returned invalid level.");
+  if (!level || !title || !levelDescription || !patternAnalysis || !encouragement) throw new AppError(AppErrorCode.DownstreamError, "AI onboarding analysis response is incomplete.");
+
+  return { level: level as "Low" | "Moderate" | "High", title, level_description: levelDescription, pattern_analysis: patternAnalysis, encouragement };
+}
+
+function parseRelapseSolutionJSON(raw: string): RelapseSolutionResponse {
+  const parsed = parseStructuredJSON(raw);
+
+  const title = String(parsed.title ?? "").trim();
+  const analysis = String(parsed.analysis ?? "").trim();
+  const summary = String(parsed.summary ?? "").trim();
+
+  if (!title || !analysis || !summary) throw new AppError(AppErrorCode.DownstreamError, "AI relapse solution response is incomplete.");
+  return { title, analysis, summary };
+}
+
+/** Safely parse JSON from AI, with markdown-stripping fallback. Always throws AppError on failure. */
+function parseStructuredJSON(raw: string): Record<string, unknown> {
+  const trimmed = raw.trim();
+  if (!trimmed) throw new AppError(AppErrorCode.DownstreamError, "AI response is empty.");
+
+  let parsed: unknown;
+
+  // Attempt 1: direct parse
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    // ok, try extracting from markdown
+  }
+
+  // Attempt 2: extract {...} block from markdown/code fences
+  if (parsed === undefined) {
+    const match = trimmed.match(/\{[\s\S]*\}/);
+    if (!match) throw new AppError(AppErrorCode.DownstreamError, "AI response contains no valid JSON object.");
+    try {
+      parsed = JSON.parse(match[0]);
+    } catch {
+      throw new AppError(AppErrorCode.DownstreamError, "AI response JSON is malformed.");
+    }
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new AppError(AppErrorCode.DownstreamError, "AI response is not a JSON object.");
+  }
+
+  return parsed as Record<string, unknown>;
 }
 
 function parsePreventionPlan(content: string) {
@@ -18,51 +90,108 @@ function parsePreventionPlan(content: string) {
   };
 }
 
-export function createAiService(repository: AiRepository, provider: AiProvider) {
-  async function complete(userId: string, mode: "coach" | "relapse_solution" | "relapse_prevention" | "onboarding_analysis", userText: string, context?: string) {
-    const { crisis, messages } = buildMessages({ mode, userText, context });
-    await repository.createChatMessage({ userId, role: "user", content: userText });
-    const response = crisis
-      ? { content: buildCrisisFallback(), model: "safety" }
-      : await provider.complete({ messages });
-    await repository.createChatMessage({ userId, role: "assistant", content: response.content });
-    return { message: response.content, model: response.model, crisisEscalation: crisis ? CRISIS_ESCALATION_COPY : null };
+function resolvePersona(raw?: string | null): Persona {
+  if (raw && ["supportive", "friendly", "concise", "direct"].includes(raw)) {
+    return raw as Persona;
   }
+  return DEFAULT_PERSONA;
+}
 
+async function downstreamGuard<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError(AppErrorCode.DownstreamError, `AI ${label} failed.`);
+  }
+}
+
+// ---------- Service factory ----------
+
+export function createAiService(repository: AiRepository, provider: AiProvider) {
   return {
-    askCoach(userId: string, message: string) {
-      return complete(userId, "coach", message);
+    askCoach(userId: string, message: string): Promise<AskCoachResponse> {
+      return downstreamGuard("coach", async () => {
+        const prefs = await repository.getPersonaPreferences(userId);
+        const persona = resolvePersona(prefs?.persona);
+
+        const { crisis, messages } = buildCoachMessages({ userText: message, persona });
+
+        await repository.createChatMessage({ userId, role: "user", content: message });
+
+        const response = crisis
+          ? { content: buildCrisisFallback(), model: "safety" }
+          : await provider.complete({ messages });
+
+        await repository.createChatMessage({ userId, role: "assistant", content: response.content });
+
+        return { response: response.content, persona_used: persona };
+      });
     },
-    relapseSolution(userId: string, input: RelapseSolutionInput) {
-      return complete(userId, "relapse_solution", input.situation, safeJoin(input.triggers) ? `Triggers: ${safeJoin(input.triggers)}` : undefined);
+
+    relapseSolution(userId: string, input: RelapseSolutionInput): Promise<RelapseSolutionResponse> {
+      return downstreamGuard("relapse solution", async () => {
+        const { messages } = buildRelapseSolutionMessages(input);
+        const response = await provider.complete({ messages, maxTokens: 500 });
+        return parseRelapseSolutionJSON(response.content);
+      });
     },
-    async relapsePreventionPlan(userId: string, input: RelapsePreventionPlanInput) {
-      const triggerSummary = safeJoin(input.triggers);
-      const context = [`Urge level: ${input.urgeLevel}/5`, triggerSummary ? `Trigger categories: ${triggerSummary}` : undefined, input.currentContext ? "User provided short current context." : undefined].filter(Boolean).join(" ");
-      const prompt = "Return exactly three short lines in this format: Delay: ... Distract: ... Decide: ...";
-      const response = await complete(userId, "relapse_prevention", prompt, context);
-      return { ...parsePreventionPlan(response.message), crisisEscalation: response.crisisEscalation };
+
+    relapsePreventionPlan(userId: string, input: RelapsePreventionPlanInput) {
+      return downstreamGuard("prevention plan", async () => {
+        const { crisis, messages } = buildPreventionMessages(input);
+        const response = crisis
+          ? { content: buildCrisisFallback(), model: "safety" }
+          : await provider.complete({ messages });
+        return parsePreventionPlan(response.content);
+      });
     },
-    onboardingAnalysis(userId: string, input: OnboardingAnalysisInput) {
-      const context = [
-        input.recoveryGoal ? "Recovery goal was provided." : undefined,
-        safeJoin(input.concerns) ? `Concern categories: ${safeJoin(input.concerns)}` : undefined,
-        input.preferredSupport ? `Preferred support: ${input.preferredSupport}` : undefined,
-      ].filter(Boolean).join(" ");
-      return complete(userId, "onboarding_analysis", "Create a brief recovery support summary.", context);
+
+    onboardingAnalysis(_userId: string, input: OnboardingAnalysisInput): Promise<OnboardingAnalysisResponse> {
+      return downstreamGuard("onboarding analysis", async () => {
+        const { messages } = buildOnboardingAnalysisMessages(input);
+        const response = await provider.complete({ messages, maxTokens: 500 });
+        return parseOnboardingAnalysisResponse(response.content);
+      });
     },
-    listChatHistory(userId: string) {
-      return repository.listChatHistory(userId, 50);
+
+    async listChatHistory(userId: string, limit?: number) {
+      const effectiveLimit = limit && limit >= 1 && limit <= 200 ? limit : 50;
+      return repository.listChatHistory(userId, effectiveLimit);
     },
+
     async getSummary(userId: string) {
       const history = await repository.listChatHistory(userId, 20);
-      return { totalMessages: history.length, lastMessageAt: history.at(-1)?.createdAt ?? null };
+      if (history.length === 0) return { summary: DEFAULT_SUMMARY };
+
+      try {
+        const chatSummary = history.map((item) => `${item.role}: ${item.content.substring(0, 100)}`).join("\n");
+        const { messages } = buildCoachMessages({
+          userText: "Based on recent conversations, give a 2-sentence summary of the user's recovery progress.",
+          persona: DEFAULT_PERSONA,
+          context: `Recent chat history:\n${chatSummary}`,
+        });
+        const response = await provider.complete({ messages, maxTokens: 200 });
+        return { summary: response.content.trim() || DEFAULT_SUMMARY };
+      } catch {
+        return { summary: DEFAULT_SUMMARY };
+      }
     },
-    async getPersonaPreferences(userId: string) {
-      return await repository.getPersonaPreferences(userId) ?? { userId, tone: "balanced" as const, focusAreas: [], updatedAt: null };
+
+    async getPersonaPreferences(userId: string): Promise<PersonaPreferencesResponse> {
+      const prefs = await repository.getPersonaPreferences(userId);
+      return {
+        persona: resolvePersona(prefs?.persona),
+        fallback_persona: DEFAULT_PERSONA,
+      };
     },
-    updatePersonaPreferences(userId: string, input: PersonaPreferencesInput) {
-      return repository.upsertPersonaPreferences({ userId, ...input });
+
+    async updatePersonaPreferences(userId: string, input: PersonaPreferencesInput): Promise<PersonaPreferencesResponse> {
+      await repository.upsertPersonaPreferences({ userId, persona: input.persona });
+      return {
+        persona: input.persona,
+        fallback_persona: DEFAULT_PERSONA,
+      };
     },
   };
 }

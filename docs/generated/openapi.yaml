@@ -5008,7 +5008,7 @@ paths:
         - "routine"
       summary: "Create routine check-in"
       description: |
-          Stores one daily check-in using Asia/Jakarta local date semantics.
+          Stores one daily check-in using Asia/Jakarta local date semantics. is_successful must be true. Use relapse endpoint for unsuccessful days.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_routine_checkin"
@@ -5031,7 +5031,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    "$ref": "#/components/schemas/CheckIn"
+                    "$ref": "#/components/schemas/CheckInResponse"
                   meta:
                     oneOf:
                       -
@@ -5048,12 +5048,59 @@ paths:
                     success: true
                     message: "Check-in saved successfully"
                     data:
-                      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-                      userId: "11111111-1111-4111-8111-111111111111"
-                      mood: 4
-                      note: "Feeling better today."
-                      localDate: "2026-07-16"
-                      createdAt: "2026-07-16T01:00:00.000Z"
+                      check_in:
+                        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+                        user_id: "11111111-1111-4111-8111-111111111111"
+                        check_in_date: "2026-07-16"
+                        check_in_day_name: "Rabu"
+                        mood: "tenang"
+                        is_successful: true
+                        commitment: "Feeling better today."
+                        relapse_trigger:
+[]
+                        created_at: "2026-07-16T01:00:00.000Z"
+                      statistics:
+                        current_streak: 7
+                        longest_streak: 14
+                        total_checkins: 21
+                        total_attempts: 23
+                        success_rate: 0.91
+                        streak_calendar:
+                          - "2026-07-16"
+                        relapse_calendar:
+[]
+                        relapse_count: 2
+                        relapse_rate: 0.09
+                        recovery_success_rate: 0.91
+                        checkin_consistency_score: 0.67
+                        weekly_progress:
+                          window_days: 7
+                          current_successful_checkins: 7
+                          previous_successful_checkins: 5
+                          delta: 2
+                          delta_rate: 0.4
+                        monthly_progress:
+                          window_days: 30
+                          current_successful_checkins: 21
+                          previous_successful_checkins: 18
+                          delta: 3
+                          delta_rate: 0.17
+                        mood_trend:
+[]
+                        last_check_in_date: "2026-07-16"
+                        last_check_in_day_name: "Rabu"
+                        last_relapse_date: null
+                        last_relapse_day_name: null
+                        weekday_summary:
+[]
+                        streak_goal_comparison:
+                          porn_free_goal: 90
+                          current_streak: 7
+                          longest_streak: 14
+                          goal_reached: false
+                          remaining_days: 83
+                          progress_rate: 0.08
+                      relapse_solution: null
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -5145,30 +5192,42 @@ paths:
               additionalProperties: false
               required:
                 - "mood"
+                - "is_successful"
               properties:
                 mood:
-                  type: "integer"
-                  minimum: 1
-                  maximum: 5
-                  example: 4
-                note:
+                  type: "string"
+                  maxLength: 50
+                  example: "tenang"
+                is_successful:
+                  type: "boolean"
+                  example: true
+                commitment:
                   type:
                     - "string"
                     - "null"
                   example: "Feeling better today."
                   maxLength: 2000
+                content:
+                  type:
+                    - "string"
+                    - "null"
+                  example: null
+                  maxLength: 2000
+                  description: "Alias for commitment"
                 localDate:
                   type:
                     - "string"
                     - "null"
                   example: "2026-07-16"
                   format: "date"
+                  description: "Optional. Defaults to Asia/Jakarta today."
             examples:
               today:
                 summary: "today"
                 value:
-                  mood: 4
-                  note: "Feeling better today."
+                  mood: "tenang"
+                  is_successful: true
+                  commitment: "Feeling better today."
                   localDate: "2026-07-16"
   "/api/v1/routine/relapses":
     post:
@@ -5176,7 +5235,7 @@ paths:
         - "routine"
       summary: "Create relapse event"
       description: |
-          Records relapse event with mood, triggers, optional note, and local date.
+          Records relapse event with mood, triggers, optional commitment, and local date. Links to same-day check-in if exists. Each user can record one relapse per local date.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_routine_relapses"
@@ -5199,7 +5258,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    "$ref": "#/components/schemas/Relapse"
+                    "$ref": "#/components/schemas/RelapseResponse"
                   meta:
                     oneOf:
                       -
@@ -5216,15 +5275,63 @@ paths:
                     success: true
                     message: "Relapse recorded successfully"
                     data:
-                      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
-                      userId: "11111111-1111-4111-8111-111111111111"
-                      mood: 2
-                      triggers:
-                        - "stress"
-                        - "late-night scrolling"
-                      note: "Late-night stress."
-                      localDate: "2026-07-16"
-                      createdAt: "2026-07-16T01:00:00.000Z"
+                      relapse:
+                        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+                        user_id: "11111111-1111-4111-8111-111111111111"
+                        relapse_date: "2026-07-16"
+                        relapse_day_name: "Rabu"
+                        mood: "cemas"
+                        commitment: "Late-night stress."
+                        relapse_trigger:
+                          - "stress"
+                        check_in_id: null
+                        created_at: "2026-07-16T01:00:00.000Z"
+                      statistics:
+                        current_streak: 0
+                        longest_streak: 14
+                        total_checkins: 20
+                        total_attempts: 22
+                        success_rate: 0.91
+                        streak_calendar:
+                          - "2026-07-15"
+                        relapse_calendar:
+                          - "2026-07-16"
+                        relapse_count: 3
+                        relapse_rate: 0.13
+                        recovery_success_rate: 0.87
+                        checkin_consistency_score: 0.6
+                        weekly_progress:
+                          window_days: 7
+                          current_successful_checkins: 6
+                          previous_successful_checkins: 5
+                          delta: 1
+                          delta_rate: 0.2
+                        monthly_progress:
+                          window_days: 30
+                          current_successful_checkins: 20
+                          previous_successful_checkins: 18
+                          delta: 2
+                          delta_rate: 0.11
+                        mood_trend:
+[]
+                        last_check_in_date: "2026-07-15"
+                        last_check_in_day_name: "Selasa"
+                        last_relapse_date: "2026-07-16"
+                        last_relapse_day_name: "Rabu"
+                        weekday_summary:
+[]
+                        streak_goal_comparison:
+                          porn_free_goal: 90
+                          current_streak: 0
+                          longest_streak: 14
+                          goal_reached: false
+                          remaining_days: 90
+                          progress_rate: 0
+                      relapse_solution:
+                        title: "Quick Recovery Steps"
+                        analysis: "Relapse detected with mood anxious. Current trigger pattern: stress."
+                        summary: "Best immediate action: cut off access to the trigger now, stabilize your emotions briefly, then switch to a pre-planned safe activity."
+                        generated_at: "2026-07-16T01:00:00.000Z"
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -5280,50 +5387,56 @@ paths:
               additionalProperties: false
               required:
                 - "mood"
-                - "triggers"
+                - "relapse_trigger"
               properties:
                 mood:
-                  type: "integer"
-                  minimum: 1
-                  maximum: 5
-                  example: 2
-                triggers:
+                  type: "string"
+                  maxLength: 50
+                  example: "cemas"
+                relapse_trigger:
                   type: "array"
                   minItems: 1
                   items:
                     type: "string"
-                    maxLength: 100
+                    maxLength: 500
                   example:
                     - "stress"
-                    - "late-night scrolling"
-                note:
+                commitment:
                   type:
                     - "string"
                     - "null"
                   example: "Late-night stress."
                   maxLength: 2000
+                content:
+                  type:
+                    - "string"
+                    - "null"
+                  example: null
+                  maxLength: 2000
+                  description: "Alias for commitment"
                 localDate:
                   type:
                     - "string"
                     - "null"
                   example: "2026-07-16"
                   format: "date"
+                  description: "Optional. Defaults to Asia/Jakarta today."
             examples:
               event:
                 summary: "event"
                 value:
-                  mood: 2
-                  triggers:
+                  mood: "cemas"
+                  relapse_trigger:
                     - "stress"
                     - "late-night scrolling"
-                  note: "Late-night stress."
+                  commitment: "Late-night stress."
                   localDate: "2026-07-16"
     get:
       tags:
         - "routine"
       summary: "List relapse events"
       description: |
-          Returns current user's relapse history.
+          Returns current user's relapse history with full detail including check_in_id linking.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_routine_relapses"
@@ -5367,14 +5480,16 @@ paths:
                     data:
                       -
                         id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
-                        userId: "11111111-1111-4111-8111-111111111111"
-                        mood: 2
-                        triggers:
+                        user_id: "11111111-1111-4111-8111-111111111111"
+                        relapse_date: "2026-07-16"
+                        relapse_day_name: "Rabu"
+                        mood: "cemas"
+                        commitment: "Late-night stress."
+                        relapse_trigger:
                           - "stress"
                           - "late-night scrolling"
-                        note: "Late-night stress."
-                        localDate: "2026-07-16"
-                        createdAt: "2026-07-16T01:00:00.000Z"
+                        check_in_id: null
+                        created_at: "2026-07-16T01:00:00.000Z"
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -5427,7 +5542,7 @@ paths:
         - "routine"
       summary: "Read routine statistics"
       description: |
-          Returns streak, check-in, and relapse summary for current user.
+          Returns full routine statistics: streak, check-in, relapse, mood trend, weekly/monthly progress, weekday summary, and streak goal comparison.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_routine_statistics"
@@ -5467,11 +5582,61 @@ paths:
                     success: true
                     message: "Routine statistics retrieved successfully"
                     data:
-                      currentStreak: 7
-                      longestStreak: 14
-                      checkInCount: 21
-                      relapseCount: 2
-                      lastCheckInDate: "2026-07-16"
+                      current_streak: 7
+                      longest_streak: 14
+                      total_checkins: 21
+                      total_attempts: 23
+                      success_rate: 0.91
+                      streak_calendar:
+                        - "2026-07-10"
+                        - "2026-07-11"
+                        - "2026-07-12"
+                        - "2026-07-13"
+                        - "2026-07-14"
+                        - "2026-07-15"
+                        - "2026-07-16"
+                      relapse_calendar:
+                        - "2026-07-09"
+                      relapse_count: 2
+                      relapse_rate: 0.09
+                      recovery_success_rate: 0.91
+                      checkin_consistency_score: 0.67
+                      weekly_progress:
+                        window_days: 7
+                        current_successful_checkins: 7
+                        previous_successful_checkins: 5
+                        delta: 2
+                        delta_rate: 0.4
+                      monthly_progress:
+                        window_days: 30
+                        current_successful_checkins: 21
+                        previous_successful_checkins: 18
+                        delta: 3
+                        delta_rate: 0.17
+                      mood_trend:
+                        -
+                          date: "2026-07-16"
+                          day_name: "Rabu"
+                          dominant_mood: "tenang"
+                          successful_ratio: 1
+                      last_check_in_date: "2026-07-16"
+                      last_check_in_day_name: "Rabu"
+                      last_relapse_date: "2026-07-09"
+                      last_relapse_day_name: "Sabtu"
+                      weekday_summary:
+                        -
+                          day_name: "Senin"
+                          successful_checkins: 3
+                          relapse_count: 0
+                          total_checkins: 3
+                          success_rate: 1
+                      streak_goal_comparison:
+                        porn_free_goal: 90
+                        current_streak: 7
+                        longest_streak: 14
+                        goal_reached: false
+                        remaining_days: 83
+                        progress_rate: 0.08
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -5524,7 +5689,7 @@ paths:
         - "routine"
       summary: "Read routine activity summary"
       description: |
-          Returns compact recent activity buckets for dashboard display.
+          Returns periodic activity timeline with recent check-in, relapse, and journal events. Supports optional window_days query param (7-90, default 30).
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_routine_statistics_activity_summary"
@@ -5547,29 +5712,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    type: "object"
-                    required:
-                      - "days"
-                    properties:
-                      days:
-                        type: "array"
-                        items:
-                          type: "object"
-                          required:
-                            - "date"
-                            - "checkedIn"
-                            - "relapseCount"
-                          properties:
-                            date:
-                              type: "string"
-                              format: "date"
-                              example: "2026-07-16"
-                            checkedIn:
-                              type: "boolean"
-                              example: true
-                            relapseCount:
-                              type: "integer"
-                              example: 0
+                    "$ref": "#/components/schemas/ActivitySummary"
                   meta:
                     oneOf:
                       -
@@ -5586,11 +5729,16 @@ paths:
                     success: true
                     message: "Routine activity summary retrieved successfully"
                     data:
-                      days:
+                      window_days: 30
+                      successful_checkins: 18
+                      relapses: 3
+                      active_days: 21
+                      recent_activity:
                         -
                           date: "2026-07-16"
-                          checkedIn: true
-                          relapseCount: 0
+                          day_name: "Rabu"
+                          type: "checkin_success"
+                          mood: "tenang"
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -5643,7 +5791,7 @@ paths:
         - "routine"
       summary: "Read relapse statistics"
       description: |
-          Returns relapse count and top trigger summary.
+          Returns complete relapse statistics with hourly UTC distribution, trigger distribution, peak hours, AI summary placeholder, and time/trigger analysis.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_routine_relapses_statistics"
@@ -5666,28 +5814,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    type: "object"
-                    required:
-                      - "total"
-                      - "topTriggers"
-                    properties:
-                      total:
-                        type: "integer"
-                        example: 2
-                      topTriggers:
-                        type: "array"
-                        items:
-                          type: "object"
-                          required:
-                            - "trigger"
-                            - "count"
-                          properties:
-                            trigger:
-                              type: "string"
-                              example: "stress"
-                            count:
-                              type: "integer"
-                              example: 2
+                    "$ref": "#/components/schemas/RelapseStatistics"
                   meta:
                     oneOf:
                       -
@@ -5704,11 +5831,81 @@ paths:
                     success: true
                     message: "Relapse statistics retrieved successfully"
                     data:
-                      total: 2
-                      topTriggers:
+                      statistics:
+                        current_streak: 0
+                        longest_streak: 14
+                        total_checkins: 20
+                        total_attempts: 22
+                        success_rate: 0.91
+                        streak_calendar:
+                          - "2026-07-15"
+                        relapse_calendar:
+                          - "2026-07-16"
+                        relapse_count: 2
+                        relapse_rate: 0.09
+                        recovery_success_rate: 0.91
+                        checkin_consistency_score: 0.6
+                        weekly_progress:
+                          window_days: 7
+                          current_successful_checkins: 6
+                          previous_successful_checkins: 5
+                          delta: 1
+                          delta_rate: 0.2
+                        monthly_progress:
+                          window_days: 30
+                          current_successful_checkins: 20
+                          previous_successful_checkins: 18
+                          delta: 2
+                          delta_rate: 0.11
+                        mood_trend:
+[]
+                        last_check_in_date: "2026-07-15"
+                        last_check_in_day_name: "Selasa"
+                        last_relapse_date: "2026-07-16"
+                        last_relapse_day_name: "Rabu"
+                        weekday_summary:
+[]
+                        streak_goal_comparison:
+                          porn_free_goal: 90
+                          current_streak: 0
+                          longest_streak: 14
+                          goal_reached: false
+                          remaining_days: 90
+                          progress_rate: 0
+                      relapses:
                         -
-                          trigger: "stress"
-                          count: 2
+                          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+                          user_id: "11111111-1111-4111-8111-111111111111"
+                          relapse_date: "2026-07-16"
+                          relapse_day_name: "Rabu"
+                          mood: "cemas"
+                          commitment: null
+                          relapse_trigger:
+                            - "stres kerja"
+                          check_in_id: null
+                          created_at: "2026-07-16T01:00:00.000Z"
+                      hourly_relapse_distribution:
+                        -
+                          hour_utc: 21
+                          relapse_count: 1
+                      relapse_triggers_distribution:
+                        -
+                          relapse_trigger: "stres kerja"
+                          relapse_trigger_count: 1
+                      peak_relapse_hours_utc:
+                        - 21
+                      peak_relapse_count: 1
+                      ai_summary: "New insights for you will be available soon. Keep writing your daily journal!"
+                      relapse_time_summary:
+                        title: "Relapse Time Analysis"
+                        analysis: "Relapse pattern shows peak at UTC hours: 21:00."
+                        summary: "Most frequent trigger: work stress."
+                        generated_at: "2026-07-16T01:00:00.000Z"
+                      relapse_trigger_summary:
+                        title: "Quick Recovery Steps"
+                        analysis: "Relapse detected with mood anxious. Current trigger pattern: work stress."
+                        summary: "Best immediate action: cut off access to the trigger now, stabilize your emotions briefly, then switch to a pre-planned safe activity."
+                        generated_at: "2026-07-16T01:00:00.000Z"
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -6121,7 +6318,7 @@ paths:
         - "community"
       summary: "List community posts"
       description: |
-          Returns community post feed for authenticated users.
+          Returns community post feed with author info. Optional category filter: advice, motivation, story, question, help.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_community"
@@ -6165,12 +6362,17 @@ paths:
                     data:
                       -
                         id: "88888888-8888-4888-8888-888888888888"
-                        authorId: "11111111-1111-4111-8111-111111111111"
-                        category: "progress"
-                        content: "I kept my routine today."
+                        userId: "11111111-1111-4111-8111-111111111111"
+                        title: "My Recovery Story"
+                        category: "story"
+                        content: "I kept my routine today and it feels amazing."
                         likeCount: 3
-                        commentCount: 1
+                        commentCount: 2
                         createdAt: "2026-07-16T01:00:00.000Z"
+                        updatedAt: "2026-07-16T01:30:00.000Z"
+                        author:
+                          nickname: "Demo"
+                          currentStreak: 7
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -6258,7 +6460,7 @@ paths:
         - "community"
       summary: "Create community post"
       description: |
-          Creates community post. MVP moderation is lightweight; keep content safe.
+          Creates community post with optional title. Categories: advice, motivation, story, question, help. Content: 10-5000 chars. MVP moderation is lightweight; keep content safe.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_community"
@@ -6299,12 +6501,17 @@ paths:
                     message: "Community post created successfully"
                     data:
                       id: "88888888-8888-4888-8888-888888888888"
-                      authorId: "11111111-1111-4111-8111-111111111111"
-                      category: "progress"
-                      content: "I kept my routine today."
+                      userId: "11111111-1111-4111-8111-111111111111"
+                      title: "My Recovery Story"
+                      category: "story"
+                      content: "I kept my routine today and it feels amazing."
                       likeCount: 3
-                      commentCount: 1
+                      commentCount: 2
                       createdAt: "2026-07-16T01:00:00.000Z"
+                      updatedAt: "2026-07-16T01:30:00.000Z"
+                      author:
+                        nickname: "Demo"
+                        currentStreak: 7
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -6398,31 +6605,40 @@ paths:
                 - "category"
                 - "content"
               properties:
+                title:
+                  type:
+                    - "string"
+                    - "null"
+                  example: "My Recovery Story"
+                  maxLength: 120
                 category:
                   type: "string"
                   enum:
-                    - "general"
-                    - "support"
-                    - "progress"
-                  example: "progress"
+                    - "advice"
+                    - "motivation"
+                    - "story"
+                    - "question"
+                    - "help"
+                  example: "story"
                 content:
                   type: "string"
-                  minLength: 1
-                  maxLength: 2000
-                  example: "I kept my routine today."
+                  minLength: 10
+                  maxLength: 5000
+                  example: "I kept my routine today and it feels amazing."
             examples:
-              progress:
-                summary: "progress"
+              story:
+                summary: "story"
                 value:
-                  category: "progress"
-                  content: "I kept my routine today."
+                  title: "My Recovery Story"
+                  category: "story"
+                  content: "I kept my routine today and it feels amazing."
   "/api/v1/community/{postId}/comments":
     get:
       tags:
         - "community"
-      summary: "List community comments"
+      summary: "List comment thread"
       description: |
-          Returns comments for a community post.
+          Returns threaded comments for a community post with max depth 2. Root comments limited to 200.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_community_postId_comments"
@@ -6445,9 +6661,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    type: "array"
-                    items:
-                      "$ref": "#/components/schemas/CommunityComment"
+                    "$ref": "#/components/schemas/CommunityThread"
                   meta:
                     oneOf:
                       -
@@ -6464,12 +6678,19 @@ paths:
                     success: true
                     message: "Community comments retrieved successfully"
                     data:
-                      -
-                        id: "99999999-9999-4999-8999-999999999999"
-                        postId: "88888888-8888-4888-8888-888888888888"
-                        authorId: "11111111-1111-4111-8111-111111111111"
-                        content: "You are not alone."
-                        createdAt: "2026-07-16T01:10:00.000Z"
+                      postId: "88888888-8888-4888-8888-888888888888"
+                      comments:
+                        -
+                          id: "99999999-9999-4999-8999-999999999999"
+                          postId: "88888888-8888-4888-8888-888888888888"
+                          userId: "11111111-1111-4111-8111-111111111111"
+                          parentCommentId: null
+                          content: "You are not alone."
+                          depth: 0
+                          replyCount: 1
+                          createdAt: "2026-07-16T01:10:00.000Z"
+                          replies:
+[]
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -6603,7 +6824,7 @@ paths:
         - "community"
       summary: "Create community comment"
       description: |
-          Adds comment to a community post.
+          Adds top-level comment (depth=0) to a community post. Content max 2000 chars.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_community_postId_comments"
@@ -6645,8 +6866,11 @@ paths:
                     data:
                       id: "99999999-9999-4999-8999-999999999999"
                       postId: "88888888-8888-4888-8888-888888888888"
-                      authorId: "11111111-1111-4111-8111-111111111111"
+                      userId: "11111111-1111-4111-8111-111111111111"
+                      parentCommentId: null
                       content: "You are not alone."
+                      depth: 0
+                      replyCount: 1
                       createdAt: "2026-07-16T01:10:00.000Z"
                     meta: null
         "401":
@@ -6789,7 +7013,7 @@ paths:
                 content:
                   type: "string"
                   minLength: 1
-                  maxLength: 1000
+                  maxLength: 2000
                   example: "You are not alone."
             examples:
               support:
@@ -6800,9 +7024,9 @@ paths:
     post:
       tags:
         - "community"
-      summary: "Like community post"
+      summary: "Toggle like on post"
       description: |
-          Toggles/records like for current user and returns updated post counters.
+          Toggles like/unlike for current user on post. Returns updated like count and current like state.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_community_postId_like"
@@ -6825,7 +7049,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    "$ref": "#/components/schemas/CommunityPost"
+                    "$ref": "#/components/schemas/ToggleLike"
                   meta:
                     oneOf:
                       -
@@ -6840,15 +7064,10 @@ paths:
                   summary: "201 success"
                   value:
                     success: true
-                    message: "Community post liked successfully"
+                    message: "Community post like toggled"
                     data:
-                      id: "88888888-8888-4888-8888-888888888888"
-                      authorId: "11111111-1111-4111-8111-111111111111"
-                      category: "progress"
-                      content: "I kept my routine today."
-                      likeCount: 3
-                      commentCount: 1
-                      createdAt: "2026-07-16T01:00:00.000Z"
+                      likedCount: 4
+                      isLiked: true
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -6977,13 +7196,224 @@ paths:
         -
           bearerAuth:
 []
+  "/api/v1/community/{postId}/comments/{commentId}/replies":
+    post:
+      tags:
+        - "community"
+      summary: "Create reply to comment"
+      description: |
+          Adds reply to existing comment. Max thread depth is 2. Parent comment must belong to same post. Returns 422 if depth exceeded or cross-post reply.
+
+          Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
+      operationId: "post_api_v1_community_postId_comments_commentId_replies"
+      responses:
+        "201":
+          description: "Success response"
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "success"
+                  - "message"
+                  - "data"
+                  - "meta"
+                properties:
+                  success:
+                    type: "boolean"
+                    const: true
+                  message:
+                    type: "string"
+                  data:
+                    "$ref": "#/components/schemas/CommunityComment"
+                  meta:
+                    oneOf:
+                      -
+                        "$ref": "#/components/schemas/PaginationMeta"
+                      -
+                        type: "object"
+                        additionalProperties: true
+                      -
+                        type: "null"
+              examples:
+                success:
+                  summary: "201 success"
+                  value:
+                    success: true
+                    message: "Community reply created successfully"
+                    data:
+                      id: "99999999-9999-4999-8999-999999999999"
+                      postId: "88888888-8888-4888-8888-888888888888"
+                      userId: "11111111-1111-4111-8111-111111111111"
+                      parentCommentId: null
+                      content: "You are not alone."
+                      depth: 0
+                      replyCount: 1
+                      createdAt: "2026-07-16T01:10:00.000Z"
+                    meta: null
+        "401":
+          description: "Unauthenticated"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Unauthenticated"
+                  value:
+                    success: false
+                    message: "Authentication required."
+                    data: null
+                    error:
+                      code: "UNAUTHENTICATED"
+                      details:
+                        - "Bearer token is missing or invalid."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "403":
+          description: "Forbidden"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Forbidden"
+                  value:
+                    success: false
+                    message: "Access denied."
+                    data: null
+                    error:
+                      code: "FORBIDDEN"
+                      details:
+                        - "You can only manage your own content."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "404":
+          description: "Not found"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Not found"
+                  value:
+                    success: false
+                    message: "Content not found."
+                    data: null
+                    error:
+                      code: "NOT_FOUND"
+                      details:
+                        - "Post, comment, or journal was not found."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "409":
+          description: "Conflict"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Conflict"
+                  value:
+                    success: false
+                    message: "Content conflicts with current state."
+                    data: null
+                    error:
+                      code: "CONFLICT"
+                      details:
+                        - "Resource already exists or state cannot be changed."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "422":
+          description: "Validation error"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Validation error"
+                  value:
+                    success: false
+                    message: "Request validation failed."
+                    data: null
+                    error:
+                      code: "VALIDATION_ERROR"
+                      details:
+                        - "content: Must not be empty."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "500":
+          description: "Internal error"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Internal error"
+                  value:
+                    success: false
+                    message: "Unexpected internal error."
+                    data: null
+                    error:
+                      code: "INTERNAL_ERROR"
+                      details:
+                        - "Failed to process content request."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+      x-codeSamples:
+        -
+          lang: "Shell"
+          label: "cURL"
+          source: "curl -X POST http://localhost:3000/api/v1/community/{postId}/comments/{commentId}/replies"
+      parameters:
+        -
+          name: "postId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+            example: "postId_uuid"
+          description: "Route parameter: postId."
+        -
+          name: "commentId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+            example: "commentId_uuid"
+          description: "Route parameter: commentId."
+      security:
+        -
+          bearerAuth:
+[]
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              type: "object"
+              additionalProperties: false
+              required:
+                - "content"
+              properties:
+                content:
+                  type: "string"
+                  minLength: 1
+                  maxLength: 2000
+                  example: "How did it go?"
+            examples:
+              reply:
+                summary: "reply"
+                value:
+                  content: "How did it go?"
   "/api/v1/education":
     get:
       tags:
         - "education"
       summary: "List education content"
       description: |
-          Returns seeded education content catalog.
+          Returns active education content sorted by title. Each item includes type (artikel/video), url, optional thumbnail, and category.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_education"
@@ -7027,10 +7457,13 @@ paths:
                     data:
                       -
                         id: "edu_001"
-                        title: "Understanding triggers"
-                        summary: "Short guide to noticing recovery triggers."
-                        body: "Triggers are signals, not failures..."
-                        category: "recovery-basics"
+                        title: "Understanding Triggers"
+                        description: "Short guide to noticing recovery triggers."
+                        url: "https://pulih.app/education/understanding-triggers"
+                        thumbnail_url: null
+                        category: "Recovery Basics"
+                        type: "artikel"
+                        published_at: "2026-07-16T00:00:00.000Z"
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -7101,7 +7534,7 @@ paths:
         - "content"
       summary: "Read daily content"
       description: |
-          Returns daily motivation/challenge content.
+          Returns deterministic daily motivation, mental challenge, and physical challenge using UTC-based rotation with fallback.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_content_daily"
@@ -7143,7 +7576,12 @@ paths:
                     data:
                       date: "2026-07-16"
                       motivation: "Small steps still count."
-                      challenge: "Write one supportive sentence to yourself."
+                      challenge:
+                        title: "Five-minute grounding"
+                        description: "Pause, breathe, and name five things you can see."
+                      physicalChallenge:
+                        title: "Morning Stretch"
+                        description: "Stretch your entire body for 10 minutes after waking up."
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -7565,7 +8003,7 @@ paths:
         - "ai"
       summary: "Ask AI coach"
       description: |
-          Generates non-streaming supportive response. Does not diagnose, replace professional help, or expose raw sensitive data in errors.
+          Generates non-streaming supportive response with active persona. Does not diagnose, replace professional help, or expose raw sensitive data in errors.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_ai_ask_coach"
@@ -7588,7 +8026,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    "$ref": "#/components/schemas/AiCoachResponse"
+                    "$ref": "#/components/schemas/AskCoachResponse"
                   meta:
                     oneOf:
                       -
@@ -7605,9 +8043,8 @@ paths:
                     success: true
                     message: "AI coach response generated successfully"
                     data:
-                      message: "Pause for 90 seconds, breathe slowly, and move away from the trigger."
-                      safetyNotice: "Pulih AI does not replace emergency or professional care."
-                      conversationId: "chat_001"
+                      response: "Try one small safe step. Pause and breathe."
+                      persona_used: "supportive"
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -7739,7 +8176,7 @@ paths:
                 message:
                   type: "string"
                   minLength: 1
-                  maxLength: 2000
+                  maxLength: 4000
                   example: "I feel triggered after work."
             examples:
               support:
@@ -7752,7 +8189,7 @@ paths:
         - "ai"
       summary: "Ask AI relapse solution"
       description: |
-          Generates safe relapse support actions from current situation and optional triggers.
+          Analyzes relapse mood and triggers. Returns structured analysis with title, trigger analysis, and best-solution summary.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_ai_relapse_solution"
@@ -7775,7 +8212,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    "$ref": "#/components/schemas/AiCoachResponse"
+                    "$ref": "#/components/schemas/RelapseSolutionResponse"
                   meta:
                     oneOf:
                       -
@@ -7792,9 +8229,9 @@ paths:
                     success: true
                     message: "Relapse solution generated successfully"
                     data:
-                      message: "Pause for 90 seconds, breathe slowly, and move away from the trigger."
-                      safetyNotice: "Pulih AI does not replace emergency or professional care."
-                      conversationId: "chat_001"
+                      title: "Regain Focus Now"
+                      analysis: "Primary trigger emerges during stress and quick access to triggering content."
+                      summary: "Best solution right now: cut off trigger access when urge rises, do quick emotional stabilization, then switch to a safe alternative activity."
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -7921,28 +8358,33 @@ paths:
               type: "object"
               additionalProperties: false
               required:
-                - "situation"
+                - "mood"
               properties:
-                situation:
+                mood:
                   type: "string"
                   minLength: 1
-                  maxLength: 2000
-                  example: "Late-night urge after stress."
-                triggers:
+                  maxLength: 50
+                  example: "stressed"
+                relapse_trigger:
                   type: "array"
                   maxItems: 10
                   items:
                     type: "string"
-                    maxLength: 120
+                    maxLength: 500
                   example:
-                    - "stress"
+                    - "work pressure"
+                commitment:
+                  type: "string"
+                  maxLength: 4000
+                  example: "Late-night stress."
             examples:
               support:
                 summary: "support"
                 value:
-                  situation: "Late-night urge after stress."
-                  triggers:
-                    - "stress"
+                  mood: "stressed"
+                  relapse_trigger:
+                    - "work pressure"
+                  commitment: "Late-night stress."
   "/api/v1/ai/relapse-prevention-plan":
     post:
       tags:
@@ -8157,7 +8599,7 @@ paths:
         - "ai"
       summary: "Read AI chat history"
       description: |
-          Returns current user's AI conversation history only.
+          Returns current user's AI conversation history only. Optional limit query param (1-200, default 50).
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_ai_chat_history"
@@ -8182,7 +8624,7 @@ paths:
                   data:
                     type: "array"
                     items:
-                      "$ref": "#/components/schemas/AiCoachResponse"
+                      "$ref": "#/components/schemas/ChatHistoryItem"
                   meta:
                     oneOf:
                       -
@@ -8200,9 +8642,10 @@ paths:
                     message: "AI chat history retrieved successfully"
                     data:
                       -
-                        message: "Pause for 90 seconds, breathe slowly, and move away from the trigger."
-                        safetyNotice: "Pulih AI does not replace emergency or professional care."
-                        conversationId: "chat_001"
+                        id: "chat_001"
+                        role: "user"
+                        content: "I feel an urge right now."
+                        createdAt: "2026-07-16T01:00:00.000Z"
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -8327,7 +8770,7 @@ paths:
         - "ai"
       summary: "Read AI summary"
       description: |
-          Returns short summary based on recent owned activity.
+          Returns AI-generated summary based on recent chat history.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_ai_summary"
@@ -8350,17 +8793,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    type: "object"
-                    required:
-                      - "summary"
-                      - "safetyNotice"
-                    properties:
-                      summary:
-                        type: "string"
-                        example: "You checked in consistently this week."
-                      safetyNotice:
-                        type: "string"
-                        example: "Pulih AI does not replace emergency or professional care."
+                    "$ref": "#/components/schemas/AiSummaryResponse"
                   meta:
                     oneOf:
                       -
@@ -8377,8 +8810,7 @@ paths:
                     success: true
                     message: "AI summary retrieved successfully"
                     data:
-                      summary: "You checked in consistently this week."
-                      safetyNotice: "Pulih AI does not replace emergency or professional care."
+                      summary: "You checked in consistently this week. Keep your evening routine strong."
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -8503,7 +8935,7 @@ paths:
         - "ai"
       summary: "Analyze onboarding data"
       description: |
-          Analyzes onboarding input for non-diagnostic personalization.
+          Analyzes onboarding answers and returns structured dependency level classification with guidance.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_ai_onboarding_analysis"
@@ -8526,7 +8958,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    "$ref": "#/components/schemas/AiCoachResponse"
+                    "$ref": "#/components/schemas/OnboardingAnalysisResponse"
                   meta:
                     oneOf:
                       -
@@ -8543,9 +8975,11 @@ paths:
                     success: true
                     message: "Onboarding analysis generated successfully"
                     data:
-                      message: "Pause for 90 seconds, breathe slowly, and move away from the trigger."
-                      safetyNotice: "Pulih AI does not replace emergency or professional care."
-                      conversationId: "chat_001"
+                      level: "Moderate"
+                      title: "Building Consistency"
+                      level_description: "You need steady light-touch support patterns."
+                      pattern_analysis: "Answers show good motivation but rhythm is not yet stable."
+                      encouragement: "Keep small daily steps. Your progress is already good."
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -8671,42 +9105,30 @@ paths:
             schema:
               type: "object"
               additionalProperties: false
+              required:
+                - "answers"
               properties:
-                recoveryGoal:
-                  type:
-                    - "string"
-                    - "null"
-                  example: "Build a daily recovery streak."
-                  maxLength: 500
-                concerns:
-                  type: "array"
-                  maxItems: 10
-                  items:
-                    type: "string"
-                    maxLength: 120
+                answers:
+                  type: "object"
+                  minProperties: 1
+                  additionalProperties: true
                   example:
-                    - "stress"
-                preferredSupport:
-                  type:
-                    - "string"
-                    - "null"
-                  example: "Gentle reminders."
-                  maxLength: 500
+                    reason: "Better focus"
+                    goal: 30
             examples:
               analysis:
                 summary: "analysis"
                 value:
-                  recoveryGoal: "Build a daily recovery streak."
-                  concerns:
-                    - "stress"
-                  preferredSupport: "Gentle reminders."
+                  answers:
+                    reason: "Better focus"
+                    goal: 30
   "/api/v1/ai/persona-preferences":
     get:
       tags:
         - "ai"
       summary: "Read AI persona preferences"
       description: |
-          Returns current user's AI tone and focus preferences.
+          Returns current user's AI persona with fallback default.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "get_api_v1_ai_persona_preferences"
@@ -8729,28 +9151,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    type: "object"
-                    additionalProperties: false
-                    required:
-                      - "tone"
-                      - "focusAreas"
-                    properties:
-                      tone:
-                        type: "string"
-                        enum:
-                          - "gentle"
-                          - "direct"
-                          - "balanced"
-                        example: "gentle"
-                      focusAreas:
-                        type: "array"
-                        maxItems: 8
-                        items:
-                          type: "string"
-                          maxLength: 120
-                        example:
-                          - "daily check-in"
-                          - "relapse prevention"
+                    "$ref": "#/components/schemas/PersonaPreferencesResponse"
                   meta:
                     oneOf:
                       -
@@ -8767,10 +9168,8 @@ paths:
                     success: true
                     message: "AI persona preferences retrieved successfully"
                     data:
-                      tone: "gentle"
-                      focusAreas:
-                        - "daily check-in"
-                        - "relapse prevention"
+                      persona: "supportive"
+                      fallback_persona: "supportive"
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -8894,7 +9293,7 @@ paths:
         - "ai"
       summary: "Update AI persona preferences"
       description: |
-          Updates current user's AI tone and focus preferences.
+          Updates current user's AI persona preference. Allowed: supportive, friendly, concise, direct.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "put_api_v1_ai_persona_preferences"
@@ -8917,28 +9316,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    type: "object"
-                    additionalProperties: false
-                    required:
-                      - "tone"
-                      - "focusAreas"
-                    properties:
-                      tone:
-                        type: "string"
-                        enum:
-                          - "gentle"
-                          - "direct"
-                          - "balanced"
-                        example: "gentle"
-                      focusAreas:
-                        type: "array"
-                        maxItems: 8
-                        items:
-                          type: "string"
-                          maxLength: 120
-                        example:
-                          - "daily check-in"
-                          - "relapse prevention"
+                    "$ref": "#/components/schemas/PersonaPreferencesResponse"
                   meta:
                     oneOf:
                       -
@@ -8955,10 +9333,8 @@ paths:
                     success: true
                     message: "AI persona preferences updated successfully"
                     data:
-                      tone: "gentle"
-                      focusAreas:
-                        - "daily check-in"
-                        - "relapse prevention"
+                      persona: "supportive"
+                      fallback_persona: "supportive"
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -9085,33 +9461,25 @@ paths:
               type: "object"
               additionalProperties: false
               required:
-                - "tone"
-                - "focusAreas"
+                - "persona"
               properties:
-                tone:
+                persona:
                   type: "string"
                   enum:
-                    - "gentle"
+                    - "supportive"
+                    - "friendly"
+                    - "concise"
                     - "direct"
-                    - "balanced"
-                  example: "gentle"
-                focusAreas:
-                  type: "array"
-                  maxItems: 8
-                  items:
-                    type: "string"
-                    maxLength: 120
-                  example:
-                    - "daily check-in"
-                    - "relapse prevention"
+                  example: "supportive"
             examples:
-              gentle:
-                summary: "gentle"
+              supportive:
+                summary: "supportive"
                 value:
-                  tone: "gentle"
-                  focusAreas:
-                    - "daily check-in"
-                    - "relapse prevention"
+                  persona: "supportive"
+              direct:
+                summary: "direct"
+                value:
+                  persona: "direct"
 components:
   securitySchemes:
     bearerAuth:
@@ -9845,35 +10213,49 @@ components:
       type: "object"
       required:
         - "id"
-        - "userId"
+        - "user_id"
+        - "check_in_date"
+        - "check_in_day_name"
         - "mood"
-        - "note"
-        - "localDate"
-        - "createdAt"
+        - "is_successful"
+        - "commitment"
+        - "relapse_trigger"
+        - "created_at"
       properties:
         id:
           type: "string"
           format: "uuid"
           example: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-        userId:
+        user_id:
           type: "string"
           format: "uuid"
           example: "11111111-1111-4111-8111-111111111111"
+        check_in_date:
+          type: "string"
+          format: "date"
+          example: "2026-07-16"
+        check_in_day_name:
+          type: "string"
+          example: "Rabu"
         mood:
-          type: "integer"
-          minimum: 1
-          maximum: 5
-          example: 4
-        note:
+          type: "string"
+          maxLength: 50
+          example: "tenang"
+        is_successful:
+          type: "boolean"
+          example: true
+        commitment:
           type:
             - "string"
             - "null"
           example: "Feeling better today."
-        localDate:
-          type: "string"
-          format: "date"
-          example: "2026-07-16"
-        createdAt:
+        relapse_trigger:
+          type: "array"
+          items:
+            type: "string"
+          example:
+[]
+        created_at:
           type: "string"
           format: "date-time"
           example: "2026-07-16T01:00:00.000Z"
@@ -9881,74 +10263,272 @@ components:
       type: "object"
       required:
         - "id"
-        - "userId"
+        - "user_id"
+        - "relapse_date"
+        - "relapse_day_name"
         - "mood"
-        - "triggers"
-        - "note"
-        - "localDate"
-        - "createdAt"
+        - "commitment"
+        - "relapse_trigger"
+        - "check_in_id"
+        - "created_at"
       properties:
         id:
           type: "string"
           format: "uuid"
           example: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
-        userId:
+        user_id:
           type: "string"
           format: "uuid"
           example: "11111111-1111-4111-8111-111111111111"
+        relapse_date:
+          type: "string"
+          format: "date"
+          example: "2026-07-16"
+        relapse_day_name:
+          type: "string"
+          example: "Rabu"
         mood:
-          type: "integer"
-          minimum: 1
-          maximum: 5
-          example: 2
-        triggers:
-          type: "array"
-          items:
-            type: "string"
-            maxLength: 100
-          example:
-            - "stress"
-            - "late-night scrolling"
-        note:
+          type: "string"
+          maxLength: 50
+          example: "cemas"
+        commitment:
           type:
             - "string"
             - "null"
           example: "Late-night stress."
-        localDate:
-          type: "string"
-          format: "date"
-          example: "2026-07-16"
-        createdAt:
+        relapse_trigger:
+          type: "array"
+          items:
+            type: "string"
+            maxLength: 500
+          example:
+            - "stress"
+            - "late-night scrolling"
+        check_in_id:
+          type:
+            - "string"
+            - "null"
+          example: null
+          format: "uuid"
+        created_at:
           type: "string"
           format: "date-time"
           example: "2026-07-16T01:00:00.000Z"
     RoutineStatistics:
       type: "object"
       required:
-        - "currentStreak"
-        - "longestStreak"
-        - "checkInCount"
-        - "relapseCount"
-        - "lastCheckInDate"
+        - "current_streak"
+        - "longest_streak"
+        - "total_checkins"
+        - "total_attempts"
+        - "success_rate"
+        - "streak_calendar"
+        - "relapse_calendar"
+        - "relapse_count"
+        - "relapse_rate"
+        - "recovery_success_rate"
+        - "checkin_consistency_score"
+        - "weekly_progress"
+        - "monthly_progress"
+        - "mood_trend"
+        - "last_check_in_date"
+        - "last_check_in_day_name"
+        - "last_relapse_date"
+        - "last_relapse_day_name"
+        - "weekday_summary"
+        - "streak_goal_comparison"
       properties:
-        currentStreak:
+        current_streak:
           type: "integer"
           example: 7
-        longestStreak:
+        longest_streak:
           type: "integer"
           example: 14
-        checkInCount:
+        total_checkins:
           type: "integer"
           example: 21
-        relapseCount:
+        total_attempts:
+          type: "integer"
+          example: 23
+        success_rate:
+          type: "number"
+          example: 0.91
+        streak_calendar:
+          type: "array"
+          items:
+            type: "string"
+            format: "date"
+          example:
+            - "2026-07-10"
+            - "2026-07-11"
+        relapse_calendar:
+          type: "array"
+          items:
+            type: "string"
+            format: "date"
+          example:
+            - "2026-07-09"
+        relapse_count:
           type: "integer"
           example: 2
-        lastCheckInDate:
+        relapse_rate:
+          type: "number"
+          example: 0.09
+        recovery_success_rate:
+          type: "number"
+          example: 0.91
+        checkin_consistency_score:
+          type: "number"
+          example: 0.67
+        weekly_progress:
+          type: "object"
+          required:
+            - "window_days"
+            - "current_successful_checkins"
+            - "previous_successful_checkins"
+            - "delta"
+            - "delta_rate"
+          properties:
+            window_days:
+              type: "integer"
+              example: 7
+            current_successful_checkins:
+              type: "integer"
+              example: 5
+            previous_successful_checkins:
+              type: "integer"
+              example: 4
+            delta:
+              type: "integer"
+              example: 1
+            delta_rate:
+              type: "number"
+              example: 0.25
+        monthly_progress:
+          type: "object"
+          required:
+            - "window_days"
+            - "current_successful_checkins"
+            - "previous_successful_checkins"
+            - "delta"
+            - "delta_rate"
+          properties:
+            window_days:
+              type: "integer"
+              example: 30
+            current_successful_checkins:
+              type: "integer"
+              example: 18
+            previous_successful_checkins:
+              type: "integer"
+              example: 15
+            delta:
+              type: "integer"
+              example: 3
+            delta_rate:
+              type: "number"
+              example: 0.2
+        mood_trend:
+          type: "array"
+          items:
+            type: "object"
+            required:
+              - "date"
+              - "day_name"
+              - "dominant_mood"
+              - "successful_ratio"
+            properties:
+              date:
+                type: "string"
+                format: "date"
+                example: "2026-07-16"
+              day_name:
+                type: "string"
+                example: "Rabu"
+              dominant_mood:
+                type: "string"
+                example: "tenang"
+              successful_ratio:
+                type: "number"
+                example: 1
+        last_check_in_date:
           type:
             - "string"
             - "null"
           example: "2026-07-16"
           format: "date"
+        last_check_in_day_name:
+          type:
+            - "string"
+            - "null"
+          example: "Rabu"
+        last_relapse_date:
+          type:
+            - "string"
+            - "null"
+          example: "2026-07-09"
+          format: "date"
+        last_relapse_day_name:
+          type:
+            - "string"
+            - "null"
+          example: "Sabtu"
+        weekday_summary:
+          type: "array"
+          items:
+            type: "object"
+            required:
+              - "day_name"
+              - "successful_checkins"
+              - "relapse_count"
+              - "total_checkins"
+              - "success_rate"
+            properties:
+              day_name:
+                type: "string"
+                example: "Senin"
+              successful_checkins:
+                type: "integer"
+                example: 2
+              relapse_count:
+                type: "integer"
+                example: 1
+              total_checkins:
+                type: "integer"
+                example: 3
+              success_rate:
+                type: "number"
+                example: 0.67
+        streak_goal_comparison:
+          type: "object"
+          required:
+            - "porn_free_goal"
+            - "current_streak"
+            - "longest_streak"
+            - "goal_reached"
+            - "remaining_days"
+            - "progress_rate"
+          properties:
+            porn_free_goal:
+              type: "integer"
+              nullable: true
+              example: 90
+            current_streak:
+              type: "integer"
+              example: 7
+            longest_streak:
+              type: "integer"
+              example: 14
+            goal_reached:
+              type: "boolean"
+              example: false
+            remaining_days:
+              type: "integer"
+              nullable: true
+              example: 83
+            progress_rate:
+              type: "number"
+              example: 0.08
     Journal:
       type: "object"
       required:
@@ -9978,53 +10558,83 @@ components:
           type: "string"
           format: "date-time"
           example: "2026-07-16T01:00:00.000Z"
+    CommunityPostAuthor:
+      type: "object"
+      required:
+        - "nickname"
+        - "currentStreak"
+      properties:
+        nickname:
+          type: "string"
+          example: "Demo"
+        currentStreak:
+          type: "integer"
+          example: 7
     CommunityPost:
       type: "object"
       required:
         - "id"
-        - "authorId"
+        - "userId"
         - "category"
         - "content"
         - "likeCount"
         - "commentCount"
         - "createdAt"
+        - "updatedAt"
+        - "author"
       properties:
         id:
           type: "string"
           format: "uuid"
           example: "88888888-8888-4888-8888-888888888888"
-        authorId:
+        userId:
           type: "string"
           format: "uuid"
           example: "11111111-1111-4111-8111-111111111111"
+        title:
+          type:
+            - "string"
+            - "null"
+          example: "My Recovery Story"
         category:
           type: "string"
           enum:
-            - "general"
-            - "support"
-            - "progress"
-          example: "progress"
+            - "advice"
+            - "motivation"
+            - "story"
+            - "question"
+            - "help"
+          example: "story"
         content:
           type: "string"
-          maxLength: 2000
-          example: "I kept my routine today."
+          minLength: 10
+          maxLength: 5000
+          example: "I kept my routine today and it feels amazing."
         likeCount:
           type: "integer"
           example: 3
         commentCount:
           type: "integer"
-          example: 1
+          example: 2
         createdAt:
           type: "string"
           format: "date-time"
           example: "2026-07-16T01:00:00.000Z"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+          example: "2026-07-16T01:30:00.000Z"
+        author:
+          "$ref": "#/components/schemas/CommunityPostAuthor"
     CommunityComment:
       type: "object"
       required:
         - "id"
         - "postId"
-        - "authorId"
+        - "userId"
         - "content"
+        - "depth"
+        - "replyCount"
         - "createdAt"
       properties:
         id:
@@ -10035,48 +10645,170 @@ components:
           type: "string"
           format: "uuid"
           example: "88888888-8888-4888-8888-888888888888"
-        authorId:
+        userId:
           type: "string"
           format: "uuid"
           example: "11111111-1111-4111-8111-111111111111"
+        parentCommentId:
+          type:
+            - "string"
+            - "null"
+          example: null
+          format: "uuid"
         content:
           type: "string"
-          maxLength: 1000
+          maxLength: 2000
           example: "You are not alone."
+        depth:
+          type: "integer"
+          example: 0
+        replyCount:
+          type: "integer"
+          example: 1
         createdAt:
           type: "string"
           format: "date-time"
           example: "2026-07-16T01:10:00.000Z"
+    CommunityCommentNode:
+      type: "object"
+      required:
+        - "id"
+        - "postId"
+        - "userId"
+        - "content"
+        - "depth"
+        - "replyCount"
+        - "createdAt"
+        - "replies"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          example: "99999999-9999-4999-8999-999999999999"
+        postId:
+          type: "string"
+          format: "uuid"
+          example: "88888888-8888-4888-8888-888888888888"
+        userId:
+          type: "string"
+          format: "uuid"
+          example: "11111111-1111-4111-8111-111111111111"
+        parentCommentId:
+          type:
+            - "string"
+            - "null"
+          example: null
+          format: "uuid"
+        content:
+          type: "string"
+          maxLength: 2000
+          example: "Thanks for sharing!"
+        depth:
+          type: "integer"
+          example: 0
+        replyCount:
+          type: "integer"
+          example: 1
+        createdAt:
+          type: "string"
+          format: "date-time"
+          example: "2026-07-16T01:10:00.000Z"
+        replies:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/CommunityCommentNode"
+          example:
+[]
+    CommunityThread:
+      type: "object"
+      required:
+        - "postId"
+        - "comments"
+      properties:
+        postId:
+          type: "string"
+          format: "uuid"
+          example: "88888888-8888-4888-8888-888888888888"
+        comments:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/CommunityCommentNode"
+    ToggleLike:
+      type: "object"
+      required:
+        - "likedCount"
+        - "isLiked"
+      properties:
+        likedCount:
+          type: "integer"
+          example: 4
+        isLiked:
+          type: "boolean"
+          example: true
+    DailyChallengePayload:
+      type: "object"
+      required:
+        - "title"
+        - "description"
+      properties:
+        title:
+          type: "string"
+          example: "Five-minute grounding"
+        description:
+          type: "string"
+          example: "Pause, breathe, and name five things you can see."
     EducationContent:
       type: "object"
       required:
         - "id"
         - "title"
-        - "summary"
-        - "body"
+        - "url"
         - "category"
+        - "type"
       properties:
         id:
           type: "string"
           example: "edu_001"
         title:
           type: "string"
-          example: "Understanding triggers"
-        summary:
-          type: "string"
+          example: "Understanding Triggers"
+        description:
+          type:
+            - "string"
+            - "null"
           example: "Short guide to noticing recovery triggers."
-        body:
+        url:
           type: "string"
-          example: "Triggers are signals, not failures..."
+          format: "uri"
+          example: "https://pulih.app/education/understanding-triggers"
+        thumbnail_url:
+          type:
+            - "string"
+            - "null"
+          example: null
+          format: "uri"
         category:
           type: "string"
-          example: "recovery-basics"
+          example: "Recovery Basics"
+        type:
+          type: "string"
+          enum:
+            - "artikel"
+            - "video"
+          example: "artikel"
+        published_at:
+          type:
+            - "string"
+            - "null"
+          example: "2026-07-16T00:00:00.000Z"
+          format: "date-time"
     DailyContent:
       type: "object"
       required:
         - "date"
         - "motivation"
         - "challenge"
+        - "physicalChallenge"
       properties:
         date:
           type: "string"
@@ -10086,8 +10818,9 @@ components:
           type: "string"
           example: "Small steps still count."
         challenge:
-          type: "string"
-          example: "Write one supportive sentence to yourself."
+          "$ref": "#/components/schemas/DailyChallengePayload"
+        physicalChallenge:
+          "$ref": "#/components/schemas/DailyChallengePayload"
     Achievement:
       type: "object"
       required:
@@ -10131,22 +10864,121 @@ components:
             - "null"
           example: "2026-07-16T01:00:00.000Z"
           format: "date-time"
-    AiCoachResponse:
+    AskCoachResponse:
       type: "object"
       required:
-        - "message"
-        - "safetyNotice"
-        - "conversationId"
+        - "response"
+        - "persona_used"
       properties:
-        message:
+        response:
           type: "string"
-          example: "Pause for 90 seconds, breathe slowly, and move away from the trigger."
-        safetyNotice:
+          example: "Try one small safe step. Pause and breathe."
+        persona_used:
           type: "string"
-          example: "Pulih AI does not replace emergency or professional care."
-        conversationId:
+          enum:
+            - "supportive"
+            - "friendly"
+            - "concise"
+            - "direct"
+          example: "supportive"
+    RelapseSolutionResponse:
+      type: "object"
+      required:
+        - "title"
+        - "analysis"
+        - "summary"
+      properties:
+        title:
+          type: "string"
+          example: "Regain Focus Now"
+        analysis:
+          type: "string"
+          example: "Primary trigger emerges during stress and quick access to triggering content."
+        summary:
+          type: "string"
+          example: "Best solution right now: cut off trigger access when urge rises, do quick emotional stabilization, then switch to a safe alternative activity."
+    OnboardingAnalysisResponse:
+      type: "object"
+      required:
+        - "level"
+        - "title"
+        - "level_description"
+        - "pattern_analysis"
+        - "encouragement"
+      properties:
+        level:
+          type: "string"
+          enum:
+            - "Low"
+            - "Moderate"
+            - "High"
+          example: "Moderate"
+        title:
+          type: "string"
+          example: "Building Consistency"
+        level_description:
+          type: "string"
+          example: "You need steady light-touch support patterns."
+        pattern_analysis:
+          type: "string"
+          example: "Answers show good motivation but rhythm is not yet stable."
+        encouragement:
+          type: "string"
+          example: "Keep small daily steps. Your progress is already good."
+    PersonaPreferencesResponse:
+      type: "object"
+      required:
+        - "persona"
+        - "fallback_persona"
+      properties:
+        persona:
+          type: "string"
+          enum:
+            - "supportive"
+            - "friendly"
+            - "concise"
+            - "direct"
+          example: "supportive"
+        fallback_persona:
+          type: "string"
+          enum:
+            - "supportive"
+            - "friendly"
+            - "concise"
+            - "direct"
+          example: "supportive"
+    ChatHistoryItem:
+      type: "object"
+      required:
+        - "id"
+        - "role"
+        - "content"
+        - "createdAt"
+      properties:
+        id:
           type: "string"
           example: "chat_001"
+        role:
+          type: "string"
+          enum:
+            - "user"
+            - "assistant"
+          example: "user"
+        content:
+          type: "string"
+          example: "I feel an urge right now."
+        createdAt:
+          type: "string"
+          format: "date-time"
+          example: "2026-07-16T01:00:00.000Z"
+    AiSummaryResponse:
+      type: "object"
+      required:
+        - "summary"
+      properties:
+        summary:
+          type: "string"
+          example: "You checked in consistently this week. Keep your evening routine strong."
     RelapsePreventionPlan:
       type: "object"
       required:
@@ -10214,6 +11046,206 @@ components:
           type: "string"
           format: "email"
           example: "demo@example.com"
+    CheckInResponse:
+      type: "object"
+      required:
+        - "check_in"
+        - "statistics"
+        - "relapse_solution"
+      properties:
+        check_in:
+          "$ref": "#/components/schemas/CheckIn"
+        statistics:
+          "$ref": "#/components/schemas/RoutineStatistics"
+        relapse_solution:
+          type: "null"
+          example: null
+    RelapseResponse:
+      type: "object"
+      required:
+        - "relapse"
+        - "statistics"
+        - "relapse_solution"
+      properties:
+        relapse:
+          "$ref": "#/components/schemas/Relapse"
+        statistics:
+          "$ref": "#/components/schemas/RoutineStatistics"
+        relapse_solution:
+          type: "object"
+          required:
+            - "title"
+            - "analysis"
+            - "summary"
+            - "generated_at"
+          properties:
+            title:
+              type: "string"
+              example: "Quick Recovery Steps"
+            analysis:
+              type: "string"
+              example: "Relapse detected with mood anxious. Current trigger pattern: stress."
+            summary:
+              type: "string"
+              example: "Best immediate action: cut off access to the trigger now, stabilize your emotions briefly, then switch to a pre-planned safe activity."
+            generated_at:
+              type: "string"
+              format: "date-time"
+              example: "2026-07-16T01:00:00.000Z"
+    ActivitySummary:
+      type: "object"
+      required:
+        - "window_days"
+        - "successful_checkins"
+        - "relapses"
+        - "active_days"
+        - "recent_activity"
+      properties:
+        window_days:
+          type: "integer"
+          example: 30
+        successful_checkins:
+          type: "integer"
+          example: 18
+        relapses:
+          type: "integer"
+          example: 3
+        active_days:
+          type: "integer"
+          example: 21
+        recent_activity:
+          type: "array"
+          items:
+            type: "object"
+            required:
+              - "date"
+              - "day_name"
+              - "type"
+            properties:
+              date:
+                type: "string"
+                format: "date"
+                example: "2026-07-16"
+              day_name:
+                type: "string"
+                example: "Rabu"
+              type:
+                type: "string"
+                enum:
+                  - "checkin_success"
+                  - "checkin_relapse"
+                  - "relapse"
+                  - "journal"
+                example: "checkin_success"
+              mood:
+                type: "string"
+                example: "tenang"
+    RelapseStatistics:
+      type: "object"
+      required:
+        - "statistics"
+        - "relapses"
+        - "hourly_relapse_distribution"
+        - "relapse_triggers_distribution"
+        - "peak_relapse_hours_utc"
+        - "peak_relapse_count"
+        - "ai_summary"
+        - "relapse_time_summary"
+        - "relapse_trigger_summary"
+      properties:
+        statistics:
+          "$ref": "#/components/schemas/RoutineStatistics"
+        relapses:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/Relapse"
+        hourly_relapse_distribution:
+          type: "array"
+          items:
+            type: "object"
+            required:
+              - "hour_utc"
+              - "relapse_count"
+            properties:
+              hour_utc:
+                type: "integer"
+                example: 21
+              relapse_count:
+                type: "integer"
+                example: 3
+        relapse_triggers_distribution:
+          type: "array"
+          items:
+            type: "object"
+            required:
+              - "relapse_trigger"
+              - "relapse_trigger_count"
+            properties:
+              relapse_trigger:
+                type: "string"
+                example: "stres kerja"
+              relapse_trigger_count:
+                type: "integer"
+                example: 5
+        peak_relapse_hours_utc:
+          type: "array"
+          items:
+            type: "integer"
+          example:
+            - 21
+            - 22
+        peak_relapse_count:
+          type: "integer"
+          example: 3
+        ai_summary:
+          type: "string"
+          example: "New insights for you will be available soon. Keep writing your daily journal!"
+        relapse_time_summary:
+          type: "object"
+          required:
+            - "title"
+            - "analysis"
+            - "summary"
+            - "generated_at"
+          properties:
+            title:
+              type: "string"
+              example: "Relapse Time Analysis"
+            analysis:
+              type: "string"
+              example: "Relapse pattern shows peak at UTC hours: 21:00."
+            summary:
+              type: "string"
+              example: "Most frequent trigger: work stress."
+            generated_at:
+              type: "string"
+              format: "date-time"
+              example: "2026-07-16T01:00:00.000Z"
+        relapse_trigger_summary:
+          oneOf:
+            -
+              type: "object"
+              required:
+                - "title"
+                - "analysis"
+                - "summary"
+                - "generated_at"
+              properties:
+                title:
+                  type: "string"
+                  example: "Quick Recovery Steps"
+                analysis:
+                  type: "string"
+                  example: "Relapse detected with mood anxious. Current trigger pattern: work stress."
+                summary:
+                  type: "string"
+                  example: "Best immediate action: cut off access to the trigger now, stabilize your emotions briefly, then switch to a pre-planned safe activity."
+                generated_at:
+                  type: "string"
+                  format: "date-time"
+                  example: "2026-07-16T01:00:00.000Z"
+            -
+              type: "null"
   responses:
     BadRequestError:
       description: "Bad request"

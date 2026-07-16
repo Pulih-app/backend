@@ -88,6 +88,14 @@ function parseUrl(issues: string[], key: string, value: string | undefined) {
   }
 }
 
+function normalizeAiModel(baseUrl: string, model: string) {
+  if (baseUrl.includes("openrouter.ai") && model.startsWith("gpt-") && !model.includes("/")) {
+    return `openai/${model}`;
+  }
+
+  return model;
+}
+
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   const issues: string[] = [];
 
@@ -122,7 +130,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   const resendFromName = env.RESEND_FROM_NAME?.trim() || "Pulih";
   const aiBaseUrl = env.AI_BASE_URL?.trim() || "https://ai.sumopod.com/v1";
   const aiApiKey = env.AI_API_KEY?.trim() || "local-ai-api-key";
-  const aiModel = env.AI_MODEL?.trim() || "gpt-4o-mini";
+  const aiModel = normalizeAiModel(aiBaseUrl, env.AI_MODEL?.trim() || "gpt-4o-mini");
   const aiTimeoutMs = env.AI_TIMEOUT_MS ? parseNumber(issues, "AI_TIMEOUT_MS", env.AI_TIMEOUT_MS, 500, 30000) : 10000;
   const aiMaxTokens = env.AI_MAX_TOKENS ? parseNumber(issues, "AI_MAX_TOKENS", env.AI_MAX_TOKENS, 64, 4000) : 800;
 

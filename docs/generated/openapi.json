@@ -11337,7 +11337,7 @@
           "ai"
         ],
         "summary": "Ask AI coach",
-        "description": "Generates non-streaming supportive response. Does not diagnose, replace professional help, or expose raw sensitive data in errors.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Generates non-streaming supportive response with active persona. Does not diagnose, replace professional help, or expose raw sensitive data in errors.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_ai_ask_coach",
         "responses": {
           "201": {
@@ -11361,7 +11361,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/AiCoachResponse"
+                      "$ref": "#/components/schemas/AskCoachResponse"
                     },
                     "meta": {
                       "oneOf": [
@@ -11386,9 +11386,8 @@
                       "success": true,
                       "message": "AI coach response generated successfully",
                       "data": {
-                        "message": "Pause for 90 seconds, breathe slowly, and move away from the trigger.",
-                        "safetyNotice": "Pulih AI does not replace emergency or professional care.",
-                        "conversationId": "chat_001"
+                        "response": "Try one small safe step. Pause and breathe.",
+                        "persona_used": "supportive"
                       },
                       "meta": null
                     }
@@ -11586,7 +11585,7 @@
                   "message": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2000,
+                    "maxLength": 4000,
                     "example": "I feel triggered after work."
                   }
                 }
@@ -11610,7 +11609,7 @@
           "ai"
         ],
         "summary": "Ask AI relapse solution",
-        "description": "Generates safe relapse support actions from current situation and optional triggers.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Analyzes relapse mood and triggers. Returns structured analysis with title, trigger analysis, and best-solution summary.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_ai_relapse_solution",
         "responses": {
           "201": {
@@ -11634,7 +11633,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/AiCoachResponse"
+                      "$ref": "#/components/schemas/RelapseSolutionResponse"
                     },
                     "meta": {
                       "oneOf": [
@@ -11659,9 +11658,9 @@
                       "success": true,
                       "message": "Relapse solution generated successfully",
                       "data": {
-                        "message": "Pause for 90 seconds, breathe slowly, and move away from the trigger.",
-                        "safetyNotice": "Pulih AI does not replace emergency or professional care.",
-                        "conversationId": "chat_001"
+                        "title": "Regain Focus Now",
+                        "analysis": "Primary trigger emerges during stress and quick access to triggering content.",
+                        "summary": "Best solution right now: cut off trigger access when urge rises, do quick emotional stabilization, then switch to a safe alternative activity."
                       },
                       "meta": null
                     }
@@ -11853,25 +11852,30 @@
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "situation"
+                  "mood"
                 ],
                 "properties": {
-                  "situation": {
+                  "mood": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 2000,
-                    "example": "Late-night urge after stress."
+                    "maxLength": 50,
+                    "example": "stressed"
                   },
-                  "triggers": {
+                  "relapse_trigger": {
                     "type": "array",
                     "maxItems": 10,
                     "items": {
                       "type": "string",
-                      "maxLength": 120
+                      "maxLength": 500
                     },
                     "example": [
-                      "stress"
+                      "work pressure"
                     ]
+                  },
+                  "commitment": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "example": "Late-night stress."
                   }
                 }
               },
@@ -11879,10 +11883,11 @@
                 "support": {
                   "summary": "support",
                   "value": {
-                    "situation": "Late-night urge after stress.",
-                    "triggers": [
-                      "stress"
-                    ]
+                    "mood": "stressed",
+                    "relapse_trigger": [
+                      "work pressure"
+                    ],
+                    "commitment": "Late-night stress."
                   }
                 }
               }
@@ -12200,7 +12205,7 @@
           "ai"
         ],
         "summary": "Read AI chat history",
-        "description": "Returns current user's AI conversation history only.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns current user's AI conversation history only. Optional limit query param (1-200, default 50).\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_ai_chat_history",
         "responses": {
           "200": {
@@ -12226,7 +12231,7 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/AiCoachResponse"
+                        "$ref": "#/components/schemas/ChatHistoryItem"
                       }
                     },
                     "meta": {
@@ -12253,9 +12258,10 @@
                       "message": "AI chat history retrieved successfully",
                       "data": [
                         {
-                          "message": "Pause for 90 seconds, breathe slowly, and move away from the trigger.",
-                          "safetyNotice": "Pulih AI does not replace emergency or professional care.",
-                          "conversationId": "chat_001"
+                          "id": "chat_001",
+                          "role": "user",
+                          "content": "I feel an urge right now.",
+                          "createdAt": "2026-07-16T01:00:00.000Z"
                         }
                       ],
                       "meta": null
@@ -12448,7 +12454,7 @@
           "ai"
         ],
         "summary": "Read AI summary",
-        "description": "Returns short summary based on recent owned activity.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns AI-generated summary based on recent chat history.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_ai_summary",
         "responses": {
           "200": {
@@ -12472,21 +12478,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "type": "object",
-                      "required": [
-                        "summary",
-                        "safetyNotice"
-                      ],
-                      "properties": {
-                        "summary": {
-                          "type": "string",
-                          "example": "You checked in consistently this week."
-                        },
-                        "safetyNotice": {
-                          "type": "string",
-                          "example": "Pulih AI does not replace emergency or professional care."
-                        }
-                      }
+                      "$ref": "#/components/schemas/AiSummaryResponse"
                     },
                     "meta": {
                       "oneOf": [
@@ -12511,8 +12503,7 @@
                       "success": true,
                       "message": "AI summary retrieved successfully",
                       "data": {
-                        "summary": "You checked in consistently this week.",
-                        "safetyNotice": "Pulih AI does not replace emergency or professional care."
+                        "summary": "You checked in consistently this week. Keep your evening routine strong."
                       },
                       "meta": null
                     }
@@ -12704,7 +12695,7 @@
           "ai"
         ],
         "summary": "Analyze onboarding data",
-        "description": "Analyzes onboarding input for non-diagnostic personalization.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Analyzes onboarding answers and returns structured dependency level classification with guidance.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_ai_onboarding_analysis",
         "responses": {
           "201": {
@@ -12728,7 +12719,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/AiCoachResponse"
+                      "$ref": "#/components/schemas/OnboardingAnalysisResponse"
                     },
                     "meta": {
                       "oneOf": [
@@ -12753,9 +12744,11 @@
                       "success": true,
                       "message": "Onboarding analysis generated successfully",
                       "data": {
-                        "message": "Pause for 90 seconds, breathe slowly, and move away from the trigger.",
-                        "safetyNotice": "Pulih AI does not replace emergency or professional care.",
-                        "conversationId": "chat_001"
+                        "level": "Moderate",
+                        "title": "Building Consistency",
+                        "level_description": "You need steady light-touch support patterns.",
+                        "pattern_analysis": "Answers show good motivation but rhythm is not yet stable.",
+                        "encouragement": "Keep small daily steps. Your progress is already good."
                       },
                       "meta": null
                     }
@@ -12946,33 +12939,18 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
+                "required": [
+                  "answers"
+                ],
                 "properties": {
-                  "recoveryGoal": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "example": "Build a daily recovery streak.",
-                    "maxLength": 500
-                  },
-                  "concerns": {
-                    "type": "array",
-                    "maxItems": 10,
-                    "items": {
-                      "type": "string",
-                      "maxLength": 120
-                    },
-                    "example": [
-                      "stress"
-                    ]
-                  },
-                  "preferredSupport": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "example": "Gentle reminders.",
-                    "maxLength": 500
+                  "answers": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "additionalProperties": true,
+                    "example": {
+                      "reason": "Better focus",
+                      "goal": 30
+                    }
                   }
                 }
               },
@@ -12980,11 +12958,10 @@
                 "analysis": {
                   "summary": "analysis",
                   "value": {
-                    "recoveryGoal": "Build a daily recovery streak.",
-                    "concerns": [
-                      "stress"
-                    ],
-                    "preferredSupport": "Gentle reminders."
+                    "answers": {
+                      "reason": "Better focus",
+                      "goal": 30
+                    }
                   }
                 }
               }
@@ -12999,7 +12976,7 @@
           "ai"
         ],
         "summary": "Read AI persona preferences",
-        "description": "Returns current user's AI tone and focus preferences.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns current user's AI persona with fallback default.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_ai_persona_preferences",
         "responses": {
           "200": {
@@ -13023,35 +13000,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "tone",
-                        "focusAreas"
-                      ],
-                      "properties": {
-                        "tone": {
-                          "type": "string",
-                          "enum": [
-                            "gentle",
-                            "direct",
-                            "balanced"
-                          ],
-                          "example": "gentle"
-                        },
-                        "focusAreas": {
-                          "type": "array",
-                          "maxItems": 8,
-                          "items": {
-                            "type": "string",
-                            "maxLength": 120
-                          },
-                          "example": [
-                            "daily check-in",
-                            "relapse prevention"
-                          ]
-                        }
-                      }
+                      "$ref": "#/components/schemas/PersonaPreferencesResponse"
                     },
                     "meta": {
                       "oneOf": [
@@ -13076,11 +13025,8 @@
                       "success": true,
                       "message": "AI persona preferences retrieved successfully",
                       "data": {
-                        "tone": "gentle",
-                        "focusAreas": [
-                          "daily check-in",
-                          "relapse prevention"
-                        ]
+                        "persona": "supportive",
+                        "fallback_persona": "supportive"
                       },
                       "meta": null
                     }
@@ -13270,7 +13216,7 @@
           "ai"
         ],
         "summary": "Update AI persona preferences",
-        "description": "Updates current user's AI tone and focus preferences.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Updates current user's AI persona preference. Allowed: supportive, friendly, concise, direct.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "put_api_v1_ai_persona_preferences",
         "responses": {
           "200": {
@@ -13294,35 +13240,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "tone",
-                        "focusAreas"
-                      ],
-                      "properties": {
-                        "tone": {
-                          "type": "string",
-                          "enum": [
-                            "gentle",
-                            "direct",
-                            "balanced"
-                          ],
-                          "example": "gentle"
-                        },
-                        "focusAreas": {
-                          "type": "array",
-                          "maxItems": 8,
-                          "items": {
-                            "type": "string",
-                            "maxLength": 120
-                          },
-                          "example": [
-                            "daily check-in",
-                            "relapse prevention"
-                          ]
-                        }
-                      }
+                      "$ref": "#/components/schemas/PersonaPreferencesResponse"
                     },
                     "meta": {
                       "oneOf": [
@@ -13347,11 +13265,8 @@
                       "success": true,
                       "message": "AI persona preferences updated successfully",
                       "data": {
-                        "tone": "gentle",
-                        "focusAreas": [
-                          "daily check-in",
-                          "relapse prevention"
-                        ]
+                        "persona": "supportive",
+                        "fallback_persona": "supportive"
                       },
                       "meta": null
                     }
@@ -13543,42 +13458,32 @@
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "tone",
-                  "focusAreas"
+                  "persona"
                 ],
                 "properties": {
-                  "tone": {
+                  "persona": {
                     "type": "string",
                     "enum": [
-                      "gentle",
-                      "direct",
-                      "balanced"
+                      "supportive",
+                      "friendly",
+                      "concise",
+                      "direct"
                     ],
-                    "example": "gentle"
-                  },
-                  "focusAreas": {
-                    "type": "array",
-                    "maxItems": 8,
-                    "items": {
-                      "type": "string",
-                      "maxLength": 120
-                    },
-                    "example": [
-                      "daily check-in",
-                      "relapse prevention"
-                    ]
+                    "example": "supportive"
                   }
                 }
               },
               "examples": {
-                "gentle": {
-                  "summary": "gentle",
+                "supportive": {
+                  "summary": "supportive",
                   "value": {
-                    "tone": "gentle",
-                    "focusAreas": [
-                      "daily check-in",
-                      "relapse prevention"
-                    ]
+                    "persona": "supportive"
+                  }
+                },
+                "direct": {
+                  "summary": "direct",
+                  "value": {
+                    "persona": "direct"
                   }
                 }
               }
@@ -15401,25 +15306,158 @@
           }
         }
       },
-      "AiCoachResponse": {
+      "AskCoachResponse": {
         "type": "object",
         "required": [
-          "message",
-          "safetyNotice",
-          "conversationId"
+          "response",
+          "persona_used"
         ],
         "properties": {
-          "message": {
+          "response": {
             "type": "string",
-            "example": "Pause for 90 seconds, breathe slowly, and move away from the trigger."
+            "example": "Try one small safe step. Pause and breathe."
           },
-          "safetyNotice": {
+          "persona_used": {
             "type": "string",
-            "example": "Pulih AI does not replace emergency or professional care."
+            "enum": [
+              "supportive",
+              "friendly",
+              "concise",
+              "direct"
+            ],
+            "example": "supportive"
+          }
+        }
+      },
+      "RelapseSolutionResponse": {
+        "type": "object",
+        "required": [
+          "title",
+          "analysis",
+          "summary"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Regain Focus Now"
           },
-          "conversationId": {
+          "analysis": {
+            "type": "string",
+            "example": "Primary trigger emerges during stress and quick access to triggering content."
+          },
+          "summary": {
+            "type": "string",
+            "example": "Best solution right now: cut off trigger access when urge rises, do quick emotional stabilization, then switch to a safe alternative activity."
+          }
+        }
+      },
+      "OnboardingAnalysisResponse": {
+        "type": "object",
+        "required": [
+          "level",
+          "title",
+          "level_description",
+          "pattern_analysis",
+          "encouragement"
+        ],
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": [
+              "Low",
+              "Moderate",
+              "High"
+            ],
+            "example": "Moderate"
+          },
+          "title": {
+            "type": "string",
+            "example": "Building Consistency"
+          },
+          "level_description": {
+            "type": "string",
+            "example": "You need steady light-touch support patterns."
+          },
+          "pattern_analysis": {
+            "type": "string",
+            "example": "Answers show good motivation but rhythm is not yet stable."
+          },
+          "encouragement": {
+            "type": "string",
+            "example": "Keep small daily steps. Your progress is already good."
+          }
+        }
+      },
+      "PersonaPreferencesResponse": {
+        "type": "object",
+        "required": [
+          "persona",
+          "fallback_persona"
+        ],
+        "properties": {
+          "persona": {
+            "type": "string",
+            "enum": [
+              "supportive",
+              "friendly",
+              "concise",
+              "direct"
+            ],
+            "example": "supportive"
+          },
+          "fallback_persona": {
+            "type": "string",
+            "enum": [
+              "supportive",
+              "friendly",
+              "concise",
+              "direct"
+            ],
+            "example": "supportive"
+          }
+        }
+      },
+      "ChatHistoryItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "content",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
             "type": "string",
             "example": "chat_001"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "example": "user"
+          },
+          "content": {
+            "type": "string",
+            "example": "I feel an urge right now."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-16T01:00:00.000Z"
+          }
+        }
+      },
+      "AiSummaryResponse": {
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "properties": {
+          "summary": {
+            "type": "string",
+            "example": "You checked in consistently this week. Keep your evening routine strong."
           }
         }
       },

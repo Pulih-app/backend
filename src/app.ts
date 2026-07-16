@@ -18,7 +18,8 @@ import type { ContentRepository } from "./modules/content/content.repository";
 import { createAiRoutes } from "./modules/ai/ai.routes";
 import type { AiProvider } from "./modules/ai/ai-provider";
 import type { AiRepository } from "./modules/ai/ai.repository";
-import { buildMessages } from "./modules/ai/ai-safety";
+import { buildOnboardingAnalysisMessages } from "./modules/ai/ai-safety";
+import { parseOnboardingAnalysisResponse } from "./modules/ai/ai.service";
 import type { AiAnalyzer } from "./modules/users/users.service";
 import type { NotificationsService } from "./modules/notifications/notifications.service";
 import { createHealthRoutes } from "./routes/health.routes";
@@ -133,15 +134,10 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   }));
   const onboardingAiAnalyzer: AiAnalyzer | undefined = options.aiProvider ? {
     async analyzeOnboarding(input) {
-      const aiConfig = config.ai!;
       const provider = options.aiProvider!;
-      const { messages } = buildMessages({
-        mode: "onboarding_analysis",
-        userText: `Analyze onboarding: goal=${input.porn_free_goal} days, reason="${input.recovery_reason}", level=${input.dependency_level ?? "unspecified"}`,
-        context: JSON.stringify({ answers: input.answers, dependency_level: input.dependency_level }),
-      });
-      const response = await provider.complete({ messages, maxTokens: 400 });
-      return parseOnboardingAnalysis(response.content);
+      const { messages } = buildOnboardingAnalysisMessages({ answers: input.answers as Record<string, unknown> });
+      const response = await provider.complete({ messages, maxTokens: 500 });
+      return parseOnboardingAnalysisResponse(response.content);
     },
   } : undefined;
 
@@ -226,15 +222,7 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   return app;
 }
 
-function parseOnboardingAnalysis(content: string) {
-  return {
-    level: "Moderate",
-    title: "Your Recovery Profile",
-    level_description: content.substring(0, 200),
-    pattern_analysis: content.length > 200 ? content.substring(200, 400) : "",
-    encouragement: "Stay consistent with your recovery journey.",
-  };
-}
+
 
 export function handleGlobalError(error: Error | HTTPException | unknown, context: any) {
   const requestId = context.get("requestId") || context.req.header("x-request-id") || crypto.randomUUID();

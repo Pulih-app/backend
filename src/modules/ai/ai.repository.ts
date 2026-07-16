@@ -2,24 +2,24 @@ import { asc, desc, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { aiChatMessages, aiPersonaPreferences } from "../../db/schema";
 
-export type AiChatRecord = { id: string; userId: string; role: "user" | "assistant"; content: string; createdAt: string };
-export type AiPersonaPreferencesRecord = { userId: string; tone: "gentle" | "direct" | "balanced"; focusAreas: string[]; updatedAt: string };
+export type AiChatRecord = { id: string; role: "user" | "assistant"; content: string; createdAt: string };
+export type AiPersonaPreferencesRecord = { persona: string; updatedAt: string };
 
 export type AiRepository = {
-  createChatMessage(input: { userId: string; role: "user" | "assistant"; content: string }): Promise<AiChatRecord>;
+  createChatMessage(input: { userId: string; role: "user" | "assistant"; content: string }): Promise<{ id: string; userId: string; role: "user" | "assistant"; content: string; createdAt: string }>;
   listChatHistory(userId: string, limit: number): Promise<AiChatRecord[]>;
   getPersonaPreferences(userId: string): Promise<AiPersonaPreferencesRecord | null>;
-  upsertPersonaPreferences(input: { userId: string; tone: "gentle" | "direct" | "balanced"; focusAreas: string[] }): Promise<AiPersonaPreferencesRecord>;
+  upsertPersonaPreferences(input: { userId: string; persona: string }): Promise<AiPersonaPreferencesRecord>;
 };
 
-const mapChat = (row: typeof aiChatMessages.$inferSelect): AiChatRecord => ({ id: row.id, userId: row.userId, role: row.role, content: row.content, createdAt: row.createdAt.toISOString() });
-const mapPreferences = (row: typeof aiPersonaPreferences.$inferSelect): AiPersonaPreferencesRecord => ({ userId: row.userId, tone: row.tone, focusAreas: row.focusAreas, updatedAt: row.updatedAt.toISOString() });
+const mapChat = (row: typeof aiChatMessages.$inferSelect): AiChatRecord => ({ id: row.id, role: row.role, content: row.content, createdAt: row.createdAt.toISOString() });
+const mapPreferences = (row: typeof aiPersonaPreferences.$inferSelect): AiPersonaPreferencesRecord => ({ persona: row.persona, updatedAt: row.updatedAt.toISOString() });
 
 export function createAiRepository(db: NodePgDatabase): AiRepository {
   return {
     async createChatMessage(input) {
       const [row] = await db.insert(aiChatMessages).values(input).returning();
-      return mapChat(row);
+      return { ...mapChat(row), userId: row.userId };
     },
     async listChatHistory(userId, limit) {
       const rows = await db.select().from(aiChatMessages).where(eq(aiChatMessages.userId, userId)).orderBy(desc(aiChatMessages.createdAt)).limit(limit);
@@ -31,8 +31,8 @@ export function createAiRepository(db: NodePgDatabase): AiRepository {
     },
     async upsertPersonaPreferences(input) {
       const [row] = await db.insert(aiPersonaPreferences)
-        .values(input)
-        .onConflictDoUpdate({ target: aiPersonaPreferences.userId, set: { tone: input.tone, focusAreas: input.focusAreas, updatedAt: new Date() } })
+        .values({ userId: input.userId, persona: input.persona as any })
+        .onConflictDoUpdate({ target: aiPersonaPreferences.userId, set: { persona: input.persona as any, updatedAt: new Date() } })
         .returning();
       return mapPreferences(row);
     },

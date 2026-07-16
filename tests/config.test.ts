@@ -61,4 +61,20 @@ describe("loadConfig", () => {
   test("rejects api prefix without leading slash", () => {
     expect(() => loadConfig({ ...validEnv, API_PREFIX: "api/v1" })).toThrow(ConfigError);
   });
+
+  test("uses OpenRouter-compatible default model when OpenRouter base URL is configured", () => {
+    const config = loadConfig({ ...validEnv, AI_BASE_URL: "https://openrouter.ai/api/v1" });
+
+    expect(config.ai?.model).toBe("openai/gpt-4o-mini");
+  });
+
+  test("normalizes explicit GPT model for OpenRouter", () => {
+    const config = loadConfig({
+      ...validEnv,
+      AI_BASE_URL: "https://openrouter.ai/api/v1",
+      AI_MODEL: "gpt-4o-mini",
+    });
+
+    expect(config.ai?.model).toBe("openai/gpt-4o-mini");
+  });
 });

@@ -1,10 +1,10 @@
 import type { Schema, ValidationIssue } from "../../shared/http/validation";
 
 export type AskCoachInput = { message: string };
-export type RelapseSolutionInput = { situation: string; triggers?: string[] };
+export type RelapseSolutionInput = { mood: string; relapse_trigger?: string[]; commitment?: string };
 export type RelapsePreventionPlanInput = { urgeLevel: number; triggers?: string[]; currentContext?: string };
-export type OnboardingAnalysisInput = { recoveryGoal?: string; concerns?: string[]; preferredSupport?: string };
-export type PersonaPreferencesInput = { tone: "gentle" | "direct" | "balanced"; focusAreas: string[] };
+export type OnboardingAnalysisInput = { answers: Record<string, unknown> };
+export type PersonaPreferencesInput = { persona: "supportive" | "friendly" | "concise" | "direct" };
 
 function ensureObject(input: unknown) {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
@@ -29,29 +29,32 @@ function text(value: unknown, field: string, issues: ValidationIssue[], maxLengt
   return trimmed;
 }
 
-function textArray(value: unknown, field: string, issues: ValidationIssue[], maxItems: number) {
+function textArray(value: unknown, field: string, issues: ValidationIssue[], maxItems: number, maxItemLength: number = 120) {
   if (value === undefined) return undefined;
   if (!Array.isArray(value)) {
     issues.push({ field, message: "Must be an array." });
     return undefined;
   }
   if (value.length > maxItems) issues.push({ field, message: `Must contain at most ${maxItems} items.` });
-  return value.map((item, index) => text(item, `${field}.${index}`, issues, 120)).filter(Boolean) as string[];
+  return value.map((item, index) => text(item, `${field}.${index}`, issues, maxItemLength)).filter(Boolean) as string[];
 }
+
+const ALLOWED_PERSONAS = ["supportive", "friendly", "concise", "direct"] as const;
 
 export const askCoachSchema: Schema<AskCoachInput> = (input) => {
   const object = ensureObject(input); if (!object.ok) return object;
   const issues: ValidationIssue[] = []; rejectUnknown(object.value, ["message"], issues);
-  const message = text(object.value.message, "message", issues, 2000) ?? "";
+  const message = text(object.value.message, "message", issues, 4000) ?? "";
   return issues.length ? { ok: false, issues } : { ok: true, value: { message } };
 };
 
 export const relapseSolutionSchema: Schema<RelapseSolutionInput> = (input) => {
   const object = ensureObject(input); if (!object.ok) return object;
-  const issues: ValidationIssue[] = []; rejectUnknown(object.value, ["situation", "triggers"], issues);
-  const situation = text(object.value.situation, "situation", issues, 2000) ?? "";
-  const triggers = textArray(object.value.triggers, "triggers", issues, 10);
-  return issues.length ? { ok: false, issues } : { ok: true, value: { situation, triggers } };
+  const issues: ValidationIssue[] = []; rejectUnknown(object.value, ["mood", "relapse_trigger", "commitment"], issues);
+  const mood = text(object.value.mood, "mood", issues, 50) ?? "";
+  const relapseTrigger = textArray(object.value.relapse_trigger, "relapse_trigger", issues, 10, 500);
+  const commitment = text(object.value.commitment, "commitment", issues, 4000, false);
+  return issues.length ? { ok: false, issues } : { ok: true, value: { mood, relapse_trigger: relapseTrigger, commitment } };
 };
 
 export const relapsePreventionPlanSchema: Schema<RelapsePreventionPlanInput> = (input) => {
@@ -66,18 +69,20 @@ export const relapsePreventionPlanSchema: Schema<RelapsePreventionPlanInput> = (
 
 export const onboardingAnalysisSchema: Schema<OnboardingAnalysisInput> = (input) => {
   const object = ensureObject(input); if (!object.ok) return object;
-  const issues: ValidationIssue[] = []; rejectUnknown(object.value, ["recoveryGoal", "concerns", "preferredSupport"], issues);
-  const recoveryGoal = text(object.value.recoveryGoal, "recoveryGoal", issues, 500, false);
-  const concerns = textArray(object.value.concerns, "concerns", issues, 10);
-  const preferredSupport = text(object.value.preferredSupport, "preferredSupport", issues, 500, false);
-  return issues.length ? { ok: false, issues } : { ok: true, value: { recoveryGoal, concerns, preferredSupport } };
+  const issues: ValidationIssue[] = []; rejectUnknown(object.value, ["answers"], issues);
+  const answers = object.value.answers;
+  if (typeof answers !== "object" || answers === null || Array.isArray(answers)) {
+    issues.push({ field: "answers", message: "Must be a non-empty object." });
+  } else if (Object.keys(answers as Record<string, unknown>).length === 0) {
+    issues.push({ field: "answers", message: "Must not be empty." });
+  }
+  return issues.length ? { ok: false, issues } : { ok: true, value: { answers: answers as Record<string, unknown> } };
 };
 
 export const personaPreferencesSchema: Schema<PersonaPreferencesInput> = (input) => {
   const object = ensureObject(input); if (!object.ok) return object;
-  const issues: ValidationIssue[] = []; rejectUnknown(object.value, ["tone", "focusAreas"], issues);
-  const tone = object.value.tone;
-  if (!["gentle", "direct", "balanced"].includes(String(tone))) issues.push({ field: "tone", message: "Must be one of gentle, direct, balanced." });
-  const focusAreas = textArray(object.value.focusAreas, "focusAreas", issues, 8) ?? [];
-  return issues.length ? { ok: false, issues } : { ok: true, value: { tone: tone as PersonaPreferencesInput["tone"], focusAreas } };
+  const issues: ValidationIssue[] = []; rejectUnknown(object.value, ["persona"], issues);
+  const persona = object.value.persona;
+  if (!ALLOWED_PERSONAS.includes(persona as any)) issues.push({ field: "persona", message: "Must be one of supportive, friendly, concise, direct." });
+  return issues.length ? { ok: false, issues } : { ok: true, value: { persona: persona as PersonaPreferencesInput["persona"] } };
 };

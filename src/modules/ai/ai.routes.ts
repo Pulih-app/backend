@@ -49,46 +49,56 @@ export function createAiRoutes(options: AiRoutesOptions) {
   routes.post("/ai/ask-coach", (context) => withAiService(options, async (service, authService) => {
     const auth = await requireAuth(context, options, authService);
     const payload = await validateJsonBody(context, askCoachSchema);
-    return context.json(createSuccessResponse({ message: "AI coach response generated successfully", data: await service.askCoach(auth.id, payload.message) }));
+    const data = await service.askCoach(auth.id, payload.message);
+    return context.json(createSuccessResponse({ message: "AI coach response generated successfully", data }));
   }));
 
   routes.post("/ai/relapse-solution", (context) => withAiService(options, async (service, authService) => {
     const auth = await requireAuth(context, options, authService);
     const payload = await validateJsonBody(context, relapseSolutionSchema);
-    return context.json(createSuccessResponse({ message: "Relapse solution generated successfully", data: await service.relapseSolution(auth.id, payload) }));
+    const data = await service.relapseSolution(auth.id, payload);
+    return context.json(createSuccessResponse({ message: "Relapse solution generated successfully", data }));
   }));
 
   routes.post("/ai/relapse-prevention-plan", (context) => withAiService(options, async (service, authService) => {
     const auth = await requireAuth(context, options, authService);
     const payload = await validateJsonBody(context, relapsePreventionPlanSchema);
-    return context.json(createSuccessResponse({ message: "Relapse prevention plan generated successfully", data: await service.relapsePreventionPlan(auth.id, payload) }));
+    const data = await service.relapsePreventionPlan(auth.id, payload);
+    return context.json(createSuccessResponse({ message: "Relapse prevention plan generated successfully", data }));
   }));
 
   routes.get("/ai/chat-history", (context) => withAiService(options, async (service, authService) => {
     const auth = await requireAuth(context, options, authService);
-    return context.json(createSuccessResponse({ message: "AI chat history retrieved successfully", data: await service.listChatHistory(auth.id) }));
+    const limitRaw = context.req.query("limit");
+    const limit = limitRaw ? parseInt(limitRaw, 10) : undefined;
+    const data = await service.listChatHistory(auth.id, isNaN(limit as number) ? undefined : limit);
+    return context.json(createSuccessResponse({ message: "AI chat history retrieved successfully", data }));
   }));
 
   routes.get("/ai/summary", (context) => withAiService(options, async (service, authService) => {
     const auth = await requireAuth(context, options, authService);
-    return context.json(createSuccessResponse({ message: "AI summary retrieved successfully", data: await service.getSummary(auth.id) }));
+    const data = await service.getSummary(auth.id);
+    return context.json(createSuccessResponse({ message: "AI summary retrieved successfully", data }));
   }));
 
   routes.post("/ai/onboarding-analysis", (context) => withAiService(options, async (service, authService) => {
     const auth = await requireAuth(context, options, authService);
     const payload = await validateJsonBody(context, onboardingAnalysisSchema);
-    return context.json(createSuccessResponse({ message: "Onboarding analysis generated successfully", data: await service.onboardingAnalysis(auth.id, payload) }));
+    const data = await service.onboardingAnalysis(auth.id, payload);
+    return context.json(createSuccessResponse({ message: "Onboarding analysis generated successfully", data }));
   }));
 
   routes.get("/ai/persona-preferences", (context) => withAiService(options, async (service, authService) => {
     const auth = await requireAuth(context, options, authService);
-    return context.json(createSuccessResponse({ message: "AI persona preferences retrieved successfully", data: await service.getPersonaPreferences(auth.id) }));
+    const data = await service.getPersonaPreferences(auth.id);
+    return context.json(createSuccessResponse({ message: "AI persona preferences retrieved successfully", data }));
   }));
 
   routes.put("/ai/persona-preferences", (context) => withAiService(options, async (service, authService) => {
     const auth = await requireAuth(context, options, authService);
     const payload = await validateJsonBody(context, personaPreferencesSchema);
-    return context.json(createSuccessResponse({ message: "AI persona preferences updated successfully", data: await service.updatePersonaPreferences(auth.id, payload) }));
+    const data = await service.updatePersonaPreferences(auth.id, payload);
+    return context.json(createSuccessResponse({ message: "AI persona preferences updated successfully", data }));
   }));
 
   return routes;

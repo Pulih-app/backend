@@ -33,7 +33,29 @@ function mapProviderError(error: unknown): never {
   if (error instanceof DOMException && error.name === "AbortError") {
     throw new AppError(AppErrorCode.ServiceUnavailable, "AI provider request timed out.");
   }
-  throw new AppError(AppErrorCode.DownstreamError, "AI provider request failed.");
+  throw new AppError(AppErrorCode.ServiceUnavailable, "AI provider is unavailable.");
+}
+
+function mapProviderStatus(status: number): never {
+  if (status === 408 || status === 409 || status === 425 || status === 429 || status >= 500) {
+    throw new AppError(AppErrorCode.ServiceUnavailable, "AI provider is temporarily unavailable.", [`provider_status:${status}`]);
+  }
+
+  throw new AppError(AppErrorCode.DownstreamError, "AI provider rejected the request.", [`provider_status:${status}`]);
+}
+
+function buildProviderHeaders(baseUrl: string, apiKey: string) {
+  const headers: Record<string, string> = {
+    "Authorization": `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+
+  if (baseUrl.includes("openrouter.ai")) {
+    headers["HTTP-Referer"] = "https://pulih.app";
+    headers["X-Title"] = "Pulih API";
+  }
+
+  return headers;
 }
 
 export function createAiProvider(options: AiProviderOptions): AiProvider {
@@ -47,10 +69,7 @@ export function createAiProvider(options: AiProviderOptions): AiProvider {
       try {
         const response = await fetcher(`${baseUrl}/chat/completions`, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${options.apiKey}`,
-            "Content-Type": "application/json",
-          },
+          headers: buildProviderHeaders(baseUrl, options.apiKey),
           signal: timeout.controller.signal,
           body: JSON.stringify({
             model,
@@ -59,7 +78,7 @@ export function createAiProvider(options: AiProviderOptions): AiProvider {
             max_tokens: input.maxTokens ?? options.maxTokens,
           }),
         });
-        if (!response.ok) throw new AppError(AppErrorCode.DownstreamError, "AI provider returned an error.");
+        if (!response.ok) mapProviderStatus(response.status);
         return mapAiResponse(await response.json(), model);
       } catch (error) {
         mapProviderError(error);
