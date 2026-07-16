@@ -6,7 +6,7 @@ import { createSuccessResponse } from "../../shared/response";
 import { authGuard, type AuthVariables } from "../auth/auth.middleware";
 import { createAuthRepository, type AuthRepository } from "../auth/auth.repository";
 import { createAuthService, type AuthService } from "../auth/auth.service";
-import { communityCommentSchema, communityPostSchema, journalSchema } from "./content.schema";
+import { communityCommentSchema, communityPostSchema, communityReplySchema, journalSchema } from "./content.schema";
 import { createContentRepository, type ContentRepository } from "./content.repository";
 import { createContentService, type ContentService } from "./content.service";
 
@@ -45,9 +45,11 @@ export function createContentRoutes(options: ContentRoutesOptions) {
     return context.json(createSuccessResponse({ message: "Journal created successfully", data: await service.createJournal(auth.id, payload) }), 201);
   }));
 
+  // Community posts
   routes.get("/community", (context) => withContentService(options, async (service, authService) => {
     await requireAuth(context, options, authService);
-    return context.json(createSuccessResponse({ message: "Community posts retrieved successfully", data: await service.listCommunityPosts() }));
+    const category = context.req.query("category");
+    return context.json(createSuccessResponse({ message: "Community posts retrieved successfully", data: await service.listCommunityPosts(category) }));
   }));
 
   routes.post("/community", (context) => withContentService(options, async (service, authService) => {
@@ -56,9 +58,10 @@ export function createContentRoutes(options: ContentRoutesOptions) {
     return context.json(createSuccessResponse({ message: "Community post created successfully", data: await service.createCommunityPost(auth.id, payload) }), 201);
   }));
 
+  // Community comments
   routes.get("/community/:postId/comments", (context) => withContentService(options, async (service, authService) => {
     await requireAuth(context, options, authService);
-    return context.json(createSuccessResponse({ message: "Community comments retrieved successfully", data: await service.listCommunityComments(context.req.param("postId")) }));
+    return context.json(createSuccessResponse({ message: "Community comments retrieved successfully", data: await service.listCommunityThread(context.req.param("postId")) }));
   }));
 
   routes.post("/community/:postId/comments", (context) => withContentService(options, async (service, authService) => {
@@ -67,9 +70,18 @@ export function createContentRoutes(options: ContentRoutesOptions) {
     return context.json(createSuccessResponse({ message: "Community comment created successfully", data: await service.createCommunityComment(auth.id, context.req.param("postId"), payload) }), 201);
   }));
 
+  // Community replies
+  routes.post("/community/:postId/comments/:commentId/replies", (context) => withContentService(options, async (service, authService) => {
+    const auth = await requireAuth(context, options, authService);
+    const payload = await validateJsonBody(context, communityReplySchema);
+    return context.json(createSuccessResponse({ message: "Community reply created successfully", data: await service.createCommunityReply(auth.id, context.req.param("postId"), context.req.param("commentId"), payload) }), 201);
+  }));
+
+  // Community like toggle
   routes.post("/community/:postId/like", (context) => withContentService(options, async (service, authService) => {
     const auth = await requireAuth(context, options, authService);
-    return context.json(createSuccessResponse({ message: "Community post liked successfully", data: await service.likeCommunityPost(auth.id, context.req.param("postId")) }));
+    const result = await service.toggleCommunityLike(auth.id, context.req.param("postId"));
+    return context.json(createSuccessResponse({ message: result.isLiked ? "Community post liked" : "Community post like removed", data: result }));
   }));
 
   routes.get("/education", (context) => withContentService(options, async (service, authService) => {

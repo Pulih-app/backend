@@ -8926,7 +8926,7 @@
           "community"
         ],
         "summary": "List community posts",
-        "description": "Returns community post feed for authenticated users.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns community post feed with author info. Optional category filter: advice, motivation, story, question, help.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_community",
         "responses": {
           "200": {
@@ -8980,12 +8980,18 @@
                       "data": [
                         {
                           "id": "88888888-8888-4888-8888-888888888888",
-                          "authorId": "11111111-1111-4111-8111-111111111111",
-                          "category": "progress",
-                          "content": "I kept my routine today.",
+                          "userId": "11111111-1111-4111-8111-111111111111",
+                          "title": "My Recovery Story",
+                          "category": "story",
+                          "content": "I kept my routine today and it feels amazing.",
                           "likeCount": 3,
-                          "commentCount": 1,
-                          "createdAt": "2026-07-16T01:00:00.000Z"
+                          "commentCount": 2,
+                          "createdAt": "2026-07-16T01:00:00.000Z",
+                          "updatedAt": "2026-07-16T01:30:00.000Z",
+                          "author": {
+                            "nickname": "Demo",
+                            "currentStreak": 7
+                          }
                         }
                       ],
                       "meta": null
@@ -9122,7 +9128,7 @@
           "community"
         ],
         "summary": "Create community post",
-        "description": "Creates community post. MVP moderation is lightweight; keep content safe.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Creates community post with optional title. Categories: advice, motivation, story, question, help. Content: 10-5000 chars. MVP moderation is lightweight; keep content safe.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_community",
         "responses": {
           "201": {
@@ -9172,12 +9178,18 @@
                       "message": "Community post created successfully",
                       "data": {
                         "id": "88888888-8888-4888-8888-888888888888",
-                        "authorId": "11111111-1111-4111-8111-111111111111",
-                        "category": "progress",
-                        "content": "I kept my routine today.",
+                        "userId": "11111111-1111-4111-8111-111111111111",
+                        "title": "My Recovery Story",
+                        "category": "story",
+                        "content": "I kept my routine today and it feels amazing.",
                         "likeCount": 3,
-                        "commentCount": 1,
-                        "createdAt": "2026-07-16T01:00:00.000Z"
+                        "commentCount": 2,
+                        "createdAt": "2026-07-16T01:00:00.000Z",
+                        "updatedAt": "2026-07-16T01:30:00.000Z",
+                        "author": {
+                          "nickname": "Demo",
+                          "currentStreak": 7
+                        }
                       },
                       "meta": null
                     }
@@ -9319,29 +9331,40 @@
                   "content"
                 ],
                 "properties": {
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": "My Recovery Story",
+                    "maxLength": 120
+                  },
                   "category": {
                     "type": "string",
                     "enum": [
-                      "general",
-                      "support",
-                      "progress"
+                      "advice",
+                      "motivation",
+                      "story",
+                      "question",
+                      "help"
                     ],
-                    "example": "progress"
+                    "example": "story"
                   },
                   "content": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 2000,
-                    "example": "I kept my routine today."
+                    "minLength": 10,
+                    "maxLength": 5000,
+                    "example": "I kept my routine today and it feels amazing."
                   }
                 }
               },
               "examples": {
-                "progress": {
-                  "summary": "progress",
+                "story": {
+                  "summary": "story",
                   "value": {
-                    "category": "progress",
-                    "content": "I kept my routine today."
+                    "title": "My Recovery Story",
+                    "category": "story",
+                    "content": "I kept my routine today and it feels amazing."
                   }
                 }
               }
@@ -9355,8 +9378,8 @@
         "tags": [
           "community"
         ],
-        "summary": "List community comments",
-        "description": "Returns comments for a community post.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "summary": "List comment thread",
+        "description": "Returns threaded comments for a community post with max depth 2. Root comments limited to 200.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_community_postId_comments",
         "responses": {
           "200": {
@@ -9380,10 +9403,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/CommunityComment"
-                      }
+                      "$ref": "#/components/schemas/CommunityThread"
                     },
                     "meta": {
                       "oneOf": [
@@ -9407,15 +9427,22 @@
                     "value": {
                       "success": true,
                       "message": "Community comments retrieved successfully",
-                      "data": [
-                        {
-                          "id": "99999999-9999-4999-8999-999999999999",
-                          "postId": "88888888-8888-4888-8888-888888888888",
-                          "authorId": "11111111-1111-4111-8111-111111111111",
-                          "content": "You are not alone.",
-                          "createdAt": "2026-07-16T01:10:00.000Z"
-                        }
-                      ],
+                      "data": {
+                        "postId": "88888888-8888-4888-8888-888888888888",
+                        "comments": [
+                          {
+                            "id": "99999999-9999-4999-8999-999999999999",
+                            "postId": "88888888-8888-4888-8888-888888888888",
+                            "userId": "11111111-1111-4111-8111-111111111111",
+                            "parentCommentId": null,
+                            "content": "You are not alone.",
+                            "depth": 0,
+                            "replyCount": 1,
+                            "createdAt": "2026-07-16T01:10:00.000Z",
+                            "replies": []
+                          }
+                        ]
+                      },
                       "meta": null
                     }
                   }
@@ -9617,7 +9644,7 @@
           "community"
         ],
         "summary": "Create community comment",
-        "description": "Adds comment to a community post.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Adds top-level comment (depth=0) to a community post. Content max 2000 chars.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_community_postId_comments",
         "responses": {
           "201": {
@@ -9668,8 +9695,11 @@
                       "data": {
                         "id": "99999999-9999-4999-8999-999999999999",
                         "postId": "88888888-8888-4888-8888-888888888888",
-                        "authorId": "11111111-1111-4111-8111-111111111111",
+                        "userId": "11111111-1111-4111-8111-111111111111",
+                        "parentCommentId": null,
                         "content": "You are not alone.",
+                        "depth": 0,
+                        "replyCount": 1,
                         "createdAt": "2026-07-16T01:10:00.000Z"
                       },
                       "meta": null
@@ -9881,7 +9911,7 @@
                   "content": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 1000,
+                    "maxLength": 2000,
                     "example": "You are not alone."
                   }
                 }
@@ -9904,8 +9934,8 @@
         "tags": [
           "community"
         ],
-        "summary": "Like community post",
-        "description": "Toggles/records like for current user and returns updated post counters.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "summary": "Toggle like on post",
+        "description": "Toggles like/unlike for current user on post. Returns updated like count and current like state.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_community_postId_like",
         "responses": {
           "201": {
@@ -9929,7 +9959,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/CommunityPost"
+                      "$ref": "#/components/schemas/ToggleLike"
                     },
                     "meta": {
                       "oneOf": [
@@ -9952,15 +9982,10 @@
                     "summary": "201 success",
                     "value": {
                       "success": true,
-                      "message": "Community post liked successfully",
+                      "message": "Community post like toggled",
                       "data": {
-                        "id": "88888888-8888-4888-8888-888888888888",
-                        "authorId": "11111111-1111-4111-8111-111111111111",
-                        "category": "progress",
-                        "content": "I kept my routine today.",
-                        "likeCount": 3,
-                        "commentCount": 1,
-                        "createdAt": "2026-07-16T01:00:00.000Z"
+                        "likedCount": 4,
+                        "isLiked": true
                       },
                       "meta": null
                     }
@@ -10157,6 +10182,308 @@
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/api/v1/community/{postId}/comments/{commentId}/replies": {
+      "post": {
+        "tags": [
+          "community"
+        ],
+        "summary": "Create reply to comment",
+        "description": "Adds reply to existing comment. Max thread depth is 2. Parent comment must belong to same post. Returns 422 if depth exceeded or cross-post reply.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "operationId": "post_api_v1_community_postId_comments_commentId_replies",
+        "responses": {
+          "201": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CommunityComment"
+                    },
+                    "meta": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "201 success",
+                    "value": {
+                      "success": true,
+                      "message": "Community reply created successfully",
+                      "data": {
+                        "id": "99999999-9999-4999-8999-999999999999",
+                        "postId": "88888888-8888-4888-8888-888888888888",
+                        "userId": "11111111-1111-4111-8111-111111111111",
+                        "parentCommentId": null,
+                        "content": "You are not alone.",
+                        "depth": 0,
+                        "replyCount": 1,
+                        "createdAt": "2026-07-16T01:10:00.000Z"
+                      },
+                      "meta": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Unauthenticated",
+                    "value": {
+                      "success": false,
+                      "message": "Authentication required.",
+                      "data": null,
+                      "error": {
+                        "code": "UNAUTHENTICATED",
+                        "details": [
+                          "Bearer token is missing or invalid."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Forbidden",
+                    "value": {
+                      "success": false,
+                      "message": "Access denied.",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": [
+                          "You can only manage your own content."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Not found",
+                    "value": {
+                      "success": false,
+                      "message": "Content not found.",
+                      "data": null,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "details": [
+                          "Post, comment, or journal was not found."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Conflict",
+                    "value": {
+                      "success": false,
+                      "message": "Content conflicts with current state.",
+                      "data": null,
+                      "error": {
+                        "code": "CONFLICT",
+                        "details": [
+                          "Resource already exists or state cannot be changed."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Validation error",
+                    "value": {
+                      "success": false,
+                      "message": "Request validation failed.",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          "content: Must not be empty."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Internal error",
+                    "value": {
+                      "success": false,
+                      "message": "Unexpected internal error.",
+                      "data": null,
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "details": [
+                          "Failed to process content request."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "cURL",
+            "source": "curl -X POST http://localhost:3000/api/v1/community/{postId}/comments/{commentId}/replies"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "postId_uuid"
+            },
+            "description": "Route parameter: postId."
+          },
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "commentId_uuid"
+            },
+            "description": "Route parameter: commentId."
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "content"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "example": "How did it go?"
+                  }
+                }
+              },
+              "examples": {
+                "reply": {
+                  "summary": "reply",
+                  "value": {
+                    "content": "How did it go?"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/education": {
@@ -14660,16 +14987,35 @@
           }
         }
       },
+      "CommunityPostAuthor": {
+        "type": "object",
+        "required": [
+          "nickname",
+          "currentStreak"
+        ],
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "example": "Demo"
+          },
+          "currentStreak": {
+            "type": "integer",
+            "example": 7
+          }
+        }
+      },
       "CommunityPost": {
         "type": "object",
         "required": [
           "id",
-          "authorId",
+          "userId",
           "category",
           "content",
           "likeCount",
           "commentCount",
-          "createdAt"
+          "createdAt",
+          "updatedAt",
+          "author"
         ],
         "properties": {
           "id": {
@@ -14677,24 +15023,34 @@
             "format": "uuid",
             "example": "88888888-8888-4888-8888-888888888888"
           },
-          "authorId": {
+          "userId": {
             "type": "string",
             "format": "uuid",
             "example": "11111111-1111-4111-8111-111111111111"
           },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "My Recovery Story"
+          },
           "category": {
             "type": "string",
             "enum": [
-              "general",
-              "support",
-              "progress"
+              "advice",
+              "motivation",
+              "story",
+              "question",
+              "help"
             ],
-            "example": "progress"
+            "example": "story"
           },
           "content": {
             "type": "string",
-            "maxLength": 2000,
-            "example": "I kept my routine today."
+            "minLength": 10,
+            "maxLength": 5000,
+            "example": "I kept my routine today and it feels amazing."
           },
           "likeCount": {
             "type": "integer",
@@ -14702,12 +15058,20 @@
           },
           "commentCount": {
             "type": "integer",
-            "example": 1
+            "example": 2
           },
           "createdAt": {
             "type": "string",
             "format": "date-time",
             "example": "2026-07-16T01:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-16T01:30:00.000Z"
+          },
+          "author": {
+            "$ref": "#/components/schemas/CommunityPostAuthor"
           }
         }
       },
@@ -14716,8 +15080,10 @@
         "required": [
           "id",
           "postId",
-          "authorId",
+          "userId",
           "content",
+          "depth",
+          "replyCount",
           "createdAt"
         ],
         "properties": {
@@ -14731,20 +15097,136 @@
             "format": "uuid",
             "example": "88888888-8888-4888-8888-888888888888"
           },
-          "authorId": {
+          "userId": {
             "type": "string",
             "format": "uuid",
             "example": "11111111-1111-4111-8111-111111111111"
           },
+          "parentCommentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "format": "uuid"
+          },
           "content": {
             "type": "string",
-            "maxLength": 1000,
+            "maxLength": 2000,
             "example": "You are not alone."
+          },
+          "depth": {
+            "type": "integer",
+            "example": 0
+          },
+          "replyCount": {
+            "type": "integer",
+            "example": 1
           },
           "createdAt": {
             "type": "string",
             "format": "date-time",
             "example": "2026-07-16T01:10:00.000Z"
+          }
+        }
+      },
+      "CommunityCommentNode": {
+        "type": "object",
+        "required": [
+          "id",
+          "postId",
+          "userId",
+          "content",
+          "depth",
+          "replyCount",
+          "createdAt",
+          "replies"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "99999999-9999-4999-8999-999999999999"
+          },
+          "postId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "88888888-8888-4888-8888-888888888888"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "11111111-1111-4111-8111-111111111111"
+          },
+          "parentCommentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "format": "uuid"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 2000,
+            "example": "Thanks for sharing!"
+          },
+          "depth": {
+            "type": "integer",
+            "example": 0
+          },
+          "replyCount": {
+            "type": "integer",
+            "example": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-16T01:10:00.000Z"
+          },
+          "replies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommunityCommentNode"
+            },
+            "example": []
+          }
+        }
+      },
+      "CommunityThread": {
+        "type": "object",
+        "required": [
+          "postId",
+          "comments"
+        ],
+        "properties": {
+          "postId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "88888888-8888-4888-8888-888888888888"
+          },
+          "comments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommunityCommentNode"
+            }
+          }
+        }
+      },
+      "ToggleLike": {
+        "type": "object",
+        "required": [
+          "likedCount",
+          "isLiked"
+        ],
+        "properties": {
+          "likedCount": {
+            "type": "integer",
+            "example": 4
+          },
+          "isLiked": {
+            "type": "boolean",
+            "example": true
           }
         }
       },

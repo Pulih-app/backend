@@ -368,12 +368,12 @@ export const demoAchievements = [
 ] as const;
 
 export const demoCommunityPosts = [
-  { id: DEMO_IDS.posts[0], userId: DEMO_IDS.patientUser, category: "support" as const, content: "Today I picked one simple routine and kept it. That felt enough for a good start." },
-  { id: DEMO_IDS.posts[1], userId: DEMO_IDS.psychologistUser, category: "general" as const, content: "Progress often looks like repeating the basics with more honesty and less shame." },
-  { id: DEMO_IDS.posts[2], userId: DEMO_IDS.patientUser, category: "progress" as const, content: "I used a grounding exercise instead of reacting automatically, and it changed the evening." },
-  { id: DEMO_IDS.posts[3], userId: DEMO_IDS.psychologistUser, category: "support" as const, content: "If today feels heavy, make the next step tiny. Tiny still counts." },
-  { id: DEMO_IDS.posts[4], userId: DEMO_IDS.patientUser, category: "progress" as const, content: "A short walk and a calm note to myself were enough to stop the spiral." },
-  { id: DEMO_IDS.posts[5], userId: DEMO_IDS.psychologistUser, category: "general" as const, content: "Healthy recovery usually looks ordinary: sleep, food, support, and repetition." },
+  { id: DEMO_IDS.posts[0], userId: DEMO_IDS.patientUser, category: "story" as const, content: "Today I picked one simple routine and kept it. That felt enough for a good start." },
+  { id: DEMO_IDS.posts[1], userId: DEMO_IDS.psychologistUser, category: "advice" as const, content: "Progress often looks like repeating the basics with more honesty and less shame." },
+  { id: DEMO_IDS.posts[2], userId: DEMO_IDS.patientUser, category: "motivation" as const, content: "I used a grounding exercise instead of reacting automatically, and it changed the evening." },
+  { id: DEMO_IDS.posts[3], userId: DEMO_IDS.psychologistUser, category: "help" as const, content: "If today feels heavy, make the next step tiny. Tiny still counts." },
+  { id: DEMO_IDS.posts[4], userId: DEMO_IDS.patientUser, category: "question" as const, content: "Has anyone else found that short walks help with evening urges? I tried it and it worked." },
+  { id: DEMO_IDS.posts[5], userId: DEMO_IDS.psychologistUser, category: "advice" as const, content: "Healthy recovery usually looks ordinary: sleep, food, support, and repetition." },
 ] as const;
 
 export const demoCommunityComments = [

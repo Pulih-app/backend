@@ -77,20 +77,21 @@ Source of truth: `src/app.ts` and route modules under `src/modules/*`.
 
 ## Content
 
-| Method | Path                                 | Auth   | MVP |
-| ------ | ------------------------------------ | ------ | --- |
-| GET    | `/api/v1/journals`                   | Bearer | Yes |
-| POST   | `/api/v1/journals`                   | Bearer | Yes |
-| GET    | `/api/v1/community`                  | Bearer | Yes |
-| POST   | `/api/v1/community`                  | Bearer | Yes |
-| GET    | `/api/v1/community/:postId/comments` | Bearer | Yes |
-| POST   | `/api/v1/community/:postId/comments` | Bearer | Yes |
-| POST   | `/api/v1/community/:postId/like`     | Bearer | Yes |
-| GET    | `/api/v1/education`                  | Bearer | Yes |
-| GET    | `/api/v1/content/daily`              | Bearer | Yes |
-| GET    | `/api/v1/achievements/catalog`       | Bearer | Yes |
-| GET    | `/api/v1/achievements/progress`      | Bearer | Yes |
-| GET    | `/api/v1/achievements/unlocked`      | Bearer | Yes |
+| Method | Path                                                    | Auth   | MVP |
+| ------ | ------------------------------------------------------- | ------ | --- |
+| GET    | `/api/v1/journals`                                      | Bearer | Yes |
+| POST   | `/api/v1/journals`                                      | Bearer | Yes |
+| GET    | `/api/v1/community`                                     | Bearer | Yes |
+| POST   | `/api/v1/community`                                     | Bearer | Yes |
+| GET    | `/api/v1/community/:postId/comments`                    | Bearer | Yes |
+| POST   | `/api/v1/community/:postId/comments`                    | Bearer | Yes |
+| POST   | `/api/v1/community/:postId/comments/:commentId/replies` | Bearer | Yes |
+| POST   | `/api/v1/community/:postId/like`                        | Bearer | Yes |
+| GET    | `/api/v1/education`                                     | Bearer | Yes |
+| GET    | `/api/v1/content/daily`                                 | Bearer | Yes |
+| GET    | `/api/v1/achievements/catalog`                          | Bearer | Yes |
+| GET    | `/api/v1/achievements/progress`                         | Bearer | Yes |
+| GET    | `/api/v1/achievements/unlocked`                         | Bearer | Yes |
 
 ## AI
 

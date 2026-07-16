@@ -53,6 +53,7 @@ export const routeInventory: RouteInventoryItem[] = [
   { method: "GET", path: "/api/v1/community/:postId/comments", auth: "bearer", mvp: true },
   { method: "POST", path: "/api/v1/community/:postId/comments", auth: "bearer", mvp: true },
   { method: "POST", path: "/api/v1/community/:postId/like", auth: "bearer", mvp: true },
+  { method: "POST", path: "/api/v1/community/:postId/comments/:commentId/replies", auth: "bearer", mvp: true },
   { method: "GET", path: "/api/v1/education", auth: "bearer", mvp: true },
   { method: "GET", path: "/api/v1/content/daily", auth: "bearer", mvp: true },
   { method: "GET", path: "/api/v1/achievements/catalog", auth: "bearer", mvp: true },

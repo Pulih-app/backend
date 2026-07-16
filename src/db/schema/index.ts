@@ -11,7 +11,7 @@ export const bookingStatusEnum = pgEnum("booking_status", ["draft", "pending_pay
 export const paymentStatusEnum = pgEnum("payment_status", ["created", "pending", "completed", "failed", "expired", "cancelled"]);
 export const notificationEventTypeEnum = pgEnum("notification_event_type", ["payment_success_patient", "booking_received_psychologist", "booking_confirmed_session_ready", "booking_rescheduled"]);
 export const notificationStatusEnum = pgEnum("notification_status", ["pending", "sent", "failed", "retrying", "cancelled"]);
-export const communityPostCategoryEnum = pgEnum("community_post_category", ["general", "support", "progress"]);
+export const communityPostCategoryEnum = pgEnum("community_post_category", ["advice", "motivation", "story", "question", "help"]);
 export const contentStatusEnum = pgEnum("content_status", ["draft", "published", "archived"]);
 export const aiChatRoleEnum = pgEnum("ai_chat_role", ["user", "assistant"]);
 export const aiPersonaToneEnum = pgEnum("ai_persona_tone", ["gentle", "direct", "balanced"]);
@@ -281,6 +281,7 @@ export const journals = pgTable("journals", {
 export const communityPosts = pgTable("community_posts", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 120 }),
   category: communityPostCategoryEnum("category").notNull(),
   content: text("content").notNull(),
   likeCount: integer("like_count").notNull().default(0),
@@ -293,9 +294,16 @@ export const communityComments = pgTable("community_comments", {
   id: uuid("id").defaultRandom().primaryKey(),
   postId: uuid("post_id").notNull().references(() => communityPosts.id, { onDelete: "cascade" }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  parentCommentId: uuid("parent_comment_id"),
   content: text("content").notNull(),
+  depth: integer("depth").notNull().default(0),
+  replyCount: integer("reply_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-}, (table) => ({ postIndex: index("idx_community_comments_post_id").on(table.postId), userIndex: index("idx_community_comments_user_id").on(table.userId) }));
+}, (table) => ({
+  postIndex: index("idx_community_comments_post_id").on(table.postId),
+  userIndex: index("idx_community_comments_user_id").on(table.userId),
+  parentIndex: index("idx_community_comments_parent_id").on(table.parentCommentId),
+}));
 
 export const communityPostLikes = pgTable("community_post_likes", {
   id: uuid("id").defaultRandom().primaryKey(),
