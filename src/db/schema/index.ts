@@ -11,6 +11,8 @@ export const bookingStatusEnum = pgEnum("booking_status", ["draft", "pending_pay
 export const paymentStatusEnum = pgEnum("payment_status", ["created", "pending", "completed", "failed", "expired", "cancelled"]);
 export const notificationEventTypeEnum = pgEnum("notification_event_type", ["payment_success_patient", "booking_received_psychologist", "booking_confirmed_session_ready", "booking_rescheduled"]);
 export const notificationStatusEnum = pgEnum("notification_status", ["pending", "sent", "failed", "retrying", "cancelled"]);
+export const communityPostCategoryEnum = pgEnum("community_post_category", ["general", "support", "progress"]);
+export const contentStatusEnum = pgEnum("content_status", ["draft", "published", "archived"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -260,6 +262,89 @@ export const streaks = pgTable("streaks", {
   longestCheck: check("ck_streaks_longest_non_negative", sql`${table.longestStreak} >= 0`),
 }));
 
+export const journals = pgTable("journals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({ userIndex: index("idx_journals_user_id").on(table.userId) }));
+
+export const communityPosts = pgTable("community_posts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  category: communityPostCategoryEnum("category").notNull(),
+  content: text("content").notNull(),
+  likeCount: integer("like_count").notNull().default(0),
+  commentCount: integer("comment_count").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({ userIndex: index("idx_community_posts_user_id").on(table.userId) }));
+
+export const communityComments = pgTable("community_comments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  postId: uuid("post_id").notNull().references(() => communityPosts.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({ postIndex: index("idx_community_comments_post_id").on(table.postId), userIndex: index("idx_community_comments_user_id").on(table.userId) }));
+
+export const communityPostLikes = pgTable("community_post_likes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  postId: uuid("post_id").notNull().references(() => communityPosts.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({ postUserUnique: uniqueIndex("uq_community_post_likes_post_user").on(table.postId, table.userId) }));
+
+export const educationContents = pgTable("education_contents", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  category: varchar("category", { length: 64 }).notNull(),
+  status: contentStatusEnum("status").notNull().default("draft"),
+  publishedAt: timestamp("published_at", { withTimezone: true, mode: "date" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({ statusIndex: index("idx_education_contents_status").on(table.status) }));
+
+export const dailyMotivations = pgTable("daily_motivations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  content: text("content").notNull(),
+  source: varchar("source", { length: 255 }),
+  localDate: date("local_date", { mode: "string" }).notNull(),
+  status: contentStatusEnum("status").notNull().default("draft"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({ localDateUnique: uniqueIndex("uq_daily_motivations_local_date").on(table.localDate) }));
+
+export const dailyChallenges = pgTable("daily_challenges", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  category: varchar("category", { length: 64 }).notNull(),
+  localDate: date("local_date", { mode: "string" }).notNull(),
+  status: contentStatusEnum("status").notNull().default("draft"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({ localDateUnique: uniqueIndex("uq_daily_challenges_local_date").on(table.localDate) }));
+
+export const achievements = pgTable("achievements", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  key: varchar("key", { length: 128 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  criteria: jsonb("criteria").notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({ keyUnique: uniqueIndex("uq_achievements_key").on(table.key) }));
+
+export const userAchievementProgress = pgTable("user_achievement_progress", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  achievementId: uuid("achievement_id").notNull().references(() => achievements.id, { onDelete: "cascade" }),
+  progressValue: integer("progress_value").notNull().default(0),
+  unlockedAt: timestamp("unlocked_at", { withTimezone: true, mode: "date" }),
+}, (table) => ({ userAchievementUnique: uniqueIndex("uq_user_achievement_progress_user_achievement").on(table.userId, table.achievementId) }));
+
 export const notificationEvents = pgTable("notification_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   type: notificationEventTypeEnum("type").notNull(),
@@ -295,6 +380,15 @@ export const schema = {
   relapses,
   streaks,
   notificationEvents,
+  journals,
+  communityPosts,
+  communityComments,
+  communityPostLikes,
+  educationContents,
+  dailyMotivations,
+  dailyChallenges,
+  achievements,
+  userAchievementProgress,
 } as const;
 
 export const usersRelations = relations(users, ({ one }) => ({
