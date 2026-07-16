@@ -20,6 +20,7 @@ import type { AiProvider } from "./modules/ai/ai-provider";
 import type { AiRepository } from "./modules/ai/ai.repository";
 import type { NotificationsService } from "./modules/notifications/notifications.service";
 import { createHealthRoutes } from "./routes/health.routes";
+import { createDocsRoutes } from "./routes/docs.routes";
 import { validationDemoRoutes } from "./routes/validation-demo.routes";
 import { loadConfig } from "./shared/config";
 import { mapError } from "./shared/errors";
@@ -118,6 +119,7 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   });
 
   app.route("/health", createHealthRoutes({ checkDatabase }));
+  app.route("/", createDocsRoutes());
   app.route("/api/v1", createAuthRoutes({
     config,
     databaseSource: {

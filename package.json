@@ -9,6 +9,7 @@
     "test": "bun test",
     "test:smoke": "bun test tests/smoke.test.ts",
     "seed:demo": "bun run scripts/seed-demo.ts",
+    "docs:generate": "bun run scripts/generate-openapi.ts",
     "db:generate": "bunx drizzle-kit generate",
     "db:migrate": "bunx drizzle-kit migrate"
   },

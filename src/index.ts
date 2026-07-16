@@ -20,12 +20,5 @@ export default {
 
 if (import.meta.main) {
   const port = Number(process.env.PORT ?? 3000);
-  const app = createApp(buildRuntimeEnv());
-
-  Bun.serve({
-    port,
-    fetch: app.fetch,
-  });
-
   console.log(`Pulih API running on http://localhost:${port}`);
 }

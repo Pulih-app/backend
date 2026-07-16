@@ -1,0 +1,44 @@
+{
+  "$schema": "https://registry.scalar.com/@scalar/schemas/config",
+  "scalar": "2.0.0",
+  "info": {
+    "title": "Pulih API Docs",
+    "description": "Service documentation and API reference for Pulih API."
+  },
+  "navigation": {
+    "routes": {
+      "/": {
+        "title": "Overview",
+        "type": "page",
+        "filepath": "docs/overview.md"
+      },
+      "/api": {
+        "title": "API Reference",
+        "type": "openapi",
+        "filepath": "docs/generated/openapi.yaml",
+        "singlePage": true
+      },
+      "/routes": {
+        "title": "Route Inventory",
+        "type": "page",
+        "filepath": "docs/generated/routes.md"
+      },
+      "/routes-snapshot": {
+        "title": "Route Inventory Notes",
+        "type": "page",
+        "filepath": "docs/api-routes.md"
+      }
+    }
+  },
+  "siteConfig": {
+    "theme": "default",
+    "layout": {
+      "toc": true,
+      "header": true,
+      "search": {
+        "enabled": true,
+        "position": "header"
+      }
+    }
+  }
+}

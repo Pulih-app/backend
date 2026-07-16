@@ -9,6 +9,10 @@ Source of truth: `src/app.ts` and route modules under `src/modules/*`.
 | GET    | `/health/live`     | No   | Yes |
 | GET    | `/health/ready`    | No   | Yes |
 | POST   | `/validation-demo` | No   | Yes |
+| GET    | `/openapi.yaml`    | No   | Yes |
+| GET    | `/openapi.json`    | No   | Yes |
+| GET    | `/docs/api`        | No   | Yes |
+| GET    | `/docs/api/`       | No   | Yes |
 
 ## Auth
 
