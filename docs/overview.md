@@ -11,3 +11,4 @@ Pulih API docs use Scalar for interactive reference.
 - `docs/generated/openapi.json` — JSON mirror for tooling.
 - `docs/generated/routes.md` — generated route inventory.
 - `docs/api-routes.md` — route inventory notes.
+- `docs/contract-parity-audit.md` — cluster contract audit and canonical decisions.
