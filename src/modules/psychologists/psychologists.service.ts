@@ -1,12 +1,100 @@
 import { AppError, AppErrorCode } from "../../shared/errors";
 import type { CredentialStorage } from "./credential-storage";
 import type { CredentialDocumentType } from "./psychologists.types";
-import { REQUIRED_DOCUMENTS_BY_TYPE, channelForType } from "./psychologists.types";
-import type { PsychologistProfileInput } from "./psychologists.schema";
-import type { PsychologistsRepository } from "./psychologists.repository";
+import { buildPackageName, channelForType, REQUIRED_DOCUMENTS_BY_TYPE, type GeneratedSessionStatus } from "./psychologists.types";
+import type { PsychologistProfileInput, SessionBundleInput } from "./psychologists.schema";
+import type { PsychologistsRepository, PsychologistSessionRecord } from "./psychologists.repository";
 
 const ALLOWED_CONTENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MIN_PRICE = 100000;
+const MAX_PRICE = 300000;
+
+function parseDateOnly(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["date: Must use YYYY-MM-DD format."]);
+  }
+  return date;
+}
+
+function combineDateAndTime(date: string, time: string) {
+  const result = new Date(`${date}T${time}.000Z`);
+  if (Number.isNaN(result.getTime())) {
+    throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["dateTime: Must use valid date and time values."]);
+  }
+  return result;
+}
+
+function addDays(date: Date, days: number) {
+  const copy = new Date(date);
+  copy.setUTCDate(copy.getUTCDate() + days);
+  return copy;
+}
+
+function toDateString(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function toTimeString(value: string) {
+  return value.length === 5 ? `${value}:00` : value;
+}
+
+function durationMinutes(start: string, end: string) {
+  const [startHours, startMinutes, startSeconds] = start.split(":").map(Number);
+  const [endHours, endMinutes, endSeconds] = end.split(":").map(Number);
+  return ((endHours * 60 + endMinutes + endSeconds / 60) - (startHours * 60 + startMinutes + startSeconds / 60));
+}
+
+function buildSessions(input: SessionBundleInput): Array<{ sessionDate: string; startsAt: string; endsAt: string; status: GeneratedSessionStatus; heldUntil: string | null }> {
+  const startDate = parseDateOnly(input.dateStart);
+  const endDate = parseDateOnly(input.dateEnd);
+  const sessions = [];
+  for (let current = new Date(startDate); current <= endDate; current = addDays(current, 1)) {
+    const date = toDateString(current);
+    const startsAt = combineDateAndTime(date, toTimeString(input.dailyStartTime));
+    const endsAt = combineDateAndTime(date, toTimeString(input.dailyEndTime));
+    sessions.push({
+      sessionDate: date,
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      status: "available" as const,
+      heldUntil: null,
+    });
+  }
+  return sessions;
+}
+
+function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string) {
+  return new Date(aStart).getTime() < new Date(bEnd).getTime() && new Date(aEnd).getTime() > new Date(bStart).getTime();
+}
+
+function validateBundleInput(input: SessionBundleInput) {
+  const price = Math.round(input.priceAmount);
+  if (price < MIN_PRICE || price > MAX_PRICE) {
+    throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["priceAmount: Must be between 100000 and 300000."]);
+  }
+
+  const minutes = durationMinutes(input.dailyStartTime, input.dailyEndTime);
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["dailyStartTime: Daily end time must be after daily start time."]);
+  }
+
+  return { priceAmount: price, packageDurationMinutes: Math.round(minutes) };
+}
+
+async function ensureNoOverlap(repository: PsychologistsRepository, profileId: string, bundleId: string | null, generatedSessions: ReturnType<typeof buildSessions>) {
+  const existingSessions = await repository.listSessionsByPsychologistId(profileId);
+  const activeSessions = existingSessions.filter((session) => !bundleId || session.bundleId !== bundleId).filter((session) => session.status !== "cancelled" && session.status !== "expired" && session.status !== "rescheduled");
+
+  for (const generated of generatedSessions) {
+    for (const existing of activeSessions) {
+      if (overlaps(generated.startsAt, generated.endsAt, existing.startsAt, existing.endsAt)) {
+        throw new AppError(AppErrorCode.Conflict, "Generated session overlaps with an existing active session.");
+      }
+    }
+  }
+}
 
 export function validateCredentialFile(file: File) {
   if (!ALLOWED_CONTENT_TYPES.has(file.type)) {
@@ -40,6 +128,19 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
     },
     async getProfile(userId: string) {
       return repository.findByUserId(userId);
+    },
+    async getPublicDirectory() {
+      return repository.listApproved();
+    },
+    async getPublicProfile(psychologistId: string) {
+      const profile = await repository.findApprovedById(psychologistId);
+      if (!profile) throw new AppError(AppErrorCode.NotFound, "Psychologist profile was not found.");
+      return profile;
+    },
+    async listPublicSessions(psychologistId: string) {
+      const profile = await repository.findApprovedById(psychologistId);
+      if (!profile) throw new AppError(AppErrorCode.NotFound, "Psychologist profile was not found.");
+      return repository.listSessionsByPsychologistId(profile.id);
     },
     async uploadCredentialFile(userId: string, documentType: CredentialDocumentType, file: File) {
       const profile = await repository.findByUserId(userId);
@@ -87,6 +188,64 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
         expiresAt: null,
         message: "Signed review URL is not configured. Use Cloudflare R2 dashboard/manual operations for private review.",
       };
+    },
+    async createBundle(userId: string, input: SessionBundleInput) {
+      const profile = await repository.findByUserId(userId);
+      if (!profile) throw new AppError(AppErrorCode.NotFound, "Psychologist profile was not found.");
+      if (profile.approvalStatus !== "approved") throw new AppError(AppErrorCode.Forbidden, "Only approved psychologists can create session bundles.");
+
+      const validated = validateBundleInput(input);
+      const packageName = buildPackageName(validated.packageDurationMinutes);
+      const generatedSessions = buildSessions(input);
+      await ensureNoOverlap(repository, profile.id, null, generatedSessions);
+      const bundle = await repository.createBundleWithSessions({
+        profileId: profile.id,
+        packageName,
+        packageDurationMinutes: validated.packageDurationMinutes,
+        priceAmount: validated.priceAmount,
+        dateStart: input.dateStart,
+        dateEnd: input.dateEnd,
+        dailyStartTime: input.dailyStartTime,
+        dailyEndTime: input.dailyEndTime,
+        sessions: generatedSessions,
+      });
+      return { bundle, sessions: generatedSessions };
+    },
+    async updateBundle(userId: string, bundleId: string, input: SessionBundleInput) {
+      const profile = await repository.findByUserId(userId);
+      if (!profile) throw new AppError(AppErrorCode.NotFound, "Psychologist profile was not found.");
+      const bundle = await repository.findBundleById(bundleId);
+      if (!bundle) throw new AppError(AppErrorCode.NotFound, "Session bundle was not found.");
+      if (bundle.profileId !== profile.id) throw new AppError(AppErrorCode.Forbidden, "You can only manage your own session bundles.");
+      if (profile.approvalStatus !== "approved") throw new AppError(AppErrorCode.Forbidden, "Only approved psychologists can manage session bundles.");
+
+      const validated = validateBundleInput(input);
+      const packageName = buildPackageName(validated.packageDurationMinutes);
+      const generatedSessions = buildSessions(input);
+      await ensureNoOverlap(repository, profile.id, bundleId, generatedSessions);
+      const updated = await repository.updateBundleWithSessions(bundleId, {
+        packageName,
+        packageDurationMinutes: validated.packageDurationMinutes,
+        priceAmount: validated.priceAmount,
+        dateStart: input.dateStart,
+        dateEnd: input.dateEnd,
+        dailyStartTime: input.dailyStartTime,
+        dailyEndTime: input.dailyEndTime,
+        sessions: generatedSessions,
+      });
+      if (!updated) throw new AppError(AppErrorCode.NotFound, "Session bundle was not found.");
+      return { bundle: updated, sessions: generatedSessions };
+    },
+    async deleteBundle(userId: string, bundleId: string) {
+      const profile = await repository.findByUserId(userId);
+      if (!profile) throw new AppError(AppErrorCode.NotFound, "Psychologist profile was not found.");
+      const bundle = await repository.findBundleById(bundleId);
+      if (!bundle) throw new AppError(AppErrorCode.NotFound, "Session bundle was not found.");
+      if (bundle.profileId !== profile.id) throw new AppError(AppErrorCode.Forbidden, "You can only manage your own session bundles.");
+      if (profile.approvalStatus !== "approved") throw new AppError(AppErrorCode.Forbidden, "Only approved psychologists can manage session bundles.");
+      await repository.deleteSessionsByBundleId(bundleId);
+      await repository.deleteBundle(bundleId);
+      return { deleted: true };
     },
   };
 }

@@ -349,7 +349,7 @@ describe("psychologist routes", () => {
     return {
       async upsertProfile(input) {
         const profile: PsychologistProfileRecord = {
-          id: profiles.get(input.userId)?.id ?? crypto.randomUUID(),
+          id: profiles.get(input.userId)?.id ?? input.userId,
           userId: input.userId,
           type: input.type,
           consultationChannel: input.consultationChannel,
@@ -358,12 +358,21 @@ describe("psychologist routes", () => {
           licenseNumber: input.licenseNumber,
           bio: input.bio,
           practicePlaces: input.practicePlaces.map((place) => ({ id: crypto.randomUUID(), name: place.name, address: place.address, isActive: place.isActive ?? true })),
+          ratingSummary: { averageRating: 0, reviewCount: 0 },
+          latestBundle: null,
         };
         profiles.set(input.userId, profile);
         return profile;
       },
       async findByUserId(userId) {
         return profiles.get(userId) ?? null;
+      },
+      async findApprovedById(psychologistId) {
+        const profile = Array.from(profiles.values()).find((item) => item.id === psychologistId && item.approvalStatus === "approved");
+        return profile ?? null;
+      },
+      async listApproved() {
+        return Array.from(profiles.values()).filter((profile) => profile.approvalStatus === "approved");
       },
       async createCredentialFile(input) {
         const file = { id: crypto.randomUUID(), ...input };
@@ -386,6 +395,30 @@ describe("psychologist routes", () => {
             profiles.set(userId, { ...profile, approvalStatus: status });
           }
         }
+      },
+      async listBundles() {
+        return [];
+      },
+      async findBundleById() {
+        return null;
+      },
+      async createBundleWithSessions() {
+        throw new Error("not used");
+      },
+      async updateBundleWithSessions() {
+        throw new Error("not used");
+      },
+      async deleteBundle() {
+        return true;
+      },
+      async deleteSessionsByBundleId() {
+        return undefined;
+      },
+      async listSessionsByPsychologistId() {
+        return [];
+      },
+      async listSessionsByBundleIds() {
+        return [];
       },
     };
   }

@@ -1,12 +1,12 @@
-import { relations } from "drizzle-orm";
-import { boolean, check, index, integer, pgEnum, pgTable, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
+import { boolean, check, index, integer, numeric, pgEnum, pgTable, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", ["patient", "psychologist", "admin"]);
 export const psychologistTypeEnum = pgEnum("psychologist_type", ["general", "clinical"]);
 export const consultationChannelEnum = pgEnum("consultation_channel", ["chat", "chat_and_meet"]);
-export const psychologistApprovalStatusEnum = pgEnum("psychologist_approval_status", ["draft", "pending_review", "approved", "rejected"]);
+export const psychologistApprovalStatusEnum = pgEnum("psychologist_approval_status", ["draft", "pending_review", "approved", "rejected", "suspended"]);
 export const credentialDocumentTypeEnum = pgEnum("credential_document_type", ["sipp", "ijazah", "str", "strpk", "sippk"]);
+export const generatedSessionStatusEnum = pgEnum("generated_session_status", ["available", "held", "booked", "completed", "cancelled", "expired", "rescheduled"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -78,12 +78,52 @@ export const psychologistPracticePlaces = pgTable("psychologist_practice_places"
   profileIndex: index("idx_psychologist_practice_places_profile_id").on(table.profileId),
 }));
 
+export const psychologistSessionBundles = pgTable("psychologist_session_bundles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profileId: uuid("profile_id").notNull().references(() => psychologistProfiles.id, { onDelete: "cascade" }),
+  packageName: varchar("package_name", { length: 255 }).notNull(),
+  packageDurationMinutes: integer("package_duration_minutes").notNull(),
+  priceAmount: numeric("price_amount", { precision: 12, scale: 2 }).notNull(),
+  dateStart: timestamp("date_start", { withTimezone: true, mode: "date" }).notNull(),
+  dateEnd: timestamp("date_end", { withTimezone: true, mode: "date" }).notNull(),
+  dailyStartTime: time("daily_start_time", { withTimezone: false }).notNull(),
+  dailyEndTime: time("daily_end_time", { withTimezone: false }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({
+  profileIndex: index("idx_psychologist_session_bundles_profile_id").on(table.profileId),
+  dateRangeIndex: index("idx_psychologist_session_bundles_date_range").on(table.dateStart, table.dateEnd),
+  dateRangeCheck: check("ck_psychologist_session_bundles_date_range", sql`${table.dateStart} <= ${table.dateEnd}`),
+  timeRangeCheck: check("ck_psychologist_session_bundles_time_range", sql`${table.dailyStartTime} < ${table.dailyEndTime}`),
+  durationCheck: check("ck_psychologist_session_bundles_duration", sql`${table.packageDurationMinutes} > 0`),
+}));
+
+export const psychologistSessionSlots = pgTable("psychologist_session_slots", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bundleId: uuid("bundle_id").notNull().references(() => psychologistSessionBundles.id, { onDelete: "cascade" }),
+  profileId: uuid("profile_id").notNull().references(() => psychologistProfiles.id, { onDelete: "cascade" }),
+  sessionDate: timestamp("session_date", { withTimezone: true, mode: "date" }).notNull(),
+  startsAt: timestamp("starts_at", { withTimezone: true, mode: "date" }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true, mode: "date" }).notNull(),
+  status: generatedSessionStatusEnum("status").notNull().default("available"),
+  heldUntil: timestamp("held_until", { withTimezone: true, mode: "date" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({
+  bundleIndex: index("idx_psychologist_session_slots_bundle_id").on(table.bundleId),
+  profileIndex: index("idx_psychologist_session_slots_profile_id").on(table.profileId),
+  sessionIndex: index("idx_psychologist_session_slots_session_date").on(table.sessionDate, table.startsAt, table.endsAt),
+  timeRangeCheck: check("ck_psychologist_session_slots_time_range", sql`${table.startsAt} < ${table.endsAt}`),
+}));
+
 export const schema = {
   users,
   profiles,
   psychologistProfiles,
   psychologistCredentialFiles,
   psychologistPracticePlaces,
+  psychologistSessionBundles,
+  psychologistSessionSlots,
 } as const;
 
 export const usersRelations = relations(users, ({ one }) => ({

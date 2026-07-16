@@ -10,8 +10,19 @@ export type PsychologistProfileInput = {
   practicePlaces?: PracticePlaceInput[];
 };
 export type CredentialFileParams = { fileId: string };
+export type PsychologistPublicParams = { psychologistId: string };
+export type PsychologistBundleParams = { bundleId: string };
+export type SessionBundleInput = {
+  dateStart: string;
+  dateEnd: string;
+  dailyStartTime: string;
+  dailyEndTime: string;
+  priceAmount: number;
+};
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 
 function ensureObject(input: unknown) {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
@@ -46,6 +57,51 @@ function parseOptionalText(value: unknown, field: string, max: number, issues: V
   return normalized.length > 0 ? normalized : null;
 }
 
+function parseOptionalBoolean(value: unknown, field: string, issues: ValidationIssue[]) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") {
+    issues.push({ field, message: "Must be a boolean." });
+    return undefined;
+  }
+  return value;
+}
+
+function parseDate(value: unknown, field: string, issues: ValidationIssue[]) {
+  if (typeof value !== "string") {
+    issues.push({ field, message: "Must be a date string." });
+    return "";
+  }
+  const normalized = value.trim();
+  if (!DATE_PATTERN.test(normalized) || Number.isNaN(Date.parse(`${normalized}T00:00:00Z`))) {
+    issues.push({ field, message: "Must use YYYY-MM-DD format." });
+  }
+  return normalized;
+}
+
+function parseTime(value: unknown, field: string, issues: ValidationIssue[]) {
+  if (typeof value !== "string") {
+    issues.push({ field, message: "Must be a time string." });
+    return "";
+  }
+  const normalized = value.trim();
+  if (!TIME_PATTERN.test(normalized)) {
+    issues.push({ field, message: "Must use HH:mm format." });
+    return "";
+  }
+  return normalized.length === 5 ? `${normalized}:00` : normalized;
+}
+
+function parseMoney(value: unknown, field: string, issues: ValidationIssue[]) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    issues.push({ field, message: "Must be a number." });
+    return 0;
+  }
+  if (value < 100000 || value > 300000) {
+    issues.push({ field, message: "Must be between 100000 and 300000." });
+  }
+  return value;
+}
+
 function parsePracticePlaces(value: unknown, type: PsychologistType, issues: ValidationIssue[]) {
   if (value === undefined) return [];
   if (!Array.isArray(value)) {
@@ -62,11 +118,11 @@ function parsePracticePlaces(value: unknown, type: PsychologistType, issues: Val
     }
     const object = item as Record<string, unknown>;
     rejectUnknownFields(object, ["name", "address", "isActive"], issues);
-    if (object.isActive !== undefined && typeof object.isActive !== "boolean") issues.push({ field: `practicePlaces.${index}.isActive`, message: "Must be a boolean." });
+    const isActive = parseOptionalBoolean(object.isActive, `practicePlaces.${index}.isActive`, issues);
     return {
       name: parseRequiredText(object.name, `practicePlaces.${index}.name`, 255, issues),
       address: parseRequiredText(object.address, `practicePlaces.${index}.address`, 1000, issues),
-      isActive: object.isActive === undefined ? true : object.isActive as boolean,
+      isActive: isActive ?? true,
     };
   });
 }
@@ -93,13 +149,56 @@ function parseProfile(input: unknown) {
   return { ok: true, value: parsed } as const;
 }
 
+function parseBundle(input: unknown) {
+  const object = ensureObject(input);
+  if (!object.ok) return object;
+  const value = object.value;
+  const issues: ValidationIssue[] = [];
+  rejectUnknownFields(value, ["dateStart", "dateEnd", "dailyStartTime", "dailyEndTime", "priceAmount"], issues);
+
+  const parsed: SessionBundleInput = {
+    dateStart: parseDate(value.dateStart, "dateStart", issues),
+    dateEnd: parseDate(value.dateEnd, "dateEnd", issues),
+    dailyStartTime: parseTime(value.dailyStartTime, "dailyStartTime", issues),
+    dailyEndTime: parseTime(value.dailyEndTime, "dailyEndTime", issues),
+    priceAmount: parseMoney(value.priceAmount, "priceAmount", issues),
+  };
+
+  if (parsed.dateStart && parsed.dateEnd && parsed.dateStart > parsed.dateEnd) {
+    issues.push({ field: "dateStart", message: "Must be on or before dateEnd." });
+  }
+  if (parsed.dailyStartTime && parsed.dailyEndTime && parsed.dailyStartTime >= parsed.dailyEndTime) {
+    issues.push({ field: "dailyStartTime", message: "Must be earlier than dailyEndTime." });
+  }
+
+  if (issues.length > 0) return { ok: false, issues } as const;
+  return { ok: true, value: parsed } as const;
+}
+
 export const psychologistProfileSchema: Schema<PsychologistProfileInput> = parseProfile;
+export const sessionBundleSchema: Schema<SessionBundleInput> = parseBundle;
 export const credentialFileParamsSchema: Schema<CredentialFileParams> = (input) => {
   const object = ensureObject(input);
   if (!object.ok) return object;
   const fileId = object.value.fileId;
   if (typeof fileId !== "string" || !UUID_PATTERN.test(fileId)) return { ok: false, issues: [{ field: "fileId", message: "Must be a valid file id." }] };
   return { ok: true, value: { fileId } };
+};
+
+export const psychologistPublicParamsSchema: Schema<PsychologistPublicParams> = (input) => {
+  const object = ensureObject(input);
+  if (!object.ok) return object;
+  const psychologistId = object.value.psychologistId;
+  if (typeof psychologistId !== "string" || !UUID_PATTERN.test(psychologistId)) return { ok: false, issues: [{ field: "psychologistId", message: "Must be a valid psychologist id." }] };
+  return { ok: true, value: { psychologistId } };
+};
+
+export const psychologistBundleParamsSchema: Schema<PsychologistBundleParams> = (input) => {
+  const object = ensureObject(input);
+  if (!object.ok) return object;
+  const bundleId = object.value.bundleId;
+  if (typeof bundleId !== "string" || !UUID_PATTERN.test(bundleId)) return { ok: false, issues: [{ field: "bundleId", message: "Must be a valid bundle id." }] };
+  return { ok: true, value: { bundleId } };
 };
 
 export function validateDocumentType(type: PsychologistType, value: unknown): CredentialDocumentType | ValidationIssue {
