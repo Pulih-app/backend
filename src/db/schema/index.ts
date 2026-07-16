@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { boolean, check, index, integer, jsonb, numeric, pgEnum, pgTable, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, check, date, index, integer, jsonb, numeric, pgEnum, pgTable, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", ["patient", "psychologist", "admin"]);
 export const psychologistTypeEnum = pgEnum("psychologist_type", ["general", "clinical"]);
@@ -222,6 +222,44 @@ export const paymentEvents = pgTable("payment_events", {
   orderIndex: index("idx_payment_events_order_id").on(table.orderId),
 }));
 
+export const checkIns = pgTable("check_ins", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  mood: integer("mood").notNull(),
+  note: text("note"),
+  localDate: date("local_date", { mode: "string" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({
+  userDateUnique: uniqueIndex("uq_check_ins_user_local_date").on(table.userId, table.localDate),
+  userDateIndex: index("idx_check_ins_user_local_date").on(table.userId, table.localDate),
+  moodCheck: check("ck_check_ins_mood", sql`${table.mood} >= 1 AND ${table.mood} <= 5`),
+}));
+
+export const relapses = pgTable("relapses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  mood: integer("mood").notNull(),
+  triggers: text("triggers").array().notNull(),
+  note: text("note"),
+  localDate: date("local_date", { mode: "string" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({
+  userDateIndex: index("idx_relapses_user_local_date").on(table.userId, table.localDate),
+  moodCheck: check("ck_relapses_mood", sql`${table.mood} >= 1 AND ${table.mood} <= 5`),
+}));
+
+export const streaks = pgTable("streaks", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  currentStreak: integer("current_streak").notNull().default(0),
+  longestStreak: integer("longest_streak").notNull().default(0),
+  lastCheckInLocalDate: date("last_check_in_local_date", { mode: "string" }),
+  lastRelapseLocalDate: date("last_relapse_local_date", { mode: "string" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({
+  currentCheck: check("ck_streaks_current_non_negative", sql`${table.currentStreak} >= 0`),
+  longestCheck: check("ck_streaks_longest_non_negative", sql`${table.longestStreak} >= 0`),
+}));
+
 export const notificationEvents = pgTable("notification_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   type: notificationEventTypeEnum("type").notNull(),
@@ -253,6 +291,9 @@ export const schema = {
   bookingReviews,
   payments,
   paymentEvents,
+  checkIns,
+  relapses,
+  streaks,
   notificationEvents,
 } as const;
 

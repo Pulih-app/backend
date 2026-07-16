@@ -11,6 +11,8 @@ import type { PsychologistsRepository } from "./modules/psychologists/psychologi
 import { createBookingsRoutes } from "./modules/bookings/bookings.routes";
 import type { BookingsRepository } from "./modules/bookings/bookings.repository";
 import { createPaymentsRoutes } from "./modules/payments/payments.routes";
+import { createRoutineRoutes } from "./modules/routine/routine.routes";
+import type { RoutineRepository } from "./modules/routine/routine.repository";
 import type { NotificationsService } from "./modules/notifications/notifications.service";
 import { createHealthRoutes } from "./routes/health.routes";
 import { validationDemoRoutes } from "./routes/validation-demo.routes";
@@ -53,6 +55,7 @@ export type AppOptions = {
   usersRepository?: UsersRepository;
   psychologistsRepository?: PsychologistsRepository;
   bookingsRepository?: BookingsRepository;
+  routineRepository?: RoutineRepository;
   credentialStorage?: CredentialStorage;
   notificationsService?: NotificationsService;
 };
@@ -153,6 +156,16 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
     },
     bookingsRepository: options.bookingsRepository,
     notificationsService: options.notificationsService,
+  }));
+  app.route("/api/v1", createRoutineRoutes({
+    config,
+    databaseSource: {
+      hyperdrive: bindings.HYPERDRIVE,
+      databaseUrl: runtimeEnv.DATABASE_URL,
+      directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
+    },
+    authRepository: options.authRepository,
+    routineRepository: options.routineRepository,
   }));
   app.route("/api/v1", validationDemoRoutes);
   app.onError(handleGlobalError);
