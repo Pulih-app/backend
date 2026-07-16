@@ -5,6 +5,9 @@ import { createAuthRoutes } from "./modules/auth/auth.routes";
 import type { AuthRepository } from "./modules/auth/auth.repository";
 import { createUsersRoutes } from "./modules/users/users.routes";
 import type { UsersRepository } from "./modules/users/users.repository";
+import { createPsychologistsRoutes } from "./modules/psychologists/psychologists.routes";
+import type { CredentialStorage, R2Like } from "./modules/psychologists/credential-storage";
+import type { PsychologistsRepository } from "./modules/psychologists/psychologists.repository";
 import { createHealthRoutes } from "./routes/health.routes";
 import { validationDemoRoutes } from "./routes/validation-demo.routes";
 import { loadConfig } from "./shared/config";
@@ -36,11 +39,14 @@ const DEFAULT_ENV = {
 export type AppEnv = Record<string, string | undefined>;
 export type AppBindings = {
   HYPERDRIVE?: HyperdriveLike;
+  CREDENTIAL_BUCKET?: R2Like;
 };
 export type AppOptions = {
   databaseHealthCheck?: () => Promise<void>;
   authRepository?: AuthRepository;
   usersRepository?: UsersRepository;
+  psychologistsRepository?: PsychologistsRepository;
+  credentialStorage?: CredentialStorage;
 };
 
 async function createDefaultDatabaseHealthCheck(env: AppEnv, bindings: AppBindings, config = loadConfig(env)) {
@@ -106,6 +112,18 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
     },
     authRepository: options.authRepository,
     usersRepository: options.usersRepository,
+  }));
+  app.route("/api/v1", createPsychologistsRoutes({
+    config,
+    databaseSource: {
+      hyperdrive: bindings.HYPERDRIVE,
+      databaseUrl: runtimeEnv.DATABASE_URL,
+      directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
+    },
+    authRepository: options.authRepository,
+    psychologistsRepository: options.psychologistsRepository,
+    credentialStorage: options.credentialStorage,
+    credentialBucket: bindings.CREDENTIAL_BUCKET,
   }));
   app.route("/api/v1", validationDemoRoutes);
   app.onError(handleGlobalError);

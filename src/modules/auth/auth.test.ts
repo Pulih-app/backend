@@ -2,8 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { createApp } from "../../app";
 import { hashPassword, verifyPassword } from "./password";
 import { issueAccessToken, verifyAccessToken } from "./token";
+import { validateCredentialFile } from "../psychologists/psychologists.service";
 import type { AuthRepository, AuthUserRecord } from "./auth.repository";
 import type { UserProfileRecord, UsersRepository, UserSettingsUpdate } from "../users/users.repository";
+import type { PsychologistProfileRecord, PsychologistsRepository } from "../psychologists/psychologists.repository";
+import type { CredentialStorage } from "../psychologists/credential-storage";
+import { channelForType, type CredentialDocumentType } from "../psychologists/psychologists.types";
 
 const baseEnv = {
   APP_NAME: "pulih-api",
@@ -334,5 +338,207 @@ describe("users routes", () => {
     expect(onboarding.status).toBe(200);
     const onboardingBody = await onboarding.json();
     expect(onboardingBody.data.onboardingCompletedAt).toBeTruthy();
+  });
+});
+
+describe("psychologist routes", () => {
+  function createMemoryPsychologistsRepository(seed: PsychologistProfileRecord[] = []): PsychologistsRepository {
+    const profiles = new Map(seed.map((profile) => [profile.userId, profile]));
+    const files = new Map<string, Array<{ id: string; profileId: string; documentType: CredentialDocumentType; objectKey: string; fileName: string; contentType: string; sizeBytes: number }>>();
+
+    return {
+      async upsertProfile(input) {
+        const profile: PsychologistProfileRecord = {
+          id: profiles.get(input.userId)?.id ?? crypto.randomUUID(),
+          userId: input.userId,
+          type: input.type,
+          consultationChannel: input.consultationChannel,
+          approvalStatus: "draft",
+          fullName: input.fullName,
+          licenseNumber: input.licenseNumber,
+          bio: input.bio,
+          practicePlaces: input.practicePlaces.map((place) => ({ id: crypto.randomUUID(), name: place.name, address: place.address, isActive: place.isActive ?? true })),
+        };
+        profiles.set(input.userId, profile);
+        return profile;
+      },
+      async findByUserId(userId) {
+        return profiles.get(userId) ?? null;
+      },
+      async createCredentialFile(input) {
+        const file = { id: crypto.randomUUID(), ...input };
+        const bucket = files.get(input.profileId) ?? [];
+        bucket.push(file);
+        files.set(input.profileId, bucket);
+        return file;
+      },
+      async listCredentialFiles(profileId) {
+        return files.get(profileId) ?? [];
+      },
+      async findCredentialFileByOwner(userId, fileId) {
+        const profile = profiles.get(userId);
+        if (!profile) return null;
+        return (files.get(profile.id) ?? []).find((file) => file.id === fileId) ?? null;
+      },
+      async updateApprovalStatus(profileId, status) {
+        for (const [userId, profile] of profiles.entries()) {
+          if (profile.id === profileId) {
+            profiles.set(userId, { ...profile, approvalStatus: status });
+          }
+        }
+      },
+    };
+  }
+
+  const credentialStorage: CredentialStorage = {
+    async put() {
+      return undefined;
+    },
+  };
+
+  test("creates psychologist profile and derives consultation channel", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const authRepository = createMemoryRepository([{ id: "user-1", email: "psych@example.com", passwordHash, role: "patient", status: "active" }]);
+    const psychologistsRepository = createMemoryPsychologistsRepository();
+    const app = createApp(baseEnv, {}, { authRepository, psychologistsRepository, credentialStorage });
+
+    const login = await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
+    });
+    const loginBody = await login.json();
+
+    const register = await app.request("http://localhost/api/v1/psychologists/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      body: JSON.stringify({ type: "general", fullName: "Dr. General", practicePlaces: [] }),
+    });
+    expect(register.status).toBe(201);
+    const registerBody = await register.json();
+    expect(registerBody.data.consultationChannel).toBe("chat");
+  });
+
+  test("rejects more than 3 active practice places for clinical psychologist", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const authRepository = createMemoryRepository([{ id: "user-1", email: "psych@example.com", passwordHash, role: "patient", status: "active" }]);
+    const psychologistsRepository = createMemoryPsychologistsRepository();
+    const app = createApp(baseEnv, {}, { authRepository, psychologistsRepository, credentialStorage });
+
+    const login = await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
+    });
+    const loginBody = await login.json();
+
+    const response = await app.request("http://localhost/api/v1/psychologists/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      body: JSON.stringify({
+        type: "clinical",
+        fullName: "Dr. Clinical",
+        practicePlaces: [
+          { name: "A", address: "X" },
+          { name: "B", address: "Y" },
+          { name: "C", address: "Z" },
+          { name: "D", address: "W" },
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(422);
+  });
+
+  test("uploads credential file and blocks submit-for-review until required files exist", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const authRepository = createMemoryRepository([{ id: "user-1", email: "psych@example.com", passwordHash, role: "patient", status: "active" }]);
+    const psychologistsRepository = createMemoryPsychologistsRepository();
+    const app = createApp(baseEnv, {}, { authRepository, psychologistsRepository, credentialStorage });
+
+    const login = await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
+    });
+    const loginBody = await login.json();
+
+    await app.request("http://localhost/api/v1/psychologists/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      body: JSON.stringify({ type: "general", fullName: "Dr. General", practicePlaces: [] }),
+    });
+
+    const form = new FormData();
+    form.set("documentType", "sipp");
+    form.set("file", new File([new Uint8Array([1, 2, 3])], "license.pdf", { type: "application/pdf" }));
+
+    const upload = await app.request("http://localhost/api/v1/psychologists/me/credential-file", {
+      method: "POST",
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      body: form,
+    });
+    expect(upload.status).toBe(201);
+
+    const submit = await app.request("http://localhost/api/v1/psychologists/me/submit-for-review", {
+      method: "POST",
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+    });
+    expect(submit.status).toBe(409);
+  });
+
+  test("rejects invalid credential file type and size", () => {
+    expect(() => validateCredentialFile(new File([new Uint8Array([1])], "note.txt", { type: "text/plain" }))).toThrow("Request validation failed.");
+    expect(() => validateCredentialFile(new File([new Uint8Array(5 * 1024 * 1024 + 1)], "large.pdf", { type: "application/pdf" }))).toThrow("Request validation failed.");
+  });
+
+  test("returns review url only for owner", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const authRepository = createMemoryRepository([
+      { id: "user-1", email: "psych@example.com", passwordHash, role: "patient", status: "active" },
+      { id: "user-2", email: "other@example.com", passwordHash, role: "patient", status: "active" },
+    ]);
+    const psychologistsRepository = createMemoryPsychologistsRepository();
+    const app = createApp(baseEnv, {}, { authRepository, psychologistsRepository, credentialStorage });
+
+    const login1 = await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
+    });
+    const login1Body = await login1.json();
+
+    const login2 = await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "other@example.com", password: "password123" }),
+    });
+    const login2Body = await login2.json();
+
+    await app.request("http://localhost/api/v1/psychologists/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.accessToken}` },
+      body: JSON.stringify({ type: "general", fullName: "Dr. General", practicePlaces: [] }),
+    });
+
+    const form = new FormData();
+    form.set("documentType", "sipp");
+    form.set("file", new File([new Uint8Array([1, 2, 3])], "license.pdf", { type: "application/pdf" }));
+    const upload = await app.request("http://localhost/api/v1/psychologists/me/credential-file", {
+      method: "POST",
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.accessToken}` },
+      body: form,
+    });
+    const uploadBody = await upload.json();
+
+    const owner = await app.request(`http://localhost/api/v1/psychologists/me/credential-file/${uploadBody.data.id}/review-url`, {
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.accessToken}` },
+    });
+    expect(owner.status).toBe(200);
+
+    const other = await app.request(`http://localhost/api/v1/psychologists/me/credential-file/${uploadBody.data.id}/review-url`, {
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${login2Body.data.accessToken}` },
+    });
+    expect(other.status).toBe(404);
   });
 });
