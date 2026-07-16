@@ -26,6 +26,7 @@ const dateTime = (example: string) => ({ type: "string", format: "date-time", ex
 const nullableString = (example: string | null = null, extra: Schema = {}) => ({ type: ["string", "null"], example, ...extra });
 const arr = (items: Schema, example?: unknown[]) => ({ type: "array", items, ...(example ? { example } : {}) });
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+const refOrNull = (name: string) => ({ oneOf: [ref(name), { type: "null" }] });
 const moduleDoc = (text: string) => `${text}\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.`;
 
 const examples = {
@@ -91,17 +92,37 @@ const schemas = {
   AuthUser: {
     type: "object",
     required: ["id", "email", "role", "status"],
-    properties: { id: uuid(examples.userId), email: { type: "string", format: "email", example: "patient@example.com" }, role: { type: "string", enum: ["patient", "psychologist", "admin"], example: "patient" }, status: { type: "string", example: "active" } },
+    properties: { id: uuid(examples.userId), email: { type: "string", format: "email", example: "patient@example.com" }, username: nullableString("patient1", { maxLength: 50 }), role: { type: "string", enum: ["patient", "psychologist", "admin"], example: "patient" }, status: { type: "string", example: "active" } },
+  },
+  UserPayload: {
+    type: "object",
+    required: ["id", "email", "nickname", "recovery_reason", "daily_checkin_time", "porn_free_goal", "onboarding_completed"],
+    properties: { id: uuid(examples.userId), email: { type: "string", format: "email", example: "patient@example.com" }, nickname: nullableString("Demo", { maxLength: 255 }), recovery_reason: nullableString("Build a daily recovery streak", { maxLength: 2000 }), daily_checkin_time: nullableString("07:30", { pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }), porn_free_goal: { type: "integer", nullable: true, minimum: 1, maximum: 3650, example: 30 }, onboarding_completed: { type: "boolean", example: false } },
+  },
+  SessionPayload: {
+    type: "object",
+    required: ["access_token", "token_type", "expires_in"],
+    properties: { access_token: { type: "string", description: "JWT access token.", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo" }, token_type: { type: "string", enum: ["Bearer"], example: "Bearer" }, expires_in: { type: "integer", example: 86400 } },
   },
   AuthTokenResponse: {
     type: "object",
-    required: ["accessToken", "tokenType", "expiresIn", "user"],
-    properties: { accessToken: { type: "string", description: "JWT access token. Store client-side only; never log.", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo" }, tokenType: { type: "string", enum: ["Bearer"], example: "Bearer" }, expiresIn: { type: "integer", example: 86400 }, user: ref("AuthUser") },
+    required: ["user", "session"],
+    properties: { user: ref("UserPayload"), session: ref("SessionPayload") },
   },
   UserProfile: {
     type: "object",
-    required: ["userId", "email", "role", "status", "displayName", "nickname", "recoveryGoal", "checkInTime", "onboardingCompletedAt"],
-    properties: { userId: uuid(examples.userId), email: { type: "string", format: "email", example: "patient@example.com" }, role: { type: "string", enum: ["patient", "psychologist", "admin"], example: "patient" }, status: { type: "string", example: "active" }, displayName: nullableString("Pulih Demo", { maxLength: 255 }), nickname: nullableString("Demo", { maxLength: 255 }), recoveryGoal: nullableString("Build a daily recovery streak", { maxLength: 2000 }), checkInTime: nullableString("07:30:00", { pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$" }), onboardingCompletedAt: nullableString("2026-07-16T16:00:00.000Z", { format: "date-time" }) },
+    required: ["id", "email", "nickname", "recovery_reason", "daily_checkin_time", "porn_free_goal", "onboarding_completed"],
+    properties: { id: uuid(examples.userId), email: { type: "string", format: "email", example: "patient@example.com" }, nickname: nullableString("Demo", { maxLength: 255 }), recovery_reason: nullableString("Build a daily recovery streak", { maxLength: 2000 }), daily_checkin_time: nullableString("07:30", { pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }), porn_free_goal: { type: "integer", nullable: true, minimum: 1, maximum: 3650, example: 30 }, onboarding_completed: { type: "boolean", example: false } },
+  },
+  OnboardingAnalysis: {
+    type: "object",
+    required: ["level", "title", "level_description", "pattern_analysis", "encouragement"],
+    properties: { level: { type: "string", example: "Moderate" }, title: { type: "string", example: "Your Recovery Profile" }, level_description: { type: "string", example: "You show moderate dependency patterns with stress as the primary trigger." }, pattern_analysis: { type: "string", example: "Your late-night urges correlate with work stress. Consider evening grounding activities." }, encouragement: { type: "string", example: "You have already taken an important step by starting this journey." } },
+  },
+  OnboardingCompletion: {
+    type: "object",
+    required: ["id", "email", "nickname", "recovery_reason", "daily_checkin_time", "porn_free_goal", "onboarding_completed"],
+    properties: { id: uuid(examples.userId), email: { type: "string", format: "email", example: "patient@example.com" }, nickname: nullableString("Demo", { maxLength: 255 }), recovery_reason: nullableString("Build a daily recovery streak", { maxLength: 2000 }), daily_checkin_time: nullableString("07:30", { pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }), porn_free_goal: { type: "integer", nullable: true, minimum: 1, maximum: 3650, example: 30 }, onboarding_completed: { type: "boolean", example: true }, onboarding_analysis: refOrNull("OnboardingAnalysis") },
   },
   PracticePlace: {
     type: "object",
@@ -221,9 +242,10 @@ const schemas = {
 } as const;
 
 const schemaExamples: Record<string, Example> = {
-  AuthUser: { id: examples.userId, email: "patient@example.com", role: "patient", status: "active" },
-  AuthTokenResponse: { accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo", tokenType: "Bearer", expiresIn: 86400, user: { id: examples.userId, email: "patient@example.com", role: "patient", status: "active" } },
-  UserProfile: { userId: examples.userId, email: "patient@example.com", role: "patient", status: "active", displayName: "Pulih Demo", nickname: "Demo", recoveryGoal: "Build a daily recovery streak", checkInTime: "07:30:00", onboardingCompletedAt: "2026-07-16T16:00:00.000Z" },
+  AuthUser: { id: examples.userId, email: "patient@example.com", username: "patient1", role: "patient", status: "active" },
+  AuthTokenResponse: { user: { id: examples.userId, email: "patient@example.com", nickname: null, recovery_reason: null, daily_checkin_time: null, porn_free_goal: null, onboarding_completed: false }, session: { access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo", token_type: "Bearer", expires_in: 86400 } },
+  UserProfile: { id: examples.userId, email: "patient@example.com", nickname: "Demo", recovery_reason: "Build a daily recovery streak", daily_checkin_time: "07:30", porn_free_goal: 30, onboarding_completed: false },
+  OnboardingCompletion: { id: examples.userId, email: "patient@example.com", nickname: "Demo", recovery_reason: "Build a daily recovery streak", daily_checkin_time: "07:30", porn_free_goal: 30, onboarding_completed: true, onboarding_analysis: { level: "Moderate", title: "Your Recovery Profile", level_description: "You show moderate dependency patterns with stress as the primary trigger.", pattern_analysis: "Your late-night urges correlate with work stress. Consider evening grounding activities.", encouragement: "You have already taken an important step by starting this journey." } },
   PsychologistProfile: { id: examples.psychologistId, userId: examples.userId, type: "clinical", fullName: "Dr. Demo", status: "draft", licenseNumber: "STR-123456", bio: "Licensed clinical psychologist.", practicePlaces: [{ name: "Pulih Clinic", address: "Jl. Demo No. 1", isActive: true }], createdAt: "2026-07-16T10:00:00.000Z", updatedAt: "2026-07-16T10:00:00.000Z" },
   CredentialFile: { id: examples.fileId, documentType: "str", fileName: "credential-str.pdf", contentType: "application/pdf", sizeBytes: 248000, createdAt: "2026-07-16T10:00:00.000Z" },
   CredentialReviewUrl: { fileId: examples.fileId, reviewUrl: "https://example-r2-signed-url.local/credential.pdf", expiresAt: "2026-07-16T10:15:00.000Z" },
@@ -261,9 +283,10 @@ function operationKey(method: string, path: string) {
 }
 
 const requestSchemas = {
-  Register: { type: "object", additionalProperties: false, required: ["email", "password"], properties: { email: { type: "string", format: "email", example: "patient@example.com" }, password: { type: "string", minLength: 1, maxLength: 72, format: "password", example: "password123" } } },
-  Onboarding: { type: "object", additionalProperties: false, required: ["recoveryGoal"], properties: { displayName: nullableString("Pulih Demo", { maxLength: 255 }), nickname: nullableString("Demo", { maxLength: 255 }), recoveryGoal: { type: "string", maxLength: 2000, example: "Build a daily recovery streak" }, checkInTime: nullableString("07:30", { pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$" }) } },
-  UserSettings: { type: "object", additionalProperties: false, properties: { displayName: nullableString("Pulih Demo", { maxLength: 255 }), nickname: nullableString("Demo", { maxLength: 255 }), recoveryGoal: nullableString("Stay sober for 30 days", { maxLength: 2000 }), checkInTime: nullableString("07:30", { pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$" }) } },
+  Register: { type: "object", additionalProperties: false, required: ["email", "username", "password", "confirm_password"], properties: { email: { type: "string", format: "email", example: "patient@example.com" }, username: { type: "string", minLength: 3, maxLength: 50, pattern: "^[a-z0-9_]{3,50}$", example: "patient1" }, password: { type: "string", minLength: 1, maxLength: 72, format: "password", example: "password123" }, confirm_password: { type: "string", minLength: 1, format: "password", example: "password123" } } },
+  Login: { type: "object", additionalProperties: false, required: ["identifier", "password"], properties: { identifier: { type: "string", example: "patient@example.com" }, password: { type: "string", minLength: 1, maxLength: 72, format: "password", example: "password123" } } },
+  Onboarding: { type: "object", additionalProperties: false, required: ["nickname", "recovery_reason", "daily_checkin_time", "porn_free_goal"], properties: { nickname: { type: "string", minLength: 1, maxLength: 255, example: "Demo" }, recovery_reason: { type: "string", minLength: 3, maxLength: 2000, example: "Build a daily recovery streak" }, daily_checkin_time: { type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d$", example: "07:30" }, porn_free_goal: { type: "integer", minimum: 1, maximum: 3650, example: 30 }, answers: { type: "object", additionalProperties: true, example: { trigger: "stress" } }, dependency_level: nullableString("Moderate", { maxLength: 64 }) } },
+  UserSettings: { type: "object", additionalProperties: false, properties: { nickname: nullableString("Demo", { maxLength: 255 }), recovery_reason: nullableString("Stay sober for 30 days", { maxLength: 2000 }), daily_checkin_time: nullableString("07:30", { pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }), porn_free_goal: { type: "integer", nullable: true, minimum: 1, maximum: 3650, example: 30 } } },
   PsychologistProfile: { type: "object", additionalProperties: false, required: ["type", "fullName"], properties: { type: { type: "string", enum: ["general", "clinical"], example: "clinical" }, fullName: { type: "string", maxLength: 255, example: "Dr. Demo" }, licenseNumber: nullableString("STR-123456", { maxLength: 128 }), bio: nullableString("Licensed clinical psychologist.", { maxLength: 2000 }), practicePlaces: { type: "array", maxItems: 3, items: ref("PracticePlace") } } },
   CredentialUpload: { type: "object", required: ["file", "documentType"], properties: { file: { type: "string", format: "binary", description: "PDF/JPG/JPEG/PNG credential file, max 5 MB." }, documentType: { type: "string", enum: ["sipp", "ijazah", "str", "strpk", "sippk"], example: "str" } } },
   SessionBundle: { type: "object", additionalProperties: false, required: ["dateStart", "dateEnd", "dailyStartTime", "dailyEndTime", "priceAmount"], properties: { dateStart: date("2026-06-01"), dateEnd: date("2026-06-07"), dailyStartTime: { type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$", example: "09:00" }, dailyEndTime: { type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$", example: "12:00" }, priceAmount: { type: "number", minimum: 100000, maximum: 300000, example: 150000 } } },
@@ -292,13 +315,13 @@ const contracts: Record<string, OperationContract> = {
   "GET /openapi.json": { summary: "Serve OpenAPI JSON", description: moduleDoc("Machine-readable OpenAPI 3.1 JSON document used by Scalar."), successSchema: { type: "object", additionalProperties: true }, successExample: { openapi: "3.1.0", info: { title: "Pulih API" } }, successMessage: "OpenAPI document retrieved successfully" },
   "GET /docs/api": { summary: "Render Scalar API docs", description: moduleDoc("Interactive Scalar API reference with search, grouped modules, request examples, response examples, auth helper, and code samples."), successSchema: { type: "string" }, successExample: "<html>...</html>", successMessage: "API docs rendered successfully" },
   "GET /docs/api/": { summary: "Render Scalar API docs", description: moduleDoc("Trailing-slash variant of the interactive Scalar API reference."), successSchema: { type: "string" }, successExample: "<html>...</html>", successMessage: "API docs rendered successfully" },
-  "POST /api/v1/auth/register": { summary: "Register patient account", description: moduleDoc("Creates a patient account with email/password and returns an access token. Duplicate email returns 409."), requestBody: body(requestSchemas.Register, { patient: { email: "patient@example.com", password: "password123" } }), successStatus: "201", successMessage: "Registration successful", successSchema: ref("AuthTokenResponse"), successExample: schemaExamples.AuthTokenResponse },
-  "POST /api/v1/auth/login": { summary: "Login with email and password", description: moduleDoc("Authenticates user credentials and returns a Bearer access token. Invalid credentials return 401."), requestBody: body(requestSchemas.Register, { patient: { email: "patient@example.com", password: "password123" } }), successMessage: "Login successful", successSchema: ref("AuthTokenResponse"), successExample: schemaExamples.AuthTokenResponse },
+  "POST /api/v1/auth/register": { summary: "Register patient account", description: moduleDoc("Creates a patient account with email, username and password. Returns user profile and access token. Duplicate email or username returns 409."), requestBody: body(requestSchemas.Register, { patient: { email: "patient@example.com", username: "patient1", password: "password123", confirm_password: "password123" } }), successStatus: "201", successMessage: "Registration successful", successSchema: ref("AuthTokenResponse"), successExample: schemaExamples.AuthTokenResponse },
+  "POST /api/v1/auth/login": { summary: "Login with email or username", description: moduleDoc("Authenticates user by identifier (email or username) and password. Returns user profile and Bearer access token. Invalid credentials return 401."), requestBody: body(requestSchemas.Login, { patient: { identifier: "patient@example.com", password: "password123" } }), successMessage: "Login successful", successSchema: ref("AuthTokenResponse"), successExample: schemaExamples.AuthTokenResponse },
   "POST /api/v1/auth/logout": { summary: "Logout current client", description: moduleDoc("Access-token-only MVP logout. Client discards token; server returns null data."), successMessage: "Logout successful", successSchema: { type: "null" }, successExample: null },
   "GET /api/v1/auth/me": { summary: "Read authenticated user", description: moduleDoc("Returns authenticated principal from Bearer token."), successMessage: "Authenticated user retrieved successfully", ...successData("AuthUser") },
-  "POST /api/v1/auth/onboarding": { summary: "Complete onboarding", description: moduleDoc("Stores recovery onboarding data for current user. Product date/time semantics follow Asia/Jakarta."), requestBody: body(requestSchemas.Onboarding, { complete: { displayName: "Pulih Demo", nickname: "Demo", recoveryGoal: "Build a daily recovery streak", checkInTime: "07:30" } }), successMessage: "Onboarding completed successfully", ...successData("UserProfile") },
+  "POST /api/v1/auth/onboarding": { summary: "Complete onboarding", description: moduleDoc("Stores recovery onboarding data for current user. Returns onboarding analysis when AI is available. Same payload is idempotent; different payload after completion returns 409."), requestBody: body(requestSchemas.Onboarding, { complete: { nickname: "Demo", recovery_reason: "Build a daily recovery streak", daily_checkin_time: "07:30", porn_free_goal: 30, answers: { trigger: "stress" }, dependency_level: "Moderate" } }), successMessage: "Onboarding completed successfully", successSchema: ref("OnboardingCompletion"), successExample: schemaExamples.OnboardingCompletion },
   "GET /api/v1/users/me": { summary: "Read current user profile", description: moduleDoc("Returns current user's profile and onboarding fields."), successMessage: "Current user retrieved successfully", ...successData("UserProfile") },
-  "PUT /api/v1/users/settings": { summary: "Update current user settings", description: moduleDoc("Updates editable current-user settings. Unknown fields return 422."), requestBody: body(requestSchemas.UserSettings, { profile: { displayName: "Pulih Demo", nickname: "Demo", recoveryGoal: "Stay sober for 30 days", checkInTime: "07:30" } }), successMessage: "Settings updated successfully", ...successData("UserProfile") },
+  "PUT /api/v1/users/settings": { summary: "Update current user settings", description: moduleDoc("Updates editable current-user settings. Unknown fields return 422."), requestBody: body(requestSchemas.UserSettings, { profile: { nickname: "Demo", recovery_reason: "Stay sober for 30 days", daily_checkin_time: "07:30", porn_free_goal: 60 } }), successMessage: "Settings updated successfully", ...successData("UserProfile") },
   "POST /api/v1/psychologists/register": { summary: "Create or update psychologist profile", description: moduleDoc("Creates psychologist profile shell. General psychologists cannot submit practice places. Clinical psychologists can submit max 3 practice places."), requestBody: body(requestSchemas.PsychologistProfile, { clinical: { type: "clinical", fullName: "Dr. Demo", licenseNumber: "STR-123456", bio: "Licensed clinical psychologist.", practicePlaces: [{ name: "Pulih Clinic", address: "Jl. Demo No. 1", isActive: true }] }, general: { type: "general", fullName: "Konselor Demo", licenseNumber: "SIPP-123456", bio: "General counseling support." } }), successStatus: "201", successMessage: "Psychologist profile saved successfully", ...successData("PsychologistProfile") },
   "GET /api/v1/psychologists/me": { summary: "Read psychologist profile", description: moduleDoc("Returns current authenticated psychologist profile, including draft/review status."), successMessage: "Request processed successfully", ...successData("PsychologistProfile") },
   "PUT /api/v1/psychologists/me": { summary: "Update psychologist profile", description: moduleDoc("Updates current psychologist profile before or during review."), requestBody: body(requestSchemas.PsychologistProfile, { clinical: { type: "clinical", fullName: "Dr. Demo", licenseNumber: "STR-123456", bio: "Updated bio.", practicePlaces: [{ name: "Pulih Clinic", address: "Jl. Demo No. 1", isActive: true }] } }), successMessage: "Psychologist profile updated successfully", ...successData("PsychologistProfile") },
@@ -462,8 +485,8 @@ function getErrorExample(item: RouteInventoryItem, status: ErrorStatus): ErrorEx
 
   if (path === "/api/v1/auth/login") {
     if (status === 400) return { code: "BAD_REQUEST", message: "Request body is malformed.", details: ["Request body must be valid JSON."] };
-    if (status === 401) return { code: "UNAUTHENTICATED", message: "Invalid credentials.", details: ["Email or password is invalid."] };
-    if (status === 422) return { code: "VALIDATION_ERROR", message: "Request validation failed.", details: ["email: Email must be valid.", "password: Password is required."] };
+    if (status === 401) return { code: "UNAUTHENTICATED", message: "Invalid credentials.", details: ["Invalid identifier or password."] };
+    if (status === 422) return { code: "VALIDATION_ERROR", message: "Request validation failed.", details: ["identifier: Identifier is required.", "password: Password is required."] };
     if (status === 429) return { code: "RATE_LIMITED", message: "Too many login attempts.", details: ["Too many login attempts. Please retry later."] };
     if (status === 500) return { code: "INTERNAL_ERROR", message: "Unexpected internal error.", details: ["Failed to verify credentials."] };
   }

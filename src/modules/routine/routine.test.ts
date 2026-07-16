@@ -53,7 +53,7 @@ const TEST_ENV = {
   PAKASIR_API_KEY: "test-pakasir-key",
 };
 
-const AUTH_USER = { id: "11111111-1111-4111-8111-111111111111", email: "patient@example.com", role: "patient" as const, status: "active" };
+const AUTH_USER = { id: "11111111-1111-4111-8111-111111111111", email: "patient@example.com", username: null, role: "patient" as const, status: "active" };
 
 describe("routine service", () => {
   test("uses Asia/Jakarta local date", () => {
@@ -91,6 +91,8 @@ describe("routine routes", () => {
       authRepository: {
         async createPatient() { throw new Error("not used"); },
         async findByEmail() { return null; },
+        async findByUsername() { return null; },
+        async findByLoginIdentifier() { return null; },
         async findById(id: string) { return id === AUTH_USER.id ? { ...AUTH_USER, passwordHash: "hash" } : null; },
       },
       routineRepository: repository,

@@ -35,6 +35,7 @@ function createMemoryAuthRepository(seed: AuthUserRecord[] = []): AuthRepository
       const user: AuthUserRecord = {
         id: crypto.randomUUID(),
         email: input.email,
+        username: input.username,
         passwordHash: input.passwordHash,
         role: "patient",
         status: "active",
@@ -44,6 +45,12 @@ function createMemoryAuthRepository(seed: AuthUserRecord[] = []): AuthRepository
     },
     async findByEmail(email) {
       return Array.from(users.values()).find((user) => user.email === email) ?? null;
+    },
+    async findByUsername(username) {
+      return Array.from(users.values()).find((user) => user.username === username) ?? null;
+    },
+    async findByLoginIdentifier(identifier) {
+      return Array.from(users.values()).find((user) => user.email === identifier || user.username === identifier) ?? null;
     },
     async findById(id) {
       return users.get(id) ?? null;
@@ -61,10 +68,14 @@ function createMemoryUsersRepository(seed: UserProfileRecord[] = []): UsersRepos
       email: "patient@example.com",
       role: "patient",
       status: "active",
-      displayName: null,
+      username: null,
       nickname: null,
-      recoveryGoal: null,
-      checkInTime: null,
+      recoveryReason: null,
+      dailyCheckinTime: null,
+      pornFreeGoal: null,
+      answers: {},
+      dependencyLevel: null,
+      aiSummary: null,
       onboardingCompletedAt: null,
     };
   }
@@ -73,10 +84,10 @@ function createMemoryUsersRepository(seed: UserProfileRecord[] = []): UsersRepos
     const existing = baseProfile(userId);
     const updated: UserProfileRecord = {
       ...existing,
-      displayName: input.displayName !== undefined ? input.displayName : existing.displayName,
       nickname: input.nickname !== undefined ? input.nickname : existing.nickname,
-      recoveryGoal: input.recoveryGoal !== undefined ? input.recoveryGoal : existing.recoveryGoal,
-      checkInTime: input.checkInTime !== undefined ? input.checkInTime : existing.checkInTime,
+      recoveryReason: input.recovery_reason !== undefined ? input.recovery_reason : existing.recoveryReason,
+      dailyCheckinTime: input.daily_checkin_time !== undefined ? input.daily_checkin_time : existing.dailyCheckinTime,
+      pornFreeGoal: input.porn_free_goal !== undefined ? input.porn_free_goal : existing.pornFreeGoal,
       onboardingCompletedAt: onboardingCompletedAt ?? existing.onboardingCompletedAt,
     };
     profiles.set(userId, updated);
@@ -371,16 +382,16 @@ describe("smoke path", () => {
     const register = await app.request("http://localhost/api/v1/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
+      body: JSON.stringify({ email: "patient@example.com", username: "patient1", password: "password123", confirm_password: "password123" }),
     });
     expect(register.status).toBe(201);
     const registerBody = await register.json();
-    const token = registerBody.data.accessToken as string;
+    const token = registerBody.data.session.access_token as string;
 
     const login = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
+      body: JSON.stringify({ identifier: "patient@example.com", password: "password123" }),
     });
     expect(login.status).toBe(200);
 

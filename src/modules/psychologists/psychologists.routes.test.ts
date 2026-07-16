@@ -25,11 +25,13 @@ function createMemoryAuthRepository(seed: AuthUserRecord[]): AuthRepository {
   const users = new Map(seed.map((user) => [user.id, user]));
   return {
     async createPatient(input) {
-      const user: AuthUserRecord = { id: crypto.randomUUID(), email: input.email, passwordHash: input.passwordHash, role: "patient", status: "active" };
+      const user: AuthUserRecord = { id: crypto.randomUUID(), email: input.email, username: input.username, passwordHash: input.passwordHash, role: "patient", status: "active" };
       users.set(user.id, user);
       return user;
     },
     async findByEmail(email) { return Array.from(users.values()).find((user) => user.email === email) ?? null; },
+    async findByUsername(username) { return Array.from(users.values()).find((user) => user.username === username) ?? null; },
+    async findByLoginIdentifier(identifier: string) { return Array.from(users.values()).find((u) => u.email === identifier || u.username === identifier) ?? null; },
     async findById(id) { return users.get(id) ?? null; },
   };
 }
@@ -158,10 +160,10 @@ describe("psychologist directory and bundles", () => {
     const register = await app.request("http://localhost/api/v1/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "approved@example.com", password: "password123" }),
+      body: JSON.stringify({ email: "approved@example.com", username: "approved", password: "password123", confirm_password: "password123" }),
     });
     const registerBody = await register.json();
-    const token = registerBody.data.accessToken as string;
+    const token = registerBody.data.session.access_token as string;
     const userId = registerBody.data.user.id as string;
 
     await app.request("http://localhost/api/v1/psychologists/register", {
@@ -201,10 +203,10 @@ describe("psychologist directory and bundles", () => {
     const ownerRegister = await app.request("http://localhost/api/v1/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "owner@example.com", password: "password123" }),
+      body: JSON.stringify({ email: "owner@example.com", username: "owner", password: "password123", confirm_password: "password123" }),
     });
     const ownerBody = await ownerRegister.json();
-    const ownerToken = ownerBody.data.accessToken as string;
+    const ownerToken = ownerBody.data.session.access_token as string;
     const ownerUserId = ownerBody.data.user.id as string;
 
     await app.request("http://localhost/api/v1/psychologists/register", {
@@ -256,10 +258,10 @@ describe("psychologist directory and bundles", () => {
     const otherRegister = await app.request("http://localhost/api/v1/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "other@example.com", password: "password123" }),
+      body: JSON.stringify({ email: "other@example.com", username: "other", password: "password123", confirm_password: "password123" }),
     });
     const otherBody = await otherRegister.json();
-    const otherToken = otherBody.data.accessToken as string;
+    const otherToken = otherBody.data.session.access_token as string;
 
     await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",

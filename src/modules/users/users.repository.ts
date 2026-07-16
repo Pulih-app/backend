@@ -8,36 +8,50 @@ export type UserProfileRecord = {
   email: string;
   role: string;
   status: string;
-  displayName: string | null;
+  username: string | null;
   nickname: string | null;
-  recoveryGoal: string | null;
-  checkInTime: string | null;
+  recoveryReason: string | null;
+  dailyCheckinTime: string | null;
+  pornFreeGoal: number | null;
+  answers: Record<string, unknown>;
+  dependencyLevel: string | null;
+  aiSummary: string | null;
   onboardingCompletedAt: Date | null;
 };
 
 export type UserSettingsUpdate = {
-  displayName?: string | null;
   nickname?: string | null;
-  recoveryGoal?: string | null;
-  checkInTime?: string | null;
+  recovery_reason?: string | null;
+  daily_checkin_time?: string | null;
+  porn_free_goal?: number | null;
+};
+
+export type OnboardingUpdate = UserSettingsUpdate & {
+  answers?: Record<string, unknown>;
+  dependency_level?: string | null;
+  ai_summary?: string | null;
 };
 
 export type UsersRepository = {
   findCurrentUser(userId: string): Promise<UserProfileRecord | null>;
   updateSettings(userId: string, input: UserSettingsUpdate): Promise<UserProfileRecord>;
-  completeOnboarding(userId: string, input: UserSettingsUpdate): Promise<UserProfileRecord>;
+  completeOnboarding(userId: string, input: OnboardingUpdate): Promise<UserProfileRecord>;
 };
 
 type UserProfileRow = {
   userId: string;
   profileId: string | null;
   email: string;
+  username: string | null;
   role: string;
   status: string;
-  displayName: string | null;
   nickname: string | null;
-  recoveryGoal: string | null;
-  checkInTime: string | null;
+  recoveryReason: string | null;
+  dailyCheckinTime: string | null;
+  pornFreeGoal: number | null;
+  answers: unknown;
+  dependencyLevel: string | null;
+  aiSummary: string | null;
   onboardingCompletedAt: Date | null;
 };
 
@@ -48,37 +62,16 @@ function mapRow(row: UserProfileRow): UserProfileRecord {
     email: row.email,
     role: row.role,
     status: row.status,
-    displayName: row.displayName,
+    username: row.username,
     nickname: row.nickname,
-    recoveryGoal: row.recoveryGoal,
-    checkInTime: row.checkInTime ? row.checkInTime.toString() : null,
+    recoveryReason: row.recoveryReason,
+    dailyCheckinTime: row.dailyCheckinTime ? row.dailyCheckinTime.toString() : null,
+    pornFreeGoal: row.pornFreeGoal,
+    answers: (row.answers ?? {}) as Record<string, unknown>,
+    dependencyLevel: row.dependencyLevel,
+    aiSummary: row.aiSummary,
     onboardingCompletedAt: row.onboardingCompletedAt,
   };
-}
-
-function buildProfileChanges(input: UserSettingsUpdate, onboardingCompletedAt?: Date | null) {
-  return {
-    ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
-    ...(input.nickname !== undefined ? { nickname: input.nickname } : {}),
-    ...(input.recoveryGoal !== undefined ? { recoveryGoal: input.recoveryGoal } : {}),
-    ...(input.checkInTime !== undefined ? { checkInTime: input.checkInTime } : {}),
-    ...(onboardingCompletedAt !== undefined ? { onboardingCompletedAt } : {}),
-  };
-}
-
-async function upsertProfile(db: NodePgDatabase, userId: string, input: UserSettingsUpdate, onboardingCompletedAt?: Date | null) {
-  const changes = buildProfileChanges(input, onboardingCompletedAt);
-
-  await db.insert(profiles).values({
-    userId,
-    ...changes,
-  }).onConflictDoUpdate({
-    target: profiles.userId,
-    set: {
-      ...changes,
-      updatedAt: new Date(),
-    },
-  });
 }
 
 export function createUsersRepository(db: NodePgDatabase): UsersRepository {
@@ -88,19 +81,47 @@ export function createUsersRepository(db: NodePgDatabase): UsersRepository {
         userId: users.id,
         profileId: profiles.id,
         email: users.email,
+        username: users.username,
         role: users.role,
         status: users.status,
-        displayName: profiles.displayName,
         nickname: profiles.nickname,
-        recoveryGoal: profiles.recoveryGoal,
-        checkInTime: profiles.checkInTime,
+        recoveryReason: profiles.recoveryReason,
+        dailyCheckinTime: profiles.dailyCheckinTime,
+        pornFreeGoal: users.pornFreeGoal,
+        answers: profiles.answers,
+        dependencyLevel: profiles.dependencyLevel,
+        aiSummary: profiles.aiSummary,
         onboardingCompletedAt: profiles.onboardingCompletedAt,
       }).from(users).leftJoin(profiles, eq(profiles.userId, users.id)).where(eq(users.id, userId)).limit(1);
 
       return row ? mapRow(row) : null;
     },
     async updateSettings(userId, input) {
-      await upsertProfile(db, userId, input);
+      const userChanges: Record<string, unknown> = {};
+      if (input.porn_free_goal !== undefined) { userChanges.pornFreeGoal = input.porn_free_goal; }
+
+      const profileChanges: Record<string, unknown> = {};
+      if (input.nickname !== undefined) { profileChanges.nickname = input.nickname; }
+      if (input.recovery_reason !== undefined) { profileChanges.recoveryReason = input.recovery_reason; }
+      if (input.daily_checkin_time !== undefined) { profileChanges.dailyCheckinTime = input.daily_checkin_time; }
+
+      if (Object.keys(userChanges).length > 0) {
+        await db.update(users).set(userChanges).where(eq(users.id, userId));
+      }
+
+      if (Object.keys(profileChanges).length > 0) {
+        await db.insert(profiles).values({
+          userId,
+          ...profileChanges,
+        }).onConflictDoUpdate({
+          target: profiles.userId,
+          set: {
+            ...profileChanges,
+            updatedAt: new Date(),
+          },
+        });
+      }
+
       const profile = await this.findCurrentUser(userId);
       if (!profile) {
         throw new Error("Updated user profile was not found.");
@@ -108,7 +129,34 @@ export function createUsersRepository(db: NodePgDatabase): UsersRepository {
       return profile;
     },
     async completeOnboarding(userId, input) {
-      await upsertProfile(db, userId, input, new Date());
+      const userChanges: Record<string, unknown> = {};
+      if (input.porn_free_goal !== undefined) { userChanges.pornFreeGoal = input.porn_free_goal; }
+
+      const profileChanges: Record<string, unknown> = {
+        onboardingCompletedAt: new Date(),
+      };
+      if (input.nickname !== undefined) { profileChanges.nickname = input.nickname; }
+      if (input.recovery_reason !== undefined) { profileChanges.recoveryReason = input.recovery_reason; }
+      if (input.daily_checkin_time !== undefined) { profileChanges.dailyCheckinTime = input.daily_checkin_time; }
+      if (input.answers !== undefined) { profileChanges.answers = input.answers; }
+      if (input.dependency_level !== undefined) { profileChanges.dependencyLevel = input.dependency_level; }
+      if (input.ai_summary !== undefined) { profileChanges.aiSummary = input.ai_summary; }
+
+      if (Object.keys(userChanges).length > 0) {
+        await db.update(users).set(userChanges).where(eq(users.id, userId));
+      }
+
+      await db.insert(profiles).values({
+        userId,
+        ...profileChanges,
+      }).onConflictDoUpdate({
+        target: profiles.userId,
+        set: {
+          ...profileChanges,
+          updatedAt: new Date(),
+        },
+      });
+
       const profile = await this.findCurrentUser(userId);
       if (!profile) {
         throw new Error("Updated user profile was not found.");

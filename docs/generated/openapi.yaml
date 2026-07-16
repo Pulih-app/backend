@@ -652,7 +652,7 @@ paths:
         - "auth"
       summary: "Register patient account"
       description: |
-          Creates a patient account with email/password and returns an access token. Duplicate email returns 409.
+          Creates a patient account with email, username and password. Returns user profile and access token. Duplicate email or username returns 409.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_auth_register"
@@ -692,14 +692,18 @@ paths:
                     success: true
                     message: "Registration successful"
                     data:
-                      accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo"
-                      tokenType: "Bearer"
-                      expiresIn: 86400
                       user:
                         id: "11111111-1111-4111-8111-111111111111"
                         email: "patient@example.com"
-                        role: "patient"
-                        status: "active"
+                        nickname: null
+                        recovery_reason: null
+                        daily_checkin_time: null
+                        porn_free_goal: null
+                        onboarding_completed: false
+                      session:
+                        access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo"
+                        token_type: "Bearer"
+                        expires_in: 86400
                     meta: null
         "400":
           description: "Bad request"
@@ -806,16 +810,29 @@ paths:
               additionalProperties: false
               required:
                 - "email"
+                - "username"
                 - "password"
+                - "confirm_password"
               properties:
                 email:
                   type: "string"
                   format: "email"
                   example: "patient@example.com"
+                username:
+                  type: "string"
+                  minLength: 3
+                  maxLength: 50
+                  pattern: "^[a-z0-9_]{3,50}$"
+                  example: "patient1"
                 password:
                   type: "string"
                   minLength: 1
                   maxLength: 72
+                  format: "password"
+                  example: "password123"
+                confirm_password:
+                  type: "string"
+                  minLength: 1
                   format: "password"
                   example: "password123"
             examples:
@@ -823,14 +840,16 @@ paths:
                 summary: "patient"
                 value:
                   email: "patient@example.com"
+                  username: "patient1"
                   password: "password123"
+                  confirm_password: "password123"
   "/api/v1/auth/login":
     post:
       tags:
         - "auth"
-      summary: "Login with email and password"
+      summary: "Login with email or username"
       description: |
-          Authenticates user credentials and returns a Bearer access token. Invalid credentials return 401.
+          Authenticates user by identifier (email or username) and password. Returns user profile and Bearer access token. Invalid credentials return 401.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_auth_login"
@@ -870,14 +889,18 @@ paths:
                     success: true
                     message: "Login successful"
                     data:
-                      accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo"
-                      tokenType: "Bearer"
-                      expiresIn: 86400
                       user:
                         id: "11111111-1111-4111-8111-111111111111"
                         email: "patient@example.com"
-                        role: "patient"
-                        status: "active"
+                        nickname: null
+                        recovery_reason: null
+                        daily_checkin_time: null
+                        porn_free_goal: null
+                        onboarding_completed: false
+                      session:
+                        access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo"
+                        token_type: "Bearer"
+                        expires_in: 86400
                     meta: null
         "400":
           description: "Bad request"
@@ -913,7 +936,7 @@ paths:
                     error:
                       code: "UNAUTHENTICATED"
                       details:
-                        - "Email or password is invalid."
+                        - "Invalid identifier or password."
                       request_id: "req_01JZV7PULIHDEMO0000000000"
         "422":
           description: "Validation error"
@@ -931,7 +954,7 @@ paths:
                     error:
                       code: "VALIDATION_ERROR"
                       details:
-                        - "email: Email must be valid."
+                        - "identifier: Identifier is required."
                         - "password: Password is required."
                       request_id: "req_01JZV7PULIHDEMO0000000000"
         "429":
@@ -983,12 +1006,11 @@ paths:
               type: "object"
               additionalProperties: false
               required:
-                - "email"
+                - "identifier"
                 - "password"
               properties:
-                email:
+                identifier:
                   type: "string"
-                  format: "email"
                   example: "patient@example.com"
                 password:
                   type: "string"
@@ -1000,7 +1022,7 @@ paths:
               patient:
                 summary: "patient"
                 value:
-                  email: "patient@example.com"
+                  identifier: "patient@example.com"
                   password: "password123"
   "/api/v1/auth/logout":
     post:
@@ -1138,6 +1160,7 @@ paths:
                     data:
                       id: "11111111-1111-4111-8111-111111111111"
                       email: "patient@example.com"
+                      username: "patient1"
                       role: "patient"
                       status: "active"
                     meta: null
@@ -1192,7 +1215,7 @@ paths:
         - "auth"
       summary: "Complete onboarding"
       description: |
-          Stores recovery onboarding data for current user. Product date/time semantics follow Asia/Jakarta.
+          Stores recovery onboarding data for current user. Returns onboarding analysis when AI is available. Same payload is idempotent; different payload after completion returns 409.
 
           Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
       operationId: "post_api_v1_auth_onboarding"
@@ -1215,7 +1238,7 @@ paths:
                   message:
                     type: "string"
                   data:
-                    "$ref": "#/components/schemas/UserProfile"
+                    "$ref": "#/components/schemas/OnboardingCompletion"
                   meta:
                     oneOf:
                       -
@@ -1232,15 +1255,19 @@ paths:
                     success: true
                     message: "Onboarding completed successfully"
                     data:
-                      userId: "11111111-1111-4111-8111-111111111111"
+                      id: "11111111-1111-4111-8111-111111111111"
                       email: "patient@example.com"
-                      role: "patient"
-                      status: "active"
-                      displayName: "Pulih Demo"
                       nickname: "Demo"
-                      recoveryGoal: "Build a daily recovery streak"
-                      checkInTime: "07:30:00"
-                      onboardingCompletedAt: "2026-07-16T16:00:00.000Z"
+                      recovery_reason: "Build a daily recovery streak"
+                      daily_checkin_time: "07:30"
+                      porn_free_goal: 30
+                      onboarding_completed: true
+                      onboarding_analysis:
+                        level: "Moderate"
+                        title: "Your Recovery Profile"
+                        level_description: "You show moderate dependency patterns with stress as the primary trigger."
+                        pattern_analysis: "Your late-night urges correlate with work stress. Consider evening grounding activities."
+                        encouragement: "You have already taken an important step by starting this journey."
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -1314,38 +1341,52 @@ paths:
               type: "object"
               additionalProperties: false
               required:
-                - "recoveryGoal"
+                - "nickname"
+                - "recovery_reason"
+                - "daily_checkin_time"
+                - "porn_free_goal"
               properties:
-                displayName:
-                  type:
-                    - "string"
-                    - "null"
-                  example: "Pulih Demo"
-                  maxLength: 255
                 nickname:
-                  type:
-                    - "string"
-                    - "null"
-                  example: "Demo"
-                  maxLength: 255
-                recoveryGoal:
                   type: "string"
+                  minLength: 1
+                  maxLength: 255
+                  example: "Demo"
+                recovery_reason:
+                  type: "string"
+                  minLength: 3
                   maxLength: 2000
                   example: "Build a daily recovery streak"
-                checkInTime:
+                daily_checkin_time:
+                  type: "string"
+                  pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"
+                  example: "07:30"
+                porn_free_goal:
+                  type: "integer"
+                  minimum: 1
+                  maximum: 3650
+                  example: 30
+                answers:
+                  type: "object"
+                  additionalProperties: true
+                  example:
+                    trigger: "stress"
+                dependency_level:
                   type:
                     - "string"
                     - "null"
-                  example: "07:30"
-                  pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+                  example: "Moderate"
+                  maxLength: 64
             examples:
               complete:
                 summary: "complete"
                 value:
-                  displayName: "Pulih Demo"
                   nickname: "Demo"
-                  recoveryGoal: "Build a daily recovery streak"
-                  checkInTime: "07:30"
+                  recovery_reason: "Build a daily recovery streak"
+                  daily_checkin_time: "07:30"
+                  porn_free_goal: 30
+                  answers:
+                    trigger: "stress"
+                  dependency_level: "Moderate"
   "/api/v1/users/me":
     get:
       tags:
@@ -1392,15 +1433,13 @@ paths:
                     success: true
                     message: "Current user retrieved successfully"
                     data:
-                      userId: "11111111-1111-4111-8111-111111111111"
+                      id: "11111111-1111-4111-8111-111111111111"
                       email: "patient@example.com"
-                      role: "patient"
-                      status: "active"
-                      displayName: "Pulih Demo"
                       nickname: "Demo"
-                      recoveryGoal: "Build a daily recovery streak"
-                      checkInTime: "07:30:00"
-                      onboardingCompletedAt: "2026-07-16T16:00:00.000Z"
+                      recovery_reason: "Build a daily recovery streak"
+                      daily_checkin_time: "07:30"
+                      porn_free_goal: 30
+                      onboarding_completed: false
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -1511,15 +1550,13 @@ paths:
                     success: true
                     message: "Settings updated successfully"
                     data:
-                      userId: "11111111-1111-4111-8111-111111111111"
+                      id: "11111111-1111-4111-8111-111111111111"
                       email: "patient@example.com"
-                      role: "patient"
-                      status: "active"
-                      displayName: "Pulih Demo"
                       nickname: "Demo"
-                      recoveryGoal: "Build a daily recovery streak"
-                      checkInTime: "07:30:00"
-                      onboardingCompletedAt: "2026-07-16T16:00:00.000Z"
+                      recovery_reason: "Build a daily recovery streak"
+                      daily_checkin_time: "07:30"
+                      porn_free_goal: 30
+                      onboarding_completed: false
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -1593,38 +1630,38 @@ paths:
               type: "object"
               additionalProperties: false
               properties:
-                displayName:
-                  type:
-                    - "string"
-                    - "null"
-                  example: "Pulih Demo"
-                  maxLength: 255
                 nickname:
                   type:
                     - "string"
                     - "null"
                   example: "Demo"
                   maxLength: 255
-                recoveryGoal:
+                recovery_reason:
                   type:
                     - "string"
                     - "null"
                   example: "Stay sober for 30 days"
                   maxLength: 2000
-                checkInTime:
+                daily_checkin_time:
                   type:
                     - "string"
                     - "null"
                   example: "07:30"
-                  pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+                  pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"
+                porn_free_goal:
+                  type: "integer"
+                  nullable: true
+                  minimum: 1
+                  maximum: 3650
+                  example: 30
             examples:
               profile:
                 summary: "profile"
                 value:
-                  displayName: "Pulih Demo"
                   nickname: "Demo"
-                  recoveryGoal: "Stay sober for 30 days"
-                  checkInTime: "07:30"
+                  recovery_reason: "Stay sober for 30 days"
+                  daily_checkin_time: "07:30"
+                  porn_free_goal: 60
   "/api/v1/psychologists/register":
     post:
       tags:
@@ -9225,6 +9262,12 @@ components:
           type: "string"
           format: "email"
           example: "patient@example.com"
+        username:
+          type:
+            - "string"
+            - "null"
+          example: "patient1"
+          maxLength: 50
         role:
           type: "string"
           enum:
@@ -9235,42 +9278,18 @@ components:
         status:
           type: "string"
           example: "active"
-    AuthTokenResponse:
+    UserPayload:
       type: "object"
       required:
-        - "accessToken"
-        - "tokenType"
-        - "expiresIn"
-        - "user"
-      properties:
-        accessToken:
-          type: "string"
-          description: "JWT access token. Store client-side only; never log."
-          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo"
-        tokenType:
-          type: "string"
-          enum:
-            - "Bearer"
-          example: "Bearer"
-        expiresIn:
-          type: "integer"
-          example: 86400
-        user:
-          "$ref": "#/components/schemas/AuthUser"
-    UserProfile:
-      type: "object"
-      required:
-        - "userId"
+        - "id"
         - "email"
-        - "role"
-        - "status"
-        - "displayName"
         - "nickname"
-        - "recoveryGoal"
-        - "checkInTime"
-        - "onboardingCompletedAt"
+        - "recovery_reason"
+        - "daily_checkin_time"
+        - "porn_free_goal"
+        - "onboarding_completed"
       properties:
-        userId:
+        id:
           type: "string"
           format: "uuid"
           example: "11111111-1111-4111-8111-111111111111"
@@ -9278,46 +9297,184 @@ components:
           type: "string"
           format: "email"
           example: "patient@example.com"
-        role:
-          type: "string"
-          enum:
-            - "patient"
-            - "psychologist"
-            - "admin"
-          example: "patient"
-        status:
-          type: "string"
-          example: "active"
-        displayName:
-          type:
-            - "string"
-            - "null"
-          example: "Pulih Demo"
-          maxLength: 255
         nickname:
           type:
             - "string"
             - "null"
           example: "Demo"
           maxLength: 255
-        recoveryGoal:
+        recovery_reason:
           type:
             - "string"
             - "null"
           example: "Build a daily recovery streak"
           maxLength: 2000
-        checkInTime:
+        daily_checkin_time:
           type:
             - "string"
             - "null"
-          example: "07:30:00"
-          pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
-        onboardingCompletedAt:
+          example: "07:30"
+          pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"
+        porn_free_goal:
+          type: "integer"
+          nullable: true
+          minimum: 1
+          maximum: 3650
+          example: 30
+        onboarding_completed:
+          type: "boolean"
+          example: false
+    SessionPayload:
+      type: "object"
+      required:
+        - "access_token"
+        - "token_type"
+        - "expires_in"
+      properties:
+        access_token:
+          type: "string"
+          description: "JWT access token."
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo"
+        token_type:
+          type: "string"
+          enum:
+            - "Bearer"
+          example: "Bearer"
+        expires_in:
+          type: "integer"
+          example: 86400
+    AuthTokenResponse:
+      type: "object"
+      required:
+        - "user"
+        - "session"
+      properties:
+        user:
+          "$ref": "#/components/schemas/UserPayload"
+        session:
+          "$ref": "#/components/schemas/SessionPayload"
+    UserProfile:
+      type: "object"
+      required:
+        - "id"
+        - "email"
+        - "nickname"
+        - "recovery_reason"
+        - "daily_checkin_time"
+        - "porn_free_goal"
+        - "onboarding_completed"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          example: "11111111-1111-4111-8111-111111111111"
+        email:
+          type: "string"
+          format: "email"
+          example: "patient@example.com"
+        nickname:
           type:
             - "string"
             - "null"
-          example: "2026-07-16T16:00:00.000Z"
-          format: "date-time"
+          example: "Demo"
+          maxLength: 255
+        recovery_reason:
+          type:
+            - "string"
+            - "null"
+          example: "Build a daily recovery streak"
+          maxLength: 2000
+        daily_checkin_time:
+          type:
+            - "string"
+            - "null"
+          example: "07:30"
+          pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"
+        porn_free_goal:
+          type: "integer"
+          nullable: true
+          minimum: 1
+          maximum: 3650
+          example: 30
+        onboarding_completed:
+          type: "boolean"
+          example: false
+    OnboardingAnalysis:
+      type: "object"
+      required:
+        - "level"
+        - "title"
+        - "level_description"
+        - "pattern_analysis"
+        - "encouragement"
+      properties:
+        level:
+          type: "string"
+          example: "Moderate"
+        title:
+          type: "string"
+          example: "Your Recovery Profile"
+        level_description:
+          type: "string"
+          example: "You show moderate dependency patterns with stress as the primary trigger."
+        pattern_analysis:
+          type: "string"
+          example: "Your late-night urges correlate with work stress. Consider evening grounding activities."
+        encouragement:
+          type: "string"
+          example: "You have already taken an important step by starting this journey."
+    OnboardingCompletion:
+      type: "object"
+      required:
+        - "id"
+        - "email"
+        - "nickname"
+        - "recovery_reason"
+        - "daily_checkin_time"
+        - "porn_free_goal"
+        - "onboarding_completed"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          example: "11111111-1111-4111-8111-111111111111"
+        email:
+          type: "string"
+          format: "email"
+          example: "patient@example.com"
+        nickname:
+          type:
+            - "string"
+            - "null"
+          example: "Demo"
+          maxLength: 255
+        recovery_reason:
+          type:
+            - "string"
+            - "null"
+          example: "Build a daily recovery streak"
+          maxLength: 2000
+        daily_checkin_time:
+          type:
+            - "string"
+            - "null"
+          example: "07:30"
+          pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"
+        porn_free_goal:
+          type: "integer"
+          nullable: true
+          minimum: 1
+          maximum: 3650
+          example: 30
+        onboarding_completed:
+          type: "boolean"
+          example: true
+        onboarding_analysis:
+          oneOf:
+            -
+              "$ref": "#/components/schemas/OnboardingAnalysis"
+            -
+              type: "null"
     PracticePlace:
       type: "object"
       required:

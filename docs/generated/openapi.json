@@ -920,7 +920,7 @@
           "auth"
         ],
         "summary": "Register patient account",
-        "description": "Creates a patient account with email/password and returns an access token. Duplicate email returns 409.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Creates a patient account with email, username and password. Returns user profile and access token. Duplicate email or username returns 409.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_auth_register",
         "responses": {
           "201": {
@@ -969,14 +969,19 @@
                       "success": true,
                       "message": "Registration successful",
                       "data": {
-                        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo",
-                        "tokenType": "Bearer",
-                        "expiresIn": 86400,
                         "user": {
                           "id": "11111111-1111-4111-8111-111111111111",
                           "email": "patient@example.com",
-                          "role": "patient",
-                          "status": "active"
+                          "nickname": null,
+                          "recovery_reason": null,
+                          "daily_checkin_time": null,
+                          "porn_free_goal": null,
+                          "onboarding_completed": false
+                        },
+                        "session": {
+                          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo",
+                          "token_type": "Bearer",
+                          "expires_in": 86400
                         }
                       },
                       "meta": null
@@ -1139,7 +1144,9 @@
                 "additionalProperties": false,
                 "required": [
                   "email",
-                  "password"
+                  "username",
+                  "password",
+                  "confirm_password"
                 ],
                 "properties": {
                   "email": {
@@ -1147,10 +1154,23 @@
                     "format": "email",
                     "example": "patient@example.com"
                   },
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 50,
+                    "pattern": "^[a-z0-9_]{3,50}$",
+                    "example": "patient1"
+                  },
                   "password": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 72,
+                    "format": "password",
+                    "example": "password123"
+                  },
+                  "confirm_password": {
+                    "type": "string",
+                    "minLength": 1,
                     "format": "password",
                     "example": "password123"
                   }
@@ -1161,7 +1181,9 @@
                   "summary": "patient",
                   "value": {
                     "email": "patient@example.com",
-                    "password": "password123"
+                    "username": "patient1",
+                    "password": "password123",
+                    "confirm_password": "password123"
                   }
                 }
               }
@@ -1175,8 +1197,8 @@
         "tags": [
           "auth"
         ],
-        "summary": "Login with email and password",
-        "description": "Authenticates user credentials and returns a Bearer access token. Invalid credentials return 401.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "summary": "Login with email or username",
+        "description": "Authenticates user by identifier (email or username) and password. Returns user profile and Bearer access token. Invalid credentials return 401.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_auth_login",
         "responses": {
           "200": {
@@ -1225,14 +1247,19 @@
                       "success": true,
                       "message": "Login successful",
                       "data": {
-                        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo",
-                        "tokenType": "Bearer",
-                        "expiresIn": 86400,
                         "user": {
                           "id": "11111111-1111-4111-8111-111111111111",
                           "email": "patient@example.com",
-                          "role": "patient",
-                          "status": "active"
+                          "nickname": null,
+                          "recovery_reason": null,
+                          "daily_checkin_time": null,
+                          "porn_free_goal": null,
+                          "onboarding_completed": false
+                        },
+                        "session": {
+                          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo",
+                          "token_type": "Bearer",
+                          "expires_in": 86400
                         }
                       },
                       "meta": null
@@ -1286,7 +1313,7 @@
                       "error": {
                         "code": "UNAUTHENTICATED",
                         "details": [
-                          "Email or password is invalid."
+                          "Invalid identifier or password."
                         ],
                         "request_id": "req_01JZV7PULIHDEMO0000000000"
                       }
@@ -1313,7 +1340,7 @@
                       "error": {
                         "code": "VALIDATION_ERROR",
                         "details": [
-                          "email: Email must be valid.",
+                          "identifier: Identifier is required.",
                           "password: Password is required."
                         ],
                         "request_id": "req_01JZV7PULIHDEMO0000000000"
@@ -1394,13 +1421,12 @@
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "email",
+                  "identifier",
                   "password"
                 ],
                 "properties": {
-                  "email": {
+                  "identifier": {
                     "type": "string",
-                    "format": "email",
                     "example": "patient@example.com"
                   },
                   "password": {
@@ -1416,7 +1442,7 @@
                 "patient": {
                   "summary": "patient",
                   "value": {
-                    "email": "patient@example.com",
+                    "identifier": "patient@example.com",
                     "password": "password123"
                   }
                 }
@@ -1609,6 +1635,7 @@
                       "data": {
                         "id": "11111111-1111-4111-8111-111111111111",
                         "email": "patient@example.com",
+                        "username": "patient1",
                         "role": "patient",
                         "status": "active"
                       },
@@ -1694,7 +1721,7 @@
           "auth"
         ],
         "summary": "Complete onboarding",
-        "description": "Stores recovery onboarding data for current user. Product date/time semantics follow Asia/Jakarta.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Stores recovery onboarding data for current user. Returns onboarding analysis when AI is available. Same payload is idempotent; different payload after completion returns 409.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_auth_onboarding",
         "responses": {
           "201": {
@@ -1718,7 +1745,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/UserProfile"
+                      "$ref": "#/components/schemas/OnboardingCompletion"
                     },
                     "meta": {
                       "oneOf": [
@@ -1743,15 +1770,20 @@
                       "success": true,
                       "message": "Onboarding completed successfully",
                       "data": {
-                        "userId": "11111111-1111-4111-8111-111111111111",
+                        "id": "11111111-1111-4111-8111-111111111111",
                         "email": "patient@example.com",
-                        "role": "patient",
-                        "status": "active",
-                        "displayName": "Pulih Demo",
                         "nickname": "Demo",
-                        "recoveryGoal": "Build a daily recovery streak",
-                        "checkInTime": "07:30:00",
-                        "onboardingCompletedAt": "2026-07-16T16:00:00.000Z"
+                        "recovery_reason": "Build a daily recovery streak",
+                        "daily_checkin_time": "07:30",
+                        "porn_free_goal": 30,
+                        "onboarding_completed": true,
+                        "onboarding_analysis": {
+                          "level": "Moderate",
+                          "title": "Your Recovery Profile",
+                          "level_description": "You show moderate dependency patterns with stress as the primary trigger.",
+                          "pattern_analysis": "Your late-night urges correlate with work stress. Consider evening grounding activities.",
+                          "encouragement": "You have already taken an important step by starting this journey."
+                        }
                       },
                       "meta": null
                     }
@@ -1863,37 +1895,49 @@
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "recoveryGoal"
+                  "nickname",
+                  "recovery_reason",
+                  "daily_checkin_time",
+                  "porn_free_goal"
                 ],
                 "properties": {
-                  "displayName": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "example": "Pulih Demo",
-                    "maxLength": 255
-                  },
                   "nickname": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "example": "Demo",
-                    "maxLength": 255
-                  },
-                  "recoveryGoal": {
                     "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "example": "Demo"
+                  },
+                  "recovery_reason": {
+                    "type": "string",
+                    "minLength": 3,
                     "maxLength": 2000,
                     "example": "Build a daily recovery streak"
                   },
-                  "checkInTime": {
+                  "daily_checkin_time": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "07:30"
+                  },
+                  "porn_free_goal": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3650,
+                    "example": 30
+                  },
+                  "answers": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "example": {
+                      "trigger": "stress"
+                    }
+                  },
+                  "dependency_level": {
                     "type": [
                       "string",
                       "null"
                     ],
-                    "example": "07:30",
-                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+                    "example": "Moderate",
+                    "maxLength": 64
                   }
                 }
               },
@@ -1901,10 +1945,14 @@
                 "complete": {
                   "summary": "complete",
                   "value": {
-                    "displayName": "Pulih Demo",
                     "nickname": "Demo",
-                    "recoveryGoal": "Build a daily recovery streak",
-                    "checkInTime": "07:30"
+                    "recovery_reason": "Build a daily recovery streak",
+                    "daily_checkin_time": "07:30",
+                    "porn_free_goal": 30,
+                    "answers": {
+                      "trigger": "stress"
+                    },
+                    "dependency_level": "Moderate"
                   }
                 }
               }
@@ -1968,15 +2016,13 @@
                       "success": true,
                       "message": "Current user retrieved successfully",
                       "data": {
-                        "userId": "11111111-1111-4111-8111-111111111111",
+                        "id": "11111111-1111-4111-8111-111111111111",
                         "email": "patient@example.com",
-                        "role": "patient",
-                        "status": "active",
-                        "displayName": "Pulih Demo",
                         "nickname": "Demo",
-                        "recoveryGoal": "Build a daily recovery streak",
-                        "checkInTime": "07:30:00",
-                        "onboardingCompletedAt": "2026-07-16T16:00:00.000Z"
+                        "recovery_reason": "Build a daily recovery streak",
+                        "daily_checkin_time": "07:30",
+                        "porn_free_goal": 30,
+                        "onboarding_completed": false
                       },
                       "meta": null
                     }
@@ -2136,15 +2182,13 @@
                       "success": true,
                       "message": "Settings updated successfully",
                       "data": {
-                        "userId": "11111111-1111-4111-8111-111111111111",
+                        "id": "11111111-1111-4111-8111-111111111111",
                         "email": "patient@example.com",
-                        "role": "patient",
-                        "status": "active",
-                        "displayName": "Pulih Demo",
                         "nickname": "Demo",
-                        "recoveryGoal": "Build a daily recovery streak",
-                        "checkInTime": "07:30:00",
-                        "onboardingCompletedAt": "2026-07-16T16:00:00.000Z"
+                        "recovery_reason": "Build a daily recovery streak",
+                        "daily_checkin_time": "07:30",
+                        "porn_free_goal": 30,
+                        "onboarding_completed": false
                       },
                       "meta": null
                     }
@@ -2256,14 +2300,6 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
-                  "displayName": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "example": "Pulih Demo",
-                    "maxLength": 255
-                  },
                   "nickname": {
                     "type": [
                       "string",
@@ -2272,7 +2308,7 @@
                     "example": "Demo",
                     "maxLength": 255
                   },
-                  "recoveryGoal": {
+                  "recovery_reason": {
                     "type": [
                       "string",
                       "null"
@@ -2280,13 +2316,20 @@
                     "example": "Stay sober for 30 days",
                     "maxLength": 2000
                   },
-                  "checkInTime": {
+                  "daily_checkin_time": {
                     "type": [
                       "string",
                       "null"
                     ],
                     "example": "07:30",
-                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                  },
+                  "porn_free_goal": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "maximum": 3650,
+                    "example": 30
                   }
                 }
               },
@@ -2294,10 +2337,10 @@
                 "profile": {
                   "summary": "profile",
                   "value": {
-                    "displayName": "Pulih Demo",
                     "nickname": "Demo",
-                    "recoveryGoal": "Stay sober for 30 days",
-                    "checkInTime": "07:30"
+                    "recovery_reason": "Stay sober for 30 days",
+                    "daily_checkin_time": "07:30",
+                    "porn_free_goal": 60
                   }
                 }
               }
@@ -13195,6 +13238,14 @@
             "format": "email",
             "example": "patient@example.com"
           },
+          "username": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "patient1",
+            "maxLength": 50
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -13210,51 +13261,19 @@
           }
         }
       },
-      "AuthTokenResponse": {
+      "UserPayload": {
         "type": "object",
         "required": [
-          "accessToken",
-          "tokenType",
-          "expiresIn",
-          "user"
-        ],
-        "properties": {
-          "accessToken": {
-            "type": "string",
-            "description": "JWT access token. Store client-side only; never log.",
-            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo"
-          },
-          "tokenType": {
-            "type": "string",
-            "enum": [
-              "Bearer"
-            ],
-            "example": "Bearer"
-          },
-          "expiresIn": {
-            "type": "integer",
-            "example": 86400
-          },
-          "user": {
-            "$ref": "#/components/schemas/AuthUser"
-          }
-        }
-      },
-      "UserProfile": {
-        "type": "object",
-        "required": [
-          "userId",
+          "id",
           "email",
-          "role",
-          "status",
-          "displayName",
           "nickname",
-          "recoveryGoal",
-          "checkInTime",
-          "onboardingCompletedAt"
+          "recovery_reason",
+          "daily_checkin_time",
+          "porn_free_goal",
+          "onboarding_completed"
         ],
         "properties": {
-          "userId": {
+          "id": {
             "type": "string",
             "format": "uuid",
             "example": "11111111-1111-4111-8111-111111111111"
@@ -13264,26 +13283,105 @@
             "format": "email",
             "example": "patient@example.com"
           },
-          "role": {
-            "type": "string",
-            "enum": [
-              "patient",
-              "psychologist",
-              "admin"
-            ],
-            "example": "patient"
-          },
-          "status": {
-            "type": "string",
-            "example": "active"
-          },
-          "displayName": {
+          "nickname": {
             "type": [
               "string",
               "null"
             ],
-            "example": "Pulih Demo",
+            "example": "Demo",
             "maxLength": 255
+          },
+          "recovery_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Build a daily recovery streak",
+            "maxLength": 2000
+          },
+          "daily_checkin_time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "07:30",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "porn_free_goal": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 3650,
+            "example": 30
+          },
+          "onboarding_completed": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "SessionPayload": {
+        "type": "object",
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "JWT access token.",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo"
+          },
+          "token_type": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ],
+            "example": "Bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "example": 86400
+          }
+        }
+      },
+      "AuthTokenResponse": {
+        "type": "object",
+        "required": [
+          "user",
+          "session"
+        ],
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserPayload"
+          },
+          "session": {
+            "$ref": "#/components/schemas/SessionPayload"
+          }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "nickname",
+          "recovery_reason",
+          "daily_checkin_time",
+          "porn_free_goal",
+          "onboarding_completed"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "11111111-1111-4111-8111-111111111111"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "patient@example.com"
           },
           "nickname": {
             "type": [
@@ -13293,7 +13391,7 @@
             "example": "Demo",
             "maxLength": 255
           },
-          "recoveryGoal": {
+          "recovery_reason": {
             "type": [
               "string",
               "null"
@@ -13301,21 +13399,125 @@
             "example": "Build a daily recovery streak",
             "maxLength": 2000
           },
-          "checkInTime": {
+          "daily_checkin_time": {
             "type": [
               "string",
               "null"
             ],
-            "example": "07:30:00",
-            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+            "example": "07:30",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
           },
-          "onboardingCompletedAt": {
+          "porn_free_goal": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 3650,
+            "example": 30
+          },
+          "onboarding_completed": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "OnboardingAnalysis": {
+        "type": "object",
+        "required": [
+          "level",
+          "title",
+          "level_description",
+          "pattern_analysis",
+          "encouragement"
+        ],
+        "properties": {
+          "level": {
+            "type": "string",
+            "example": "Moderate"
+          },
+          "title": {
+            "type": "string",
+            "example": "Your Recovery Profile"
+          },
+          "level_description": {
+            "type": "string",
+            "example": "You show moderate dependency patterns with stress as the primary trigger."
+          },
+          "pattern_analysis": {
+            "type": "string",
+            "example": "Your late-night urges correlate with work stress. Consider evening grounding activities."
+          },
+          "encouragement": {
+            "type": "string",
+            "example": "You have already taken an important step by starting this journey."
+          }
+        }
+      },
+      "OnboardingCompletion": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "nickname",
+          "recovery_reason",
+          "daily_checkin_time",
+          "porn_free_goal",
+          "onboarding_completed"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "11111111-1111-4111-8111-111111111111"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "patient@example.com"
+          },
+          "nickname": {
             "type": [
               "string",
               "null"
             ],
-            "example": "2026-07-16T16:00:00.000Z",
-            "format": "date-time"
+            "example": "Demo",
+            "maxLength": 255
+          },
+          "recovery_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Build a daily recovery streak",
+            "maxLength": 2000
+          },
+          "daily_checkin_time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "07:30",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "porn_free_goal": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 3650,
+            "example": 30
+          },
+          "onboarding_completed": {
+            "type": "boolean",
+            "example": true
+          },
+          "onboarding_analysis": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },

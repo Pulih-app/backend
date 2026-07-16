@@ -4,7 +4,7 @@ import { hashPassword, verifyPassword } from "./password";
 import { issueAccessToken, verifyAccessToken } from "./token";
 import { validateCredentialFile } from "../psychologists/psychologists.service";
 import type { AuthRepository, AuthUserRecord } from "./auth.repository";
-import type { UserProfileRecord, UsersRepository, UserSettingsUpdate } from "../users/users.repository";
+import type { UserProfileRecord, UsersRepository, UserSettingsUpdate, OnboardingUpdate } from "../users/users.repository";
 import type { PsychologistProfileRecord, PsychologistsRepository } from "../psychologists/psychologists.repository";
 import type { CredentialStorage } from "../psychologists/credential-storage";
 import { channelForType, type CredentialDocumentType } from "../psychologists/psychologists.types";
@@ -34,6 +34,7 @@ function createMemoryRepository(seed: AuthUserRecord[] = []): AuthRepository {
       const user: AuthUserRecord = {
         id: crypto.randomUUID(),
         email: input.email,
+        username: input.username,
         passwordHash: input.passwordHash,
         role: "patient",
         status: "active",
@@ -43,6 +44,12 @@ function createMemoryRepository(seed: AuthUserRecord[] = []): AuthRepository {
     },
     async findByEmail(email) {
       return Array.from(users.values()).find((user) => user.email === email) ?? null;
+    },
+    async findByUsername(username) {
+      return Array.from(users.values()).find((user) => user.username === username) ?? null;
+    },
+    async findByLoginIdentifier(identifier) {
+      return Array.from(users.values()).find((user) => user.email === identifier || user.username === identifier) ?? null;
     },
     async findById(id) {
       return users.get(id) ?? null;
@@ -60,10 +67,14 @@ function createMemoryUsersRepository(seed: UserProfileRecord[] = []): UsersRepos
       email: "patient@example.com",
       role: "patient",
       status: "active",
-      displayName: null,
+      username: null,
       nickname: null,
-      recoveryGoal: null,
-      checkInTime: null,
+      recoveryReason: null,
+      dailyCheckinTime: null,
+      pornFreeGoal: null,
+      answers: {},
+      dependencyLevel: null,
+      aiSummary: null,
       onboardingCompletedAt: null,
     };
   }
@@ -72,10 +83,10 @@ function createMemoryUsersRepository(seed: UserProfileRecord[] = []): UsersRepos
     const existing = baseProfile(userId);
     const updated: UserProfileRecord = {
       ...existing,
-      displayName: input.displayName !== undefined ? input.displayName : existing.displayName,
       nickname: input.nickname !== undefined ? input.nickname : existing.nickname,
-      recoveryGoal: input.recoveryGoal !== undefined ? input.recoveryGoal : existing.recoveryGoal,
-      checkInTime: input.checkInTime !== undefined ? input.checkInTime : existing.checkInTime,
+      recoveryReason: input.recovery_reason !== undefined ? input.recovery_reason : existing.recoveryReason,
+      dailyCheckinTime: input.daily_checkin_time !== undefined ? input.daily_checkin_time : existing.dailyCheckinTime,
+      pornFreeGoal: input.porn_free_goal !== undefined ? input.porn_free_goal : existing.pornFreeGoal,
       onboardingCompletedAt: onboardingCompletedAt ?? existing.onboardingCompletedAt,
     };
     profiles.set(userId, updated);
@@ -90,7 +101,20 @@ function createMemoryUsersRepository(seed: UserProfileRecord[] = []): UsersRepos
       return applyUpdate(userId, input);
     },
     async completeOnboarding(userId, input) {
-      return applyUpdate(userId, input, new Date("2026-01-01T00:00:00.000Z"));
+      const existing = baseProfile(userId);
+      const updated: UserProfileRecord = {
+        ...existing,
+        nickname: input.nickname !== undefined ? input.nickname : existing.nickname,
+        recoveryReason: input.recovery_reason !== undefined ? input.recovery_reason : existing.recoveryReason,
+        dailyCheckinTime: input.daily_checkin_time !== undefined ? input.daily_checkin_time : existing.dailyCheckinTime,
+        pornFreeGoal: input.porn_free_goal !== undefined ? input.porn_free_goal : existing.pornFreeGoal,
+        answers: (input as OnboardingUpdate).answers ?? existing.answers,
+        dependencyLevel: (input as OnboardingUpdate).dependency_level ?? existing.dependencyLevel,
+        aiSummary: (input as OnboardingUpdate).ai_summary ?? existing.aiSummary,
+        onboardingCompletedAt: new Date("2026-01-01T00:00:00.000Z"),
+      };
+      profiles.set(userId, updated);
+      return updated;
     },
   };
 }
@@ -108,7 +132,7 @@ describe("password helper", () => {
 describe("access token", () => {
   test("issues and verifies token", async () => {
     const token = await issueAccessToken({
-      user: { id: "user-1", email: "user@example.com", role: "patient", status: "active" },
+      user: { id: "user-1", email: "user@example.com", username: null, role: "patient", status: "active" },
       secret: "test-secret",
       ttlSeconds: 60,
       now: new Date("2026-01-01T00:00:00.000Z"),
@@ -126,7 +150,7 @@ describe("access token", () => {
 
   test("rejects expired token", async () => {
     const token = await issueAccessToken({
-      user: { id: "user-1", email: "user@example.com", role: "patient", status: "active" },
+      user: { id: "user-1", email: "user@example.com", username: null, role: "patient", status: "active" },
       secret: "test-secret",
       ttlSeconds: 1,
       now: new Date("2026-01-01T00:00:00.000Z"),
@@ -141,13 +165,13 @@ describe("access token", () => {
 });
 
 describe("auth routes", () => {
-  test("registers patient and returns token", async () => {
+  test("registers patient and returns token with reference format", async () => {
     const app = createApp(baseEnv, {}, { authRepository: createMemoryRepository() });
 
     const response = await app.request("http://localhost/api/v1/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
+      body: JSON.stringify({ email: "patient@example.com", username: "patient1", password: "password123", confirm_password: "password123" }),
     });
 
     expect(response.status).toBe(201);
@@ -155,12 +179,14 @@ describe("auth routes", () => {
     expect(body).toMatchObject({
       success: true,
       data: {
-        tokenType: "Bearer",
-        expiresIn: 86400,
-        user: { email: "patient@example.com", role: "patient" },
+        session: {
+          token_type: "Bearer",
+          expires_in: 86400,
+        },
+        user: { email: "patient@example.com", nickname: null, onboarding_completed: false },
       },
     });
-    expect(body.data.accessToken).toBeTruthy();
+    expect(body.data.session.access_token).toBeTruthy();
   });
 
   test("rejects duplicate email", async () => {
@@ -168,6 +194,7 @@ describe("auth routes", () => {
     const app = createApp(baseEnv, {}, { authRepository: createMemoryRepository([{
       id: "user-1",
       email: "patient@example.com",
+      username: "existing",
       passwordHash,
       role: "patient",
       status: "active",
@@ -176,12 +203,46 @@ describe("auth routes", () => {
     const response = await app.request("http://localhost/api/v1/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
+      body: JSON.stringify({ email: "patient@example.com", username: "newuser", password: "password123", confirm_password: "password123" }),
     });
 
     expect(response.status).toBe(409);
     const body = await response.json();
     expect(body.error.code).toBe("CONFLICT");
+  });
+
+  test("rejects duplicate username", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const app = createApp(baseEnv, {}, { authRepository: createMemoryRepository([{
+      id: "user-1",
+      email: "other@example.com",
+      username: "taken",
+      passwordHash,
+      role: "patient",
+      status: "active",
+    }]) });
+
+    const response = await app.request("http://localhost/api/v1/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "new@example.com", username: "taken", password: "password123", confirm_password: "password123" }),
+    });
+
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error.code).toBe("CONFLICT");
+  });
+
+  test("rejects password mismatch", async () => {
+    const app = createApp(baseEnv, {}, { authRepository: createMemoryRepository() });
+
+    const response = await app.request("http://localhost/api/v1/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "patient@example.com", username: "patient1", password: "password123", confirm_password: "different" }),
+    });
+
+    expect(response.status).toBe(422);
   });
 
   test("rejects invalid password", async () => {
@@ -190,7 +251,7 @@ describe("auth routes", () => {
     const response = await app.request("http://localhost/api/v1/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "short" }),
+      body: JSON.stringify({ email: "patient@example.com", username: "short", password: "short", confirm_password: "short" }),
     });
 
     expect(response.status).toBe(422);
@@ -198,11 +259,12 @@ describe("auth routes", () => {
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
-  test("logs in with valid credentials", async () => {
+  test("logs in with valid credentials using identifier", async () => {
     const passwordHash = await hashPassword("password123", 4);
     const app = createApp(baseEnv, {}, { authRepository: createMemoryRepository([{
       id: "user-1",
       email: "patient@example.com",
+      username: "patient1",
       passwordHash,
       role: "patient",
       status: "active",
@@ -211,12 +273,35 @@ describe("auth routes", () => {
     const response = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
+      body: JSON.stringify({ identifier: "patient@example.com", password: "password123" }),
     });
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.data.accessToken).toBeTruthy();
+    expect(body.data.session.access_token).toBeTruthy();
+    expect(body.data.user.email).toBe("patient@example.com");
+  });
+
+  test("logs in with username as identifier", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const app = createApp(baseEnv, {}, { authRepository: createMemoryRepository([{
+      id: "user-1",
+      email: "patient@example.com",
+      username: "patient1",
+      passwordHash,
+      role: "patient",
+      status: "active",
+    }]) });
+
+    const response = await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ identifier: "patient1", password: "password123" }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data.session.access_token).toBeTruthy();
     expect(body.data.user.email).toBe("patient@example.com");
   });
 
@@ -225,6 +310,7 @@ describe("auth routes", () => {
     const repository = createMemoryRepository([{
       id: "user-1",
       email: "patient@example.com",
+      username: "patient1",
       passwordHash,
       role: "patient",
       status: "active",
@@ -242,12 +328,12 @@ describe("auth routes", () => {
     const login = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
+      body: JSON.stringify({ identifier: "patient@example.com", password: "password123" }),
     });
     const loginBody = await login.json();
 
     const valid = await app.request("http://localhost/api/v1/auth/me", {
-      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
     });
     expect(valid.status).toBe(200);
     const validBody = await valid.json();
@@ -256,11 +342,12 @@ describe("auth routes", () => {
 });
 
 describe("users routes", () => {
-  test("reads own profile and rejects unknown fields on settings", async () => {
+  test("reads own profile with reference field names", async () => {
     const passwordHash = await hashPassword("password123", 4);
     const authRepository = createMemoryRepository([{
       id: "user-1",
       email: "patient@example.com",
+      username: "patient1",
       passwordHash,
       role: "patient",
       status: "active",
@@ -271,10 +358,14 @@ describe("users routes", () => {
       email: "patient@example.com",
       role: "patient",
       status: "active",
-      displayName: "Patient",
-      nickname: null,
-      recoveryGoal: "Recover",
-      checkInTime: "08:00:00",
+      username: "patient1",
+      nickname: "Patient",
+      recoveryReason: "I want to recover",
+      dailyCheckinTime: "08:00",
+      pornFreeGoal: 30,
+      answers: {},
+      dependencyLevel: null,
+      aiSummary: null,
       onboardingCompletedAt: null,
     }]);
     const app = createApp(baseEnv, {}, { authRepository, usersRepository });
@@ -282,30 +373,35 @@ describe("users routes", () => {
     const login = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
+      body: JSON.stringify({ identifier: "patient@example.com", password: "password123" }),
     });
     const loginBody = await login.json();
 
     const me = await app.request("http://localhost/api/v1/users/me", {
-      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
     });
     expect(me.status).toBe(200);
     const meBody = await me.json();
-    expect(meBody.data.displayName).toBe("Patient");
+    expect(meBody.data.nickname).toBe("Patient");
+    expect(meBody.data.recovery_reason).toBe("I want to recover");
+    expect(meBody.data.daily_checkin_time).toBe("08:00");
+    expect(meBody.data.porn_free_goal).toBe(30);
+    expect(meBody.data.onboarding_completed).toBe(false);
 
     const invalid = await app.request("http://localhost/api/v1/users/settings", {
       method: "PUT",
-      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
-      body: JSON.stringify({ displayName: "New", unknownField: true }),
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
+      body: JSON.stringify({ nickname: "New", unknownField: true }),
     });
     expect(invalid.status).toBe(422);
   });
 
-  test("updates settings and completes onboarding", async () => {
+  test("updates settings and completes onboarding with reference fields", async () => {
     const passwordHash = await hashPassword("password123", 4);
     const authRepository = createMemoryRepository([{
       id: "user-1",
       email: "patient@example.com",
+      username: "patient1",
       passwordHash,
       role: "patient",
       status: "active",
@@ -316,28 +412,121 @@ describe("users routes", () => {
     const login = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
+      body: JSON.stringify({ identifier: "patient@example.com", password: "password123" }),
     });
     const loginBody = await login.json();
 
     const settings = await app.request("http://localhost/api/v1/users/settings", {
       method: "PUT",
-      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
-      body: JSON.stringify({ displayName: "New Name", recoveryGoal: "Stay clean", checkInTime: "07:30" }),
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
+      body: JSON.stringify({ nickname: "New Name", recovery_reason: "Stay clean", daily_checkin_time: "07:30", porn_free_goal: 60 }),
     });
     expect(settings.status).toBe(200);
     const settingsBody = await settings.json();
-    expect(settingsBody.data.displayName).toBe("New Name");
-    expect(settingsBody.data.checkInTime).toBe("07:30:00");
+    expect(settingsBody.data.nickname).toBe("New Name");
+    expect(settingsBody.data.daily_checkin_time).toBe("07:30");
 
     const onboarding = await app.request("http://localhost/api/v1/auth/onboarding", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
-      body: JSON.stringify({ recoveryGoal: "Stay clean", checkInTime: "07:30" }),
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
+      body: JSON.stringify({ nickname: "OnboardName", recovery_reason: "Stay clean", daily_checkin_time: "07:30", porn_free_goal: 60 }),
     });
     expect(onboarding.status).toBe(200);
     const onboardingBody = await onboarding.json();
-    expect(onboardingBody.data.onboardingCompletedAt).toBeTruthy();
+    expect(onboardingBody.data.onboarding_completed).toBe(true);
+    expect(onboardingBody.data.nickname).toBe("OnboardName");
+  });
+
+  test("onboarding idempotent with same payload", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const authRepository = createMemoryRepository([{
+      id: "user-1",
+      email: "patient@example.com",
+      username: "patient1",
+      passwordHash,
+      role: "patient",
+      status: "active",
+    }]);
+
+    const usersRepository = createMemoryUsersRepository([{
+      id: "profile-1",
+      userId: "user-1",
+      email: "patient@example.com",
+      role: "patient",
+      status: "active",
+      username: "patient1",
+      nickname: "OnboardName",
+      recoveryReason: "Stay clean",
+      dailyCheckinTime: "07:30",
+      pornFreeGoal: 60,
+      answers: {},
+      dependencyLevel: null,
+      aiSummary: null,
+      onboardingCompletedAt: new Date("2026-01-01T00:00:00.000Z"),
+    }]);
+
+    const app = createApp(baseEnv, {}, { authRepository, usersRepository });
+
+    const login = await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ identifier: "patient@example.com", password: "password123" }),
+    });
+    const loginBody = await login.json();
+
+    const onboarding = await app.request("http://localhost/api/v1/auth/onboarding", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
+      body: JSON.stringify({ nickname: "OnboardName", recovery_reason: "Stay clean", daily_checkin_time: "07:30", porn_free_goal: 60 }),
+    });
+    expect(onboarding.status).toBe(200);
+    const onboardingBody = await onboarding.json();
+    expect(onboardingBody.data.onboarding_completed).toBe(true);
+  });
+
+  test("onboarding rejects different payload after completion", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const authRepository = createMemoryRepository([{
+      id: "user-1",
+      email: "patient@example.com",
+      username: "patient1",
+      passwordHash,
+      role: "patient",
+      status: "active",
+    }]);
+
+    const usersRepository = createMemoryUsersRepository([{
+      id: "profile-1",
+      userId: "user-1",
+      email: "patient@example.com",
+      role: "patient",
+      status: "active",
+      username: "patient1",
+      nickname: "OldName",
+      recoveryReason: "Old reason",
+      dailyCheckinTime: "08:00",
+      pornFreeGoal: 30,
+      answers: {},
+      dependencyLevel: null,
+      aiSummary: null,
+      onboardingCompletedAt: new Date("2026-01-01T00:00:00.000Z"),
+    }]);
+
+    const app = createApp(baseEnv, {}, { authRepository, usersRepository });
+
+    const login = await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ identifier: "patient@example.com", password: "password123" }),
+    });
+    const loginBody = await login.json();
+
+    const onboarding = await app.request("http://localhost/api/v1/auth/onboarding", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
+      body: JSON.stringify({ nickname: "NewName", recovery_reason: "New reason", daily_checkin_time: "09:00", porn_free_goal: 90 }),
+    });
+    expect(onboarding.status).toBe(409);
   });
 });
 
@@ -431,20 +620,20 @@ describe("psychologist routes", () => {
 
   test("creates psychologist profile and derives consultation channel", async () => {
     const passwordHash = await hashPassword("password123", 4);
-    const authRepository = createMemoryRepository([{ id: "user-1", email: "psych@example.com", passwordHash, role: "patient", status: "active" }]);
+    const authRepository = createMemoryRepository([{ id: "user-1", email: "psych@example.com", username: "psych1", passwordHash, role: "patient", status: "active" }]);
     const psychologistsRepository = createMemoryPsychologistsRepository();
     const app = createApp(baseEnv, {}, { authRepository, psychologistsRepository, credentialStorage });
 
     const login = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
+      body: JSON.stringify({ identifier: "psych@example.com", password: "password123" }),
     });
     const loginBody = await login.json();
 
     const register = await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
       body: JSON.stringify({ type: "general", fullName: "Dr. General", practicePlaces: [] }),
     });
     expect(register.status).toBe(201);
@@ -454,20 +643,20 @@ describe("psychologist routes", () => {
 
   test("rejects more than 3 active practice places for clinical psychologist", async () => {
     const passwordHash = await hashPassword("password123", 4);
-    const authRepository = createMemoryRepository([{ id: "user-1", email: "psych@example.com", passwordHash, role: "patient", status: "active" }]);
+    const authRepository = createMemoryRepository([{ id: "user-1", email: "psych@example.com", username: "psych1", passwordHash, role: "patient", status: "active" }]);
     const psychologistsRepository = createMemoryPsychologistsRepository();
     const app = createApp(baseEnv, {}, { authRepository, psychologistsRepository, credentialStorage });
 
     const login = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
+      body: JSON.stringify({ identifier: "psych@example.com", password: "password123" }),
     });
     const loginBody = await login.json();
 
     const response = await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
       body: JSON.stringify({
         type: "clinical",
         fullName: "Dr. Clinical",
@@ -485,20 +674,20 @@ describe("psychologist routes", () => {
 
   test("uploads credential file and blocks submit-for-review until required files exist", async () => {
     const passwordHash = await hashPassword("password123", 4);
-    const authRepository = createMemoryRepository([{ id: "user-1", email: "psych@example.com", passwordHash, role: "patient", status: "active" }]);
+    const authRepository = createMemoryRepository([{ id: "user-1", email: "psych@example.com", username: "psych1", passwordHash, role: "patient", status: "active" }]);
     const psychologistsRepository = createMemoryPsychologistsRepository();
     const app = createApp(baseEnv, {}, { authRepository, psychologistsRepository, credentialStorage });
 
     const login = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
+      body: JSON.stringify({ identifier: "psych@example.com", password: "password123" }),
     });
     const loginBody = await login.json();
 
     await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
       body: JSON.stringify({ type: "general", fullName: "Dr. General", practicePlaces: [] }),
     });
 
@@ -508,14 +697,14 @@ describe("psychologist routes", () => {
 
     const upload = await app.request("http://localhost/api/v1/psychologists/me/credential-file", {
       method: "POST",
-      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
       body: form,
     });
     expect(upload.status).toBe(201);
 
     const submit = await app.request("http://localhost/api/v1/psychologists/me/submit-for-review", {
       method: "POST",
-      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.accessToken}` },
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
     });
     expect(submit.status).toBe(409);
   });
@@ -528,8 +717,8 @@ describe("psychologist routes", () => {
   test("returns review url only for owner", async () => {
     const passwordHash = await hashPassword("password123", 4);
     const authRepository = createMemoryRepository([
-      { id: "user-1", email: "psych@example.com", passwordHash, role: "patient", status: "active" },
-      { id: "user-2", email: "other@example.com", passwordHash, role: "patient", status: "active" },
+      { id: "user-1", email: "psych@example.com", username: "psych1", passwordHash, role: "patient", status: "active" },
+      { id: "user-2", email: "other@example.com", username: "other1", passwordHash, role: "patient", status: "active" },
     ]);
     const psychologistsRepository = createMemoryPsychologistsRepository();
     const app = createApp(baseEnv, {}, { authRepository, psychologistsRepository, credentialStorage });
@@ -537,20 +726,20 @@ describe("psychologist routes", () => {
     const login1 = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
+      body: JSON.stringify({ identifier: "psych@example.com", password: "password123" }),
     });
     const login1Body = await login1.json();
 
     const login2 = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "other@example.com", password: "password123" }),
+      body: JSON.stringify({ identifier: "other@example.com", password: "password123" }),
     });
     const login2Body = await login2.json();
 
     await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.accessToken}` },
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.session.access_token}` },
       body: JSON.stringify({ type: "general", fullName: "Dr. General", practicePlaces: [] }),
     });
 
@@ -559,18 +748,18 @@ describe("psychologist routes", () => {
     form.set("file", new File([new Uint8Array([1, 2, 3])], "license.pdf", { type: "application/pdf" }));
     const upload = await app.request("http://localhost/api/v1/psychologists/me/credential-file", {
       method: "POST",
-      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.accessToken}` },
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.session.access_token}` },
       body: form,
     });
     const uploadBody = await upload.json();
 
     const owner = await app.request(`http://localhost/api/v1/psychologists/me/credential-file/${uploadBody.data.id}/review-url`, {
-      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.accessToken}` },
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.session.access_token}` },
     });
     expect(owner.status).toBe(200);
 
     const other = await app.request(`http://localhost/api/v1/psychologists/me/credential-file/${uploadBody.data.id}/review-url`, {
-      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${login2Body.data.accessToken}` },
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${login2Body.data.session.access_token}` },
     });
     expect(other.status).toBe(404);
   });

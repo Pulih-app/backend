@@ -39,9 +39,10 @@ describe("openapi document", () => {
     expect(spec.components.schemas.ErrorEnvelope).toBeTruthy();
     expect(spec.paths["/api/v1/auth/register"].post.requestBody.content["application/json"].examples.patient.value).toMatchObject({
       email: "patient@example.com",
+      username: "patient1",
     });
     expect(spec.paths["/api/v1/users/me"].get.responses["200"].content["application/json"].examples.success.value.data).toMatchObject({
-      userId: "11111111-1111-4111-8111-111111111111",
+      id: "11111111-1111-4111-8111-111111111111",
     });
     expect(spec.paths["/api/v1/users/me"].get.responses["404"].content["application/json"].examples.default.value.error).toMatchObject({
       code: "NOT_FOUND",

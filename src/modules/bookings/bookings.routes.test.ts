@@ -26,11 +26,13 @@ function createMemoryAuthRepository(seed: AuthUserRecord[]): AuthRepository {
   const users = new Map(seed.map((user) => [user.id, user]));
   return {
     async createPatient(input) {
-      const user: AuthUserRecord = { id: crypto.randomUUID(), email: input.email, passwordHash: input.passwordHash, role: "patient", status: "active" };
+      const user: AuthUserRecord = { id: crypto.randomUUID(), email: input.email, username: input.username, passwordHash: input.passwordHash, role: "patient", status: "active" };
       users.set(user.id, user);
       return user;
     },
     async findByEmail(email) { return Array.from(users.values()).find((user) => user.email === email) ?? null; },
+    async findByUsername(username) { return Array.from(users.values()).find((user) => user.username === username) ?? null; },
+    async findByLoginIdentifier(identifier: string) { return Array.from(users.values()).find((u) => u.email === identifier || u.username === identifier) ?? null; },
     async findById(id) { return users.get(id) ?? null; },
   };
 }
@@ -163,8 +165,8 @@ describe("payment helpers", () => {
 describe("booking routes", () => {
   test("creates booking, payment row, and hides meet link until confirmation", async () => {
     const authRepository = createMemoryAuthRepository([
-      { id: "patient-1", email: "patient@example.com", passwordHash: "hash", role: "patient", status: "active" },
-      { id: "psych-1", email: "psych@example.com", passwordHash: "hash", role: "psychologist", status: "active" },
+      { id: "patient-1", email: "patient@example.com", username: null, passwordHash: "hash", role: "patient", status: "active" },
+      { id: "psych-1", email: "psych@example.com", username: null, passwordHash: "hash", role: "psychologist", status: "active" },
     ]);
     const bookingsRepository = createMemoryBookingsRepository({
       sessions: [{
@@ -189,7 +191,7 @@ describe("booking routes", () => {
     const login = await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "whatever" }),
+      body: JSON.stringify({ identifier: "patient@example.com", password: "whatever" }),
     });
     const loginBody = await login.json();
     expect(login.status).toBe(401);
@@ -197,10 +199,10 @@ describe("booking routes", () => {
     const register = await app.request("http://localhost/api/v1/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient-2@example.com", password: "password123" }),
+      body: JSON.stringify({ email: "patient-2@example.com", username: "patient2", password: "password123", confirm_password: "password123" }),
     });
     const registerBody = await register.json();
-    const token = registerBody.data.accessToken as string;
+    const token = registerBody.data.session.access_token as string;
 
     const create = await app.request("http://localhost/api/v1/bookings", {
       method: "POST",
@@ -239,9 +241,9 @@ describe("booking routes", () => {
   test("enforces owner-only booking access", async () => {
     const passwordHash = await hashPassword("password123", 4);
     const authRepository = createMemoryAuthRepository([
-      { id: "patient-1", email: "patient@example.com", passwordHash, role: "patient", status: "active" },
-      { id: "patient-2", email: "other@example.com", passwordHash, role: "patient", status: "active" },
-      { id: "psych-1", email: "psych@example.com", passwordHash, role: "psychologist", status: "active" },
+      { id: "patient-1", email: "patient@example.com", username: null, passwordHash, role: "patient", status: "active" },
+      { id: "patient-2", email: "other@example.com", username: null, passwordHash, role: "patient", status: "active" },
+      { id: "psych-1", email: "psych@example.com", username: null, passwordHash, role: "psychologist", status: "active" },
     ]);
     const bookingsRepository = createMemoryBookingsRepository({
       bookings: [
@@ -274,8 +276,8 @@ describe("booking routes", () => {
     const patientToken = (await (await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "patient@example.com", password: "password123" }),
-    })).json()).data.accessToken as string;
+      body: JSON.stringify({ identifier: "patient@example.com", password: "password123" }),
+    })).json()).data.session.access_token as string;
 
     const own = await app.request("http://localhost/api/v1/bookings/44444444-4444-4444-8444-444444444444", {
       headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${patientToken}` },
@@ -287,8 +289,8 @@ describe("booking routes", () => {
     const otherToken = (await (await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "other@example.com", password: "password123" }),
-    })).json()).data.accessToken as string;
+      body: JSON.stringify({ identifier: "other@example.com", password: "password123" }),
+    })).json()).data.session.access_token as string;
 
     const forbidden = await app.request("http://localhost/api/v1/bookings/44444444-4444-4444-8444-444444444444", {
       headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${otherToken}` },
@@ -298,8 +300,8 @@ describe("booking routes", () => {
     const psychToken = (await (await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
-    })).json()).data.accessToken as string;
+      body: JSON.stringify({ identifier: "psych@example.com", password: "password123" }),
+    })).json()).data.session.access_token as string;
 
     const psychList = await app.request("http://localhost/api/v1/bookings", {
       headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${psychToken}` },
@@ -312,7 +314,7 @@ describe("booking routes", () => {
 
   test("confirms clinical booking and sends email event", async () => {
     const authRepository = createMemoryAuthRepository([
-      { id: "psych-1", email: "psych@example.com", passwordHash: await hashPassword("password123", 4), role: "psychologist", status: "active" },
+      { id: "psych-1", email: "psych@example.com", username: null, passwordHash: await hashPassword("password123", 4), role: "psychologist", status: "active" },
     ]);
     const bookingsRepository = createMemoryBookingsRepository({
       bookings: [toBookingDetail({
@@ -353,8 +355,8 @@ describe("booking routes", () => {
     const psychToken = (await (await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
-    })).json()).data.accessToken as string;
+      body: JSON.stringify({ identifier: "psych@example.com", password: "password123" }),
+    })).json()).data.session.access_token as string;
 
     const response = await app.request("http://localhost/api/v1/bookings/55555555-5555-4555-8555-555555555555/confirm", {
       method: "POST",
@@ -371,7 +373,7 @@ describe("booking routes", () => {
 
   test("reschedules booking and sends email event", async () => {
     const authRepository = createMemoryAuthRepository([
-      { id: "psych-1", email: "psych@example.com", passwordHash: await hashPassword("password123", 4), role: "psychologist", status: "active" },
+      { id: "psych-1", email: "psych@example.com", username: null, passwordHash: await hashPassword("password123", 4), role: "psychologist", status: "active" },
     ]);
     const bookingsRepository = createMemoryBookingsRepository({
       sessions: [
@@ -446,8 +448,8 @@ describe("booking routes", () => {
     const psychToken = (await (await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
-      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
-    })).json()).data.accessToken as string;
+      body: JSON.stringify({ identifier: "psych@example.com", password: "password123" }),
+    })).json()).data.session.access_token as string;
 
     const response = await app.request("http://localhost/api/v1/bookings/66666666-6666-4666-8666-666666666666/reschedule", {
       method: "POST",

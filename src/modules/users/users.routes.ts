@@ -8,7 +8,7 @@ import type { AuthService } from "../auth/auth.service";
 import { createAuthRepository, type AuthRepository } from "../auth/auth.repository";
 import { createAuthService } from "../auth/auth.service";
 import { createUsersRepository, type UsersRepository } from "./users.repository";
-import { createUsersService, type UsersService } from "./users.service";
+import { createUsersService, type UsersService, type AiAnalyzer } from "./users.service";
 import { onboardingSchema, userSettingsSchema } from "./users.schema";
 
 export type UsersRoutesOptions = {
@@ -17,18 +17,19 @@ export type UsersRoutesOptions = {
   authRepository?: AuthRepository;
   usersRepository?: UsersRepository;
   authService?: AuthService;
+  aiAnalyzer?: AiAnalyzer;
 };
 
 async function withUsersService<T>(options: UsersRoutesOptions, action: (service: UsersService, authService: AuthService) => Promise<T>) {
   if (options.usersRepository && (options.authService || options.authRepository)) {
     const authService = options.authService ?? createAuthService(options.authRepository!, options.config);
-    return action(createUsersService(options.usersRepository), authService);
+    return action(createUsersService(options.usersRepository, options.aiAnalyzer), authService);
   }
 
   const handle = await createDatabaseHandle(options.databaseSource ?? {}, options.config);
   try {
     const authService = createAuthService(createAuthRepository(handle.db), options.config);
-    return await action(createUsersService(createUsersRepository(handle.db)), authService);
+    return await action(createUsersService(createUsersRepository(handle.db), options.aiAnalyzer), authService);
   } finally {
     await handle.close();
   }
@@ -62,8 +63,17 @@ export function createUsersRoutes(options: UsersRoutesOptions) {
       const middleware = authGuard({ service: authService, config: options.config });
       await middleware(context, async () => undefined);
       const payload = await validateJsonBody(context, onboardingSchema);
-      const profile = await service.completeOnboarding(context.get("auth").user.id, payload);
-      return context.json(createSuccessResponse({ message: "Onboarding completed successfully", data: profile }));
+
+      const result = await service.completeOnboarding(context.get("auth").user.id, {
+        nickname: payload.nickname,
+        recovery_reason: payload.recovery_reason,
+        daily_checkin_time: payload.daily_checkin_time,
+        porn_free_goal: payload.porn_free_goal,
+        answers: payload.answers ?? {},
+        dependency_level: payload.dependency_level ?? null,
+      });
+
+      return context.json(createSuccessResponse({ message: "Onboarding completed successfully", data: result }), 200);
     });
   });
 

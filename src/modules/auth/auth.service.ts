@@ -3,19 +3,15 @@ import type { AppConfig } from "../../shared/config";
 import type { AuthRepository, AuthUserRecord } from "./auth.repository";
 import { hashPassword, validatePassword, verifyPassword } from "./password";
 import { issueAccessToken } from "./token";
-import type { AuthUser } from "./auth.types";
+import type { AuthUser, AuthResult, UserPayload } from "./auth.types";
 
-export type AuthResult = {
-  accessToken: string;
-  tokenType: "Bearer";
-  expiresIn: number;
-  user: AuthUser;
-};
+export { type AuthResult, type AuthUser };
 
-function toPublicUser(user: AuthUserRecord): AuthUser {
+function toAuthUser(user: AuthUserRecord): AuthUser {
   return {
     id: user.id,
     email: user.email,
+    username: user.username,
     role: user.role,
     status: user.status,
   };
@@ -23,38 +19,66 @@ function toPublicUser(user: AuthUserRecord): AuthUser {
 
 export function createAuthService(repository: AuthRepository, config: AppConfig) {
   async function buildResult(user: AuthUserRecord): Promise<AuthResult> {
-    const publicUser = toPublicUser(user);
+    const publicUser = toAuthUser(user);
+    const userPayload: UserPayload = {
+      id: publicUser.id,
+      email: publicUser.email,
+      nickname: null,
+      recovery_reason: null,
+      daily_checkin_time: null,
+      porn_free_goal: null,
+      onboarding_completed: false,
+    };
+
     return {
-      accessToken: await issueAccessToken({
-        user: publicUser,
-        secret: config.security.jwtAccessSecret,
-        ttlSeconds: config.security.jwtAccessTtlSeconds,
-      }),
-      tokenType: "Bearer",
-      expiresIn: config.security.jwtAccessTtlSeconds,
-      user: publicUser,
+      user: userPayload,
+      session: {
+        access_token: await issueAccessToken({
+          user: publicUser,
+          secret: config.security.jwtAccessSecret,
+          ttlSeconds: config.security.jwtAccessTtlSeconds,
+        }),
+        token_type: "Bearer",
+        expires_in: config.security.jwtAccessTtlSeconds,
+      },
     };
   }
 
   return {
-    async register(input: { email: string; password: string }) {
+    async register(input: { email: string; username: string; password: string; confirm_password: string }) {
       validatePassword(input.password);
 
-      const existing = await repository.findByEmail(input.email);
-      if (existing) {
+      if (input.password !== input.confirm_password) {
+        throw new AppError(AppErrorCode.ValidationError, "Password validation failed.", [
+          "confirm_password: Passwords do not match.",
+        ]);
+      }
+
+      const existingEmail = await repository.findByEmail(input.email);
+      if (existingEmail) {
         throw new AppError(AppErrorCode.Conflict, "Email is already registered.", ["email: Email is already registered."]);
       }
 
+      const existingUsername = await repository.findByUsername(input.username);
+      if (existingUsername) {
+        throw new AppError(AppErrorCode.Conflict, "Username is already taken.", ["username: Username is already taken."]);
+      }
+
       const passwordHash = await hashPassword(input.password, config.security.passwordHashCost);
-      const user = await repository.createPatient({ email: input.email, passwordHash });
+      const user = await repository.createPatient({
+        email: input.email,
+        username: input.username,
+        passwordHash,
+      });
+
       return buildResult(user);
     },
-    async login(input: { email: string; password: string }) {
-      const user = await repository.findByEmail(input.email);
+    async login(input: { identifier: string; password: string }) {
+      const user = await repository.findByLoginIdentifier(input.identifier);
       const valid = user ? await verifyPassword(input.password, user.passwordHash) : false;
 
       if (!user || !valid) {
-        throw new AppError(AppErrorCode.Unauthenticated, "Invalid email or password.");
+        throw new AppError(AppErrorCode.Unauthenticated, "Invalid identifier or password.");
       }
 
       return buildResult(user);
@@ -64,7 +88,7 @@ export function createAuthService(repository: AuthRepository, config: AppConfig)
       if (!user) {
         throw new AppError(AppErrorCode.Unauthenticated, "Authenticated user was not found.");
       }
-      return toPublicUser(user);
+      return toAuthUser(user);
     },
   };
 }

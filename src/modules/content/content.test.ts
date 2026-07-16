@@ -8,7 +8,7 @@ const TEST_ENV = {
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable", DIRECT_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable",
   JWT_ACCESS_SECRET: "test-secret", JWT_ACCESS_TTL_SECONDS: "86400", PASSWORD_HASH_COST: "4", CORS_ALLOWED_ORIGINS: "http://localhost:3001", REQUEST_ID_HEADER: "x-request-id", PAKASIR_API_KEY: "test-pakasir-key",
 };
-const AUTH_USER = { id: "11111111-1111-4111-8111-111111111111", email: "patient@example.com", role: "patient" as const, status: "active" };
+const AUTH_USER = { id: "11111111-1111-4111-8111-111111111111", email: "patient@example.com", username: null, role: "patient" as const, status: "active" };
 const OTHER_USER_ID = "22222222-2222-4222-8222-222222222222";
 
 function memoryRepository(): ContentRepository {
@@ -37,7 +37,7 @@ function memoryRepository(): ContentRepository {
 
 async function authedApp(repository: ContentRepository) {
   const token = await issueAccessToken({ user: AUTH_USER, secret: TEST_ENV.JWT_ACCESS_SECRET, ttlSeconds: 60 });
-  const app = createApp(TEST_ENV, {}, { authRepository: { async createPatient() { throw new Error("not used"); }, async findByEmail() { return null; }, async findById(id: string) { return id === AUTH_USER.id ? { ...AUTH_USER, passwordHash: "hash" } : null; } }, contentRepository: repository });
+  const app = createApp(TEST_ENV, {}, { authRepository: { async createPatient() { throw new Error("not used"); }, async findByEmail() { return null; }, async findByUsername() { return null; }, async findByLoginIdentifier() { return null; }, async findById(id: string) { return id === AUTH_USER.id ? { ...AUTH_USER, passwordHash: "hash" } : null; } }, contentRepository: repository });
   return { app, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } };
 }
 
