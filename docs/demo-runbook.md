@@ -48,7 +48,17 @@ After psychologist registers and fills profile:
 12. review session channel access
 13. submit patient review
 
-## 4. Pakasir sandbox simulation
+## 4. Demo seed check
+
+Load the demo fixture set before rehearsal:
+
+```sh
+bun run seed:demo
+```
+
+The seed is repeatable and keeps the core demo rows in sync with the current MVP flow. It loads richer content fixtures for education, daily motivations, daily challenges, achievements, and community samples.
+
+## 5. Pakasir sandbox simulation
 
 Use payment simulation after booking is created:
 
@@ -60,7 +70,7 @@ curl -L "$PAKASIR_BASE_URL/api/paymentsimulation" \
 
 Then call `POST /api/v1/payments/pakasir/webhook` with matching payload.
 
-## 5. Expected emails
+## 6. Expected emails
 
 Expected email events after payment/confirmation:
 
@@ -69,7 +79,7 @@ Expected email events after payment/confirmation:
 - booking confirmed session-ready email to patient;
 - booking rescheduled email to patient when reschedule happens.
 
-## 6. Rehearsal check
+## 7. Rehearsal check
 
 Confirm:
 

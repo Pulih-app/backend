@@ -1,9 +1,12 @@
-import { Client } from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
 import { hashSync } from "bcryptjs";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { Client } from "pg";
 import { loadConfig } from "../src/shared/config";
 import {
   achievements,
+  communityComments,
+  communityPostLikes,
   communityPosts,
   dailyChallenges,
   dailyMotivations,
@@ -16,31 +19,26 @@ import {
   psychologistSessionSlots,
   users,
 } from "../src/db/schema";
-
-const DEMO_PASSWORD = "PulihDemo123!";
-const DEMO_NOW = new Date("2026-01-15T02:00:00.000Z");
-const DEMO_DAY = "2026-01-16";
-
-const ids = {
-  patientUser: "11111111-1111-4111-8111-111111111111",
-  patientProfile: "11111111-1111-4111-8111-111111111112",
-  psychologistUser: "22222222-2222-4222-8222-222222222221",
-  psychologistProfile: "22222222-2222-4222-8222-222222222222",
-  practicePlace: "22222222-2222-4222-8222-222222222223",
-  credentialSipp: "22222222-2222-4222-8222-222222222224",
-  credentialIjazah: "22222222-2222-4222-8222-222222222225",
-  credentialStr: "22222222-2222-4222-8222-222222222226",
-  bundle: "33333333-3333-4333-8333-333333333331",
-  slotOne: "33333333-3333-4333-8333-333333333332",
-  slotTwo: "33333333-3333-4333-8333-333333333333",
-  slotThree: "33333333-3333-4333-8333-333333333334",
-  educationOne: "44444444-4444-4444-8444-444444444431",
-  educationTwo: "44444444-4444-4444-8444-444444444432",
-  achievementOne: "44444444-4444-4444-8444-444444444433",
-  achievementTwo: "44444444-4444-4444-8444-444444444434",
-  postOne: "44444444-4444-4444-8444-444444444441",
-  postTwo: "44444444-4444-4444-8444-444444444442",
-} as const;
+import {
+  DEMO_IDS,
+  DEMO_NOW,
+  DEMO_PASSWORD,
+  demoAchievements,
+  demoBundle,
+  demoCommunityComments,
+  demoCommunityLikes,
+  demoCommunityPosts,
+  demoCredentialFiles,
+  demoDailyChallenges,
+  demoDailyDates,
+  demoDailyMotivations,
+  demoEducationContents,
+  demoProfiles,
+  demoPsychologistProfile,
+  demoPracticePlaces,
+  demoSessionSlots,
+  demoUsers,
+} from "./seed-demo-data";
 
 function requiredEnv(key: string) {
   const value = process.env[key];
@@ -77,99 +75,239 @@ async function main() {
     const passwordHash = hashSync(DEMO_PASSWORD, config.security.passwordHashCost);
 
     await db.transaction(async (tx) => {
-      await tx.insert(users).values([
-        { id: ids.patientUser, email: "patient.demo@pulih.local", passwordHash, role: "patient", status: "active", createdAt: DEMO_NOW, updatedAt: DEMO_NOW },
-        { id: ids.psychologistUser, email: "psychologist.demo@pulih.local", passwordHash, role: "psychologist", status: "active", createdAt: DEMO_NOW, updatedAt: DEMO_NOW },
-      ]).onConflictDoUpdate({ target: users.email, set: { passwordHash, status: "active", updatedAt: DEMO_NOW } });
+      await tx.delete(communityPostLikes).where(
+        and(
+          inArray(communityPostLikes.postId, DEMO_IDS.posts),
+          inArray(communityPostLikes.userId, demoCommunityLikes.map((item) => item.userId)),
+        ),
+      );
+      await tx.delete(communityComments).where(inArray(communityComments.id, DEMO_IDS.comments));
+      await tx.delete(communityPosts).where(inArray(communityPosts.id, DEMO_IDS.posts));
+      await tx.delete(achievements).where(inArray(achievements.id, DEMO_IDS.achievements));
+      await tx.delete(dailyChallenges).where(inArray(dailyChallenges.id, DEMO_IDS.challenges));
+      await tx.delete(dailyMotivations).where(inArray(dailyMotivations.id, DEMO_IDS.motivations));
+      await tx.delete(educationContents).where(inArray(educationContents.id, DEMO_IDS.education));
+      await tx.delete(psychologistSessionSlots).where(inArray(psychologistSessionSlots.id, [DEMO_IDS.slotOne, DEMO_IDS.slotTwo, DEMO_IDS.slotThree]));
+      await tx.delete(psychologistSessionBundles).where(eq(psychologistSessionBundles.id, demoBundle.id));
+      await tx.delete(psychologistCredentialFiles).where(inArray(psychologistCredentialFiles.id, [DEMO_IDS.credentialSipp, DEMO_IDS.credentialIjazah, DEMO_IDS.credentialStr]));
+      await tx.delete(psychologistPracticePlaces).where(eq(psychologistPracticePlaces.id, DEMO_IDS.practicePlace));
+      await tx.delete(profiles).where(eq(profiles.id, DEMO_IDS.patientProfile));
+      await tx.delete(psychologistProfiles).where(eq(psychologistProfiles.id, DEMO_IDS.psychologistProfile));
+      await tx.delete(users).where(inArray(users.id, [DEMO_IDS.patientUser, DEMO_IDS.psychologistUser]));
 
-      await tx.insert(profiles).values({
-        id: ids.patientProfile,
-        userId: ids.patientUser,
-        displayName: "Demo Patient",
-        nickname: "Demo",
-        recoveryGoal: "Build a steady recovery routine.",
-        checkInTime: "20:00:00",
-        onboardingCompletedAt: DEMO_NOW,
+      await tx.insert(users).values(demoUsers.map((user) => ({
+        id: user.id,
+        email: user.email,
+        passwordHash,
+        role: user.role,
+        status: user.status,
         createdAt: DEMO_NOW,
         updatedAt: DEMO_NOW,
-      }).onConflictDoUpdate({ target: profiles.userId, set: { displayName: "Demo Patient", nickname: "Demo", recoveryGoal: "Build a steady recovery routine.", checkInTime: "20:00:00", onboardingCompletedAt: DEMO_NOW, updatedAt: DEMO_NOW } });
+      })));
+
+      await tx.insert(profiles).values(demoProfiles.map((profile) => ({
+        id: profile.id,
+        userId: profile.userId,
+        displayName: profile.displayName,
+        nickname: profile.nickname,
+        recoveryGoal: profile.recoveryGoal,
+        checkInTime: profile.checkInTime,
+        onboardingCompletedAt: profile.onboardingCompletedAt,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      })));
 
       await tx.insert(psychologistProfiles).values({
-        id: ids.psychologistProfile,
-        userId: ids.psychologistUser,
-        type: "general",
-        consultationChannel: "chat",
-        approvalStatus: "approved",
-        fullName: "Dr. Maya Pulih",
-        licenseNumber: "SIPP-DEMO-001",
-        bio: "General psychologist for demo counseling sessions.",
+        id: demoPsychologistProfile.id,
+        userId: demoPsychologistProfile.userId,
+        type: demoPsychologistProfile.type,
+        consultationChannel: demoPsychologistProfile.consultationChannel,
+        approvalStatus: demoPsychologistProfile.approvalStatus,
+        fullName: demoPsychologistProfile.fullName,
+        licenseNumber: demoPsychologistProfile.licenseNumber,
+        bio: demoPsychologistProfile.bio,
         createdAt: DEMO_NOW,
         updatedAt: DEMO_NOW,
-      }).onConflictDoUpdate({ target: psychologistProfiles.userId, set: { type: "general", consultationChannel: "chat", approvalStatus: "approved", fullName: "Dr. Maya Pulih", licenseNumber: "SIPP-DEMO-001", bio: "General psychologist for demo counseling sessions.", updatedAt: DEMO_NOW } });
+      });
 
-      await tx.insert(psychologistPracticePlaces).values({ id: ids.practicePlace, profileId: ids.psychologistProfile, name: "Pulih Demo Clinic", address: "Jakarta", isActive: true, createdAt: DEMO_NOW, updatedAt: DEMO_NOW }).onConflictDoNothing();
+      await tx.insert(psychologistPracticePlaces).values(demoPracticePlaces.map((place) => ({
+        id: place.id,
+        profileId: place.profileId,
+        name: place.name,
+        address: place.address,
+        isActive: place.isActive,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      })));
 
-      await tx.insert(psychologistCredentialFiles).values([
-        { id: ids.credentialSipp, profileId: ids.psychologistProfile, documentType: "sipp", objectKey: "demo/psychologist/sipp.pdf", fileName: "sipp-demo.pdf", contentType: "application/pdf", sizeBytes: 128000, createdAt: DEMO_NOW },
-        { id: ids.credentialIjazah, profileId: ids.psychologistProfile, documentType: "ijazah", objectKey: "demo/psychologist/ijazah.pdf", fileName: "ijazah-demo.pdf", contentType: "application/pdf", sizeBytes: 128000, createdAt: DEMO_NOW },
-        { id: ids.credentialStr, profileId: ids.psychologistProfile, documentType: "str", objectKey: "demo/psychologist/str.pdf", fileName: "str-demo.pdf", contentType: "application/pdf", sizeBytes: 128000, createdAt: DEMO_NOW },
-      ]).onConflictDoNothing();
+      await tx.insert(psychologistCredentialFiles).values(demoCredentialFiles.map((file) => ({
+        id: file.id,
+        profileId: file.profileId,
+        documentType: file.documentType,
+        objectKey: file.objectKey,
+        fileName: file.fileName,
+        contentType: file.contentType,
+        sizeBytes: file.sizeBytes,
+        createdAt: DEMO_NOW,
+      })));
 
       await tx.insert(psychologistSessionBundles).values({
-        id: ids.bundle,
-        profileId: ids.psychologistProfile,
-        packageName: "Paket 1 Jam",
-        packageDurationMinutes: 60,
-        priceAmount: "150000.00",
-        dateStart: new Date("2026-01-16T00:00:00.000Z"),
-        dateEnd: new Date("2026-01-18T00:00:00.000Z"),
-        dailyStartTime: "09:00:00",
-        dailyEndTime: "10:00:00",
+        id: demoBundle.id,
+        profileId: demoBundle.profileId,
+        packageName: demoBundle.packageName,
+        packageDurationMinutes: demoBundle.packageDurationMinutes,
+        priceAmount: demoBundle.priceAmount,
+        dateStart: demoBundle.dateStart,
+        dateEnd: demoBundle.dateEnd,
+        dailyStartTime: demoBundle.dailyStartTime,
+        dailyEndTime: demoBundle.dailyEndTime,
         createdAt: DEMO_NOW,
         updatedAt: DEMO_NOW,
-      }).onConflictDoUpdate({ target: psychologistSessionBundles.id, set: { packageName: "Paket 1 Jam", packageDurationMinutes: 60, priceAmount: "150000.00", updatedAt: DEMO_NOW } });
+      });
 
-      await tx.insert(psychologistSessionSlots).values([
-        { id: ids.slotOne, bundleId: ids.bundle, profileId: ids.psychologistProfile, sessionDate: new Date("2026-01-16T00:00:00.000Z"), startsAt: new Date("2026-01-16T02:00:00.000Z"), endsAt: new Date("2026-01-16T03:00:00.000Z"), status: "available", createdAt: DEMO_NOW, updatedAt: DEMO_NOW },
-        { id: ids.slotTwo, bundleId: ids.bundle, profileId: ids.psychologistProfile, sessionDate: new Date("2026-01-17T00:00:00.000Z"), startsAt: new Date("2026-01-17T02:00:00.000Z"), endsAt: new Date("2026-01-17T03:00:00.000Z"), status: "available", createdAt: DEMO_NOW, updatedAt: DEMO_NOW },
-        { id: ids.slotThree, bundleId: ids.bundle, profileId: ids.psychologistProfile, sessionDate: new Date("2026-01-18T00:00:00.000Z"), startsAt: new Date("2026-01-18T02:00:00.000Z"), endsAt: new Date("2026-01-18T03:00:00.000Z"), status: "available", createdAt: DEMO_NOW, updatedAt: DEMO_NOW },
-      ]).onConflictDoUpdate({ target: psychologistSessionSlots.id, set: { status: "available", heldUntil: null, updatedAt: DEMO_NOW } });
-
-      await tx.insert(educationContents).values([
-        { id: ids.educationOne, title: "Understanding Triggers", content: "Notice patterns, plan alternatives, and ask for support early.", category: "recovery", status: "published", publishedAt: DEMO_NOW, createdAt: DEMO_NOW, updatedAt: DEMO_NOW },
-        { id: ids.educationTwo, title: "Small Daily Wins", content: "Small consistent actions can strengthen recovery momentum.", category: "routine", status: "published", publishedAt: DEMO_NOW, createdAt: DEMO_NOW, updatedAt: DEMO_NOW },
-      ]).onConflictDoNothing();
-
-      await tx.insert(dailyMotivations).values({ content: "One careful choice today is progress.", source: "Pulih", localDate: DEMO_DAY, status: "published", createdAt: DEMO_NOW, updatedAt: DEMO_NOW }).onConflictDoUpdate({ target: dailyMotivations.localDate, set: { content: "One careful choice today is progress.", source: "Pulih", status: "published", updatedAt: DEMO_NOW } });
-      await tx.insert(dailyChallenges).values({ title: "Five-minute grounding", description: "Pause, breathe, and name five things you can see.", category: "mindfulness", localDate: DEMO_DAY, status: "published", createdAt: DEMO_NOW, updatedAt: DEMO_NOW }).onConflictDoUpdate({ target: dailyChallenges.localDate, set: { title: "Five-minute grounding", description: "Pause, breathe, and name five things you can see.", category: "mindfulness", status: "published", updatedAt: DEMO_NOW } });
-
-      await tx.insert(achievements).values({
-        id: ids.achievementOne,
-        key: "first_check_in",
-        title: "First Check-in",
-        description: "Complete your first daily check-in.",
-        criteria: { type: "check_in_count", target: 1 },
+      await tx.insert(psychologistSessionSlots).values(demoSessionSlots.map((slot) => ({
+        id: slot.id,
+        bundleId: slot.bundleId,
+        profileId: slot.profileId,
+        sessionDate: slot.sessionDate,
+        startsAt: slot.startsAt,
+        endsAt: slot.endsAt,
+        status: slot.status,
         createdAt: DEMO_NOW,
-      }).onConflictDoUpdate({ target: achievements.key, set: { title: "First Check-in", description: "Complete your first daily check-in.", criteria: { type: "check_in_count", target: 1 } } });
+        updatedAt: DEMO_NOW,
+      })));
 
-      await tx.insert(achievements).values({
-        id: ids.achievementTwo,
-        key: "three_day_streak",
-        title: "Three-day Streak",
-        description: "Complete check-ins for three days.",
-        criteria: { type: "streak", target: 3 },
+      await tx.insert(educationContents).values(demoEducationContents.map((item) => ({
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        category: item.category,
+        status: "published" as const,
+        publishedAt: DEMO_NOW,
         createdAt: DEMO_NOW,
-      }).onConflictDoUpdate({ target: achievements.key, set: { title: "Three-day Streak", description: "Complete check-ins for three days.", criteria: { type: "streak", target: 3 } } });
+        updatedAt: DEMO_NOW,
+      }))).onConflictDoUpdate({
+        target: educationContents.id,
+        set: {
+          title: sql`excluded.title`,
+          content: sql`excluded.content`,
+          category: sql`excluded.category`,
+          status: sql`excluded.status`,
+          publishedAt: sql`excluded.published_at`,
+          updatedAt: DEMO_NOW,
+        },
+      });
 
-      await tx.insert(communityPosts).values([
-        { id: ids.postOne, userId: ids.patientUser, category: "support", content: "Today I am choosing one healthier response to stress.", likeCount: 0, commentCount: 0, createdAt: DEMO_NOW, updatedAt: DEMO_NOW },
-        { id: ids.postTwo, userId: ids.psychologistUser, category: "general", content: "Reminder: progress is built through small repeatable steps.", likeCount: 0, commentCount: 0, createdAt: DEMO_NOW, updatedAt: DEMO_NOW },
-      ]).onConflictDoUpdate({ target: communityPosts.id, set: { likeCount: 0, commentCount: 0, updatedAt: DEMO_NOW } });
+      await tx.insert(dailyMotivations).values(demoDailyMotivations.map((content, index) => ({
+        id: DEMO_IDS.motivations[index],
+        content,
+        source: "Pulih",
+        localDate: demoDailyDates[index],
+        status: "published" as const,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      }))).onConflictDoUpdate({
+        target: dailyMotivations.localDate,
+        set: {
+          id: sql`excluded.id`,
+          content: sql`excluded.content`,
+          source: sql`excluded.source`,
+          status: sql`excluded.status`,
+          updatedAt: DEMO_NOW,
+        },
+      });
+
+      await tx.insert(dailyChallenges).values(demoDailyChallenges.map((item, index) => ({
+        id: DEMO_IDS.challenges[index],
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        localDate: demoDailyDates[index],
+        status: "published" as const,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      }))).onConflictDoUpdate({
+        target: dailyChallenges.localDate,
+        set: {
+          id: sql`excluded.id`,
+          title: sql`excluded.title`,
+          description: sql`excluded.description`,
+          category: sql`excluded.category`,
+          status: sql`excluded.status`,
+          updatedAt: DEMO_NOW,
+        },
+      });
+
+      await tx.insert(achievements).values(demoAchievements.map((achievement, index) => ({
+        id: DEMO_IDS.achievements[index],
+        key: achievement.key,
+        title: achievement.title,
+        description: achievement.description,
+        criteria: achievement.criteria,
+        createdAt: DEMO_NOW,
+      }))).onConflictDoUpdate({
+        target: achievements.key,
+        set: {
+          id: sql`excluded.id`,
+          title: sql`excluded.title`,
+          description: sql`excluded.description`,
+          criteria: sql`excluded.criteria`,
+        },
+      });
+
+      await tx.insert(communityPosts).values(demoCommunityPosts.map((post) => ({
+        id: post.id,
+        userId: post.userId,
+        category: post.category,
+        content: post.content,
+        likeCount: 0,
+        commentCount: 0,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      }))).onConflictDoUpdate({
+        target: communityPosts.id,
+        set: {
+          userId: sql`excluded.user_id`,
+          category: sql`excluded.category`,
+          content: sql`excluded.content`,
+          updatedAt: DEMO_NOW,
+        },
+      });
+
+      await tx.insert(communityComments).values(demoCommunityComments.map((comment) => ({
+        id: comment.id,
+        postId: comment.postId,
+        userId: comment.userId,
+        content: comment.content,
+        createdAt: DEMO_NOW,
+      }))).onConflictDoUpdate({
+        target: communityComments.id,
+        set: {
+          postId: sql`excluded.post_id`,
+          userId: sql`excluded.user_id`,
+          content: sql`excluded.content`,
+        },
+      });
+
+      for (const like of demoCommunityLikes) {
+        await tx.insert(communityPostLikes).values({
+          postId: like.postId,
+          userId: like.userId,
+          createdAt: DEMO_NOW,
+        }).onConflictDoNothing();
+      }
+
+      for (const post of demoCommunityPosts) {
+        const likeCount = demoCommunityLikes.filter((item) => item.postId === post.id).length;
+        const commentCount = demoCommunityComments.filter((item) => item.postId === post.id).length;
+        await tx.update(communityPosts).set({ likeCount, commentCount, updatedAt: DEMO_NOW }).where(eq(communityPosts.id, post.id));
+      }
     });
 
     console.log("Demo seed complete.");
     console.log("Patient: patient.demo@pulih.local / PulihDemo123!");
     console.log("Psychologist: psychologist.demo@pulih.local / PulihDemo123!");
+    console.log(`Seeded content: ${demoEducationContents.length} education, ${demoDailyMotivations.length} motivations, ${demoDailyChallenges.length} challenges, ${demoAchievements.length} achievements, ${demoCommunityPosts.length} community posts.`);
   } finally {
     await client.end();
   }
