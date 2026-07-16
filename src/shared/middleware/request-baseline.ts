@@ -42,7 +42,10 @@ export function requestBaseline(config: RequestBaselineConfig) {
 
     context.set("requestId", requestId);
 
-    if (origin && !config.allowedOrigins.includes(origin)) {
+    const requestOrigin = new URL(context.req.url).origin;
+    const isSameOrigin = origin === requestOrigin;
+
+    if (origin && !isSameOrigin && !config.allowedOrigins.includes(origin)) {
       throw new AppError("FORBIDDEN", "Origin is not allowed.");
     }
 

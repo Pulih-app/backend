@@ -7122,7 +7122,7 @@
           "routine"
         ],
         "summary": "Create routine check-in",
-        "description": "Stores one daily check-in using Asia/Jakarta local date semantics.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Stores one daily check-in using Asia/Jakarta local date semantics. is_successful must be true. Use relapse endpoint for unsuccessful days.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_routine_checkin",
         "responses": {
           "201": {
@@ -7146,7 +7146,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/CheckIn"
+                      "$ref": "#/components/schemas/CheckInResponse"
                     },
                     "meta": {
                       "oneOf": [
@@ -7171,12 +7171,61 @@
                       "success": true,
                       "message": "Check-in saved successfully",
                       "data": {
-                        "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-                        "userId": "11111111-1111-4111-8111-111111111111",
-                        "mood": 4,
-                        "note": "Feeling better today.",
-                        "localDate": "2026-07-16",
-                        "createdAt": "2026-07-16T01:00:00.000Z"
+                        "check_in": {
+                          "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                          "user_id": "11111111-1111-4111-8111-111111111111",
+                          "check_in_date": "2026-07-16",
+                          "check_in_day_name": "Rabu",
+                          "mood": "tenang",
+                          "is_successful": true,
+                          "commitment": "Feeling better today.",
+                          "relapse_trigger": [],
+                          "created_at": "2026-07-16T01:00:00.000Z"
+                        },
+                        "statistics": {
+                          "current_streak": 7,
+                          "longest_streak": 14,
+                          "total_checkins": 21,
+                          "total_attempts": 23,
+                          "success_rate": 0.91,
+                          "streak_calendar": [
+                            "2026-07-16"
+                          ],
+                          "relapse_calendar": [],
+                          "relapse_count": 2,
+                          "relapse_rate": 0.09,
+                          "recovery_success_rate": 0.91,
+                          "checkin_consistency_score": 0.67,
+                          "weekly_progress": {
+                            "window_days": 7,
+                            "current_successful_checkins": 7,
+                            "previous_successful_checkins": 5,
+                            "delta": 2,
+                            "delta_rate": 0.4
+                          },
+                          "monthly_progress": {
+                            "window_days": 30,
+                            "current_successful_checkins": 21,
+                            "previous_successful_checkins": 18,
+                            "delta": 3,
+                            "delta_rate": 0.17
+                          },
+                          "mood_trend": [],
+                          "last_check_in_date": "2026-07-16",
+                          "last_check_in_day_name": "Rabu",
+                          "last_relapse_date": null,
+                          "last_relapse_day_name": null,
+                          "weekday_summary": [],
+                          "streak_goal_comparison": {
+                            "porn_free_goal": 90,
+                            "current_streak": 7,
+                            "longest_streak": 14,
+                            "goal_reached": false,
+                            "remaining_days": 83,
+                            "progress_rate": 0.08
+                          }
+                        },
+                        "relapse_solution": null
                       },
                       "meta": null
                     }
@@ -7314,16 +7363,20 @@
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "mood"
+                  "mood",
+                  "is_successful"
                 ],
                 "properties": {
                   "mood": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 5,
-                    "example": 4
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "tenang"
                   },
-                  "note": {
+                  "is_successful": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "commitment": {
                     "type": [
                       "string",
                       "null"
@@ -7331,13 +7384,23 @@
                     "example": "Feeling better today.",
                     "maxLength": 2000
                   },
+                  "content": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": null,
+                    "maxLength": 2000,
+                    "description": "Alias for commitment"
+                  },
                   "localDate": {
                     "type": [
                       "string",
                       "null"
                     ],
                     "example": "2026-07-16",
-                    "format": "date"
+                    "format": "date",
+                    "description": "Optional. Defaults to Asia/Jakarta today."
                   }
                 }
               },
@@ -7345,8 +7408,9 @@
                 "today": {
                   "summary": "today",
                   "value": {
-                    "mood": 4,
-                    "note": "Feeling better today.",
+                    "mood": "tenang",
+                    "is_successful": true,
+                    "commitment": "Feeling better today.",
                     "localDate": "2026-07-16"
                   }
                 }
@@ -7362,7 +7426,7 @@
           "routine"
         ],
         "summary": "Create relapse event",
-        "description": "Records relapse event with mood, triggers, optional note, and local date.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Records relapse event with mood, triggers, optional commitment, and local date. Links to same-day check-in if exists. Each user can record one relapse per local date.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_routine_relapses",
         "responses": {
           "201": {
@@ -7386,7 +7450,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Relapse"
+                      "$ref": "#/components/schemas/RelapseResponse"
                     },
                     "meta": {
                       "oneOf": [
@@ -7411,16 +7475,70 @@
                       "success": true,
                       "message": "Relapse recorded successfully",
                       "data": {
-                        "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-                        "userId": "11111111-1111-4111-8111-111111111111",
-                        "mood": 2,
-                        "triggers": [
-                          "stress",
-                          "late-night scrolling"
-                        ],
-                        "note": "Late-night stress.",
-                        "localDate": "2026-07-16",
-                        "createdAt": "2026-07-16T01:00:00.000Z"
+                        "relapse": {
+                          "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                          "user_id": "11111111-1111-4111-8111-111111111111",
+                          "relapse_date": "2026-07-16",
+                          "relapse_day_name": "Rabu",
+                          "mood": "cemas",
+                          "commitment": "Late-night stress.",
+                          "relapse_trigger": [
+                            "stress"
+                          ],
+                          "check_in_id": null,
+                          "created_at": "2026-07-16T01:00:00.000Z"
+                        },
+                        "statistics": {
+                          "current_streak": 0,
+                          "longest_streak": 14,
+                          "total_checkins": 20,
+                          "total_attempts": 22,
+                          "success_rate": 0.91,
+                          "streak_calendar": [
+                            "2026-07-15"
+                          ],
+                          "relapse_calendar": [
+                            "2026-07-16"
+                          ],
+                          "relapse_count": 3,
+                          "relapse_rate": 0.13,
+                          "recovery_success_rate": 0.87,
+                          "checkin_consistency_score": 0.6,
+                          "weekly_progress": {
+                            "window_days": 7,
+                            "current_successful_checkins": 6,
+                            "previous_successful_checkins": 5,
+                            "delta": 1,
+                            "delta_rate": 0.2
+                          },
+                          "monthly_progress": {
+                            "window_days": 30,
+                            "current_successful_checkins": 20,
+                            "previous_successful_checkins": 18,
+                            "delta": 2,
+                            "delta_rate": 0.11
+                          },
+                          "mood_trend": [],
+                          "last_check_in_date": "2026-07-15",
+                          "last_check_in_day_name": "Selasa",
+                          "last_relapse_date": "2026-07-16",
+                          "last_relapse_day_name": "Rabu",
+                          "weekday_summary": [],
+                          "streak_goal_comparison": {
+                            "porn_free_goal": 90,
+                            "current_streak": 0,
+                            "longest_streak": 14,
+                            "goal_reached": false,
+                            "remaining_days": 90,
+                            "progress_rate": 0
+                          }
+                        },
+                        "relapse_solution": {
+                          "title": "Quick Recovery Steps",
+                          "analysis": "Relapse detected with mood anxious. Current trigger pattern: stress.",
+                          "summary": "Best immediate action: cut off access to the trigger now, stabilize your emotions briefly, then switch to a pre-planned safe activity.",
+                          "generated_at": "2026-07-16T01:00:00.000Z"
+                        }
                       },
                       "meta": null
                     }
@@ -7505,28 +7623,26 @@
                 "additionalProperties": false,
                 "required": [
                   "mood",
-                  "triggers"
+                  "relapse_trigger"
                 ],
                 "properties": {
                   "mood": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 5,
-                    "example": 2
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "cemas"
                   },
-                  "triggers": {
+                  "relapse_trigger": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                       "type": "string",
-                      "maxLength": 100
+                      "maxLength": 500
                     },
                     "example": [
-                      "stress",
-                      "late-night scrolling"
+                      "stress"
                     ]
                   },
-                  "note": {
+                  "commitment": {
                     "type": [
                       "string",
                       "null"
@@ -7534,13 +7650,23 @@
                     "example": "Late-night stress.",
                     "maxLength": 2000
                   },
+                  "content": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": null,
+                    "maxLength": 2000,
+                    "description": "Alias for commitment"
+                  },
                   "localDate": {
                     "type": [
                       "string",
                       "null"
                     ],
                     "example": "2026-07-16",
-                    "format": "date"
+                    "format": "date",
+                    "description": "Optional. Defaults to Asia/Jakarta today."
                   }
                 }
               },
@@ -7548,12 +7674,12 @@
                 "event": {
                   "summary": "event",
                   "value": {
-                    "mood": 2,
-                    "triggers": [
+                    "mood": "cemas",
+                    "relapse_trigger": [
                       "stress",
                       "late-night scrolling"
                     ],
-                    "note": "Late-night stress.",
+                    "commitment": "Late-night stress.",
                     "localDate": "2026-07-16"
                   }
                 }
@@ -7567,7 +7693,7 @@
           "routine"
         ],
         "summary": "List relapse events",
-        "description": "Returns current user's relapse history.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns current user's relapse history with full detail including check_in_id linking.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_routine_relapses",
         "responses": {
           "200": {
@@ -7621,15 +7747,17 @@
                       "data": [
                         {
                           "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-                          "userId": "11111111-1111-4111-8111-111111111111",
-                          "mood": 2,
-                          "triggers": [
+                          "user_id": "11111111-1111-4111-8111-111111111111",
+                          "relapse_date": "2026-07-16",
+                          "relapse_day_name": "Rabu",
+                          "mood": "cemas",
+                          "commitment": "Late-night stress.",
+                          "relapse_trigger": [
                             "stress",
                             "late-night scrolling"
                           ],
-                          "note": "Late-night stress.",
-                          "localDate": "2026-07-16",
-                          "createdAt": "2026-07-16T01:00:00.000Z"
+                          "check_in_id": null,
+                          "created_at": "2026-07-16T01:00:00.000Z"
                         }
                       ],
                       "meta": null
@@ -7714,7 +7842,7 @@
           "routine"
         ],
         "summary": "Read routine statistics",
-        "description": "Returns streak, check-in, and relapse summary for current user.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns full routine statistics: streak, check-in, relapse, mood trend, weekly/monthly progress, weekday summary, and streak goal comparison.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_routine_statistics",
         "responses": {
           "200": {
@@ -7763,11 +7891,70 @@
                       "success": true,
                       "message": "Routine statistics retrieved successfully",
                       "data": {
-                        "currentStreak": 7,
-                        "longestStreak": 14,
-                        "checkInCount": 21,
-                        "relapseCount": 2,
-                        "lastCheckInDate": "2026-07-16"
+                        "current_streak": 7,
+                        "longest_streak": 14,
+                        "total_checkins": 21,
+                        "total_attempts": 23,
+                        "success_rate": 0.91,
+                        "streak_calendar": [
+                          "2026-07-10",
+                          "2026-07-11",
+                          "2026-07-12",
+                          "2026-07-13",
+                          "2026-07-14",
+                          "2026-07-15",
+                          "2026-07-16"
+                        ],
+                        "relapse_calendar": [
+                          "2026-07-09"
+                        ],
+                        "relapse_count": 2,
+                        "relapse_rate": 0.09,
+                        "recovery_success_rate": 0.91,
+                        "checkin_consistency_score": 0.67,
+                        "weekly_progress": {
+                          "window_days": 7,
+                          "current_successful_checkins": 7,
+                          "previous_successful_checkins": 5,
+                          "delta": 2,
+                          "delta_rate": 0.4
+                        },
+                        "monthly_progress": {
+                          "window_days": 30,
+                          "current_successful_checkins": 21,
+                          "previous_successful_checkins": 18,
+                          "delta": 3,
+                          "delta_rate": 0.17
+                        },
+                        "mood_trend": [
+                          {
+                            "date": "2026-07-16",
+                            "day_name": "Rabu",
+                            "dominant_mood": "tenang",
+                            "successful_ratio": 1
+                          }
+                        ],
+                        "last_check_in_date": "2026-07-16",
+                        "last_check_in_day_name": "Rabu",
+                        "last_relapse_date": "2026-07-09",
+                        "last_relapse_day_name": "Sabtu",
+                        "weekday_summary": [
+                          {
+                            "day_name": "Senin",
+                            "successful_checkins": 3,
+                            "relapse_count": 0,
+                            "total_checkins": 3,
+                            "success_rate": 1
+                          }
+                        ],
+                        "streak_goal_comparison": {
+                          "porn_free_goal": 90,
+                          "current_streak": 7,
+                          "longest_streak": 14,
+                          "goal_reached": false,
+                          "remaining_days": 83,
+                          "progress_rate": 0.08
+                        }
                       },
                       "meta": null
                     }
@@ -7851,7 +8038,7 @@
           "routine"
         ],
         "summary": "Read routine activity summary",
-        "description": "Returns compact recent activity buckets for dashboard display.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns periodic activity timeline with recent check-in, relapse, and journal events. Supports optional window_days query param (7-90, default 30).\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_routine_statistics_activity_summary",
         "responses": {
           "200": {
@@ -7875,38 +8062,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "type": "object",
-                      "required": [
-                        "days"
-                      ],
-                      "properties": {
-                        "days": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "date",
-                              "checkedIn",
-                              "relapseCount"
-                            ],
-                            "properties": {
-                              "date": {
-                                "type": "string",
-                                "format": "date",
-                                "example": "2026-07-16"
-                              },
-                              "checkedIn": {
-                                "type": "boolean",
-                                "example": true
-                              },
-                              "relapseCount": {
-                                "type": "integer",
-                                "example": 0
-                              }
-                            }
-                          }
-                        }
-                      }
+                      "$ref": "#/components/schemas/ActivitySummary"
                     },
                     "meta": {
                       "oneOf": [
@@ -7931,11 +8087,16 @@
                       "success": true,
                       "message": "Routine activity summary retrieved successfully",
                       "data": {
-                        "days": [
+                        "window_days": 30,
+                        "successful_checkins": 18,
+                        "relapses": 3,
+                        "active_days": 21,
+                        "recent_activity": [
                           {
                             "date": "2026-07-16",
-                            "checkedIn": true,
-                            "relapseCount": 0
+                            "day_name": "Rabu",
+                            "type": "checkin_success",
+                            "mood": "tenang"
                           }
                         ]
                       },
@@ -8021,7 +8182,7 @@
           "routine"
         ],
         "summary": "Read relapse statistics",
-        "description": "Returns relapse count and top trigger summary.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns complete relapse statistics with hourly UTC distribution, trigger distribution, peak hours, AI summary placeholder, and time/trigger analysis.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_routine_relapses_statistics",
         "responses": {
           "200": {
@@ -8045,37 +8206,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "type": "object",
-                      "required": [
-                        "total",
-                        "topTriggers"
-                      ],
-                      "properties": {
-                        "total": {
-                          "type": "integer",
-                          "example": 2
-                        },
-                        "topTriggers": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "trigger",
-                              "count"
-                            ],
-                            "properties": {
-                              "trigger": {
-                                "type": "string",
-                                "example": "stress"
-                              },
-                              "count": {
-                                "type": "integer",
-                                "example": 2
-                              }
-                            }
-                          }
-                        }
-                      }
+                      "$ref": "#/components/schemas/RelapseStatistics"
                     },
                     "meta": {
                       "oneOf": [
@@ -8100,13 +8231,95 @@
                       "success": true,
                       "message": "Relapse statistics retrieved successfully",
                       "data": {
-                        "total": 2,
-                        "topTriggers": [
-                          {
-                            "trigger": "stress",
-                            "count": 2
+                        "statistics": {
+                          "current_streak": 0,
+                          "longest_streak": 14,
+                          "total_checkins": 20,
+                          "total_attempts": 22,
+                          "success_rate": 0.91,
+                          "streak_calendar": [
+                            "2026-07-15"
+                          ],
+                          "relapse_calendar": [
+                            "2026-07-16"
+                          ],
+                          "relapse_count": 2,
+                          "relapse_rate": 0.09,
+                          "recovery_success_rate": 0.91,
+                          "checkin_consistency_score": 0.6,
+                          "weekly_progress": {
+                            "window_days": 7,
+                            "current_successful_checkins": 6,
+                            "previous_successful_checkins": 5,
+                            "delta": 1,
+                            "delta_rate": 0.2
+                          },
+                          "monthly_progress": {
+                            "window_days": 30,
+                            "current_successful_checkins": 20,
+                            "previous_successful_checkins": 18,
+                            "delta": 2,
+                            "delta_rate": 0.11
+                          },
+                          "mood_trend": [],
+                          "last_check_in_date": "2026-07-15",
+                          "last_check_in_day_name": "Selasa",
+                          "last_relapse_date": "2026-07-16",
+                          "last_relapse_day_name": "Rabu",
+                          "weekday_summary": [],
+                          "streak_goal_comparison": {
+                            "porn_free_goal": 90,
+                            "current_streak": 0,
+                            "longest_streak": 14,
+                            "goal_reached": false,
+                            "remaining_days": 90,
+                            "progress_rate": 0
                           }
-                        ]
+                        },
+                        "relapses": [
+                          {
+                            "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                            "user_id": "11111111-1111-4111-8111-111111111111",
+                            "relapse_date": "2026-07-16",
+                            "relapse_day_name": "Rabu",
+                            "mood": "cemas",
+                            "commitment": null,
+                            "relapse_trigger": [
+                              "stres kerja"
+                            ],
+                            "check_in_id": null,
+                            "created_at": "2026-07-16T01:00:00.000Z"
+                          }
+                        ],
+                        "hourly_relapse_distribution": [
+                          {
+                            "hour_utc": 21,
+                            "relapse_count": 1
+                          }
+                        ],
+                        "relapse_triggers_distribution": [
+                          {
+                            "relapse_trigger": "stres kerja",
+                            "relapse_trigger_count": 1
+                          }
+                        ],
+                        "peak_relapse_hours_utc": [
+                          21
+                        ],
+                        "peak_relapse_count": 1,
+                        "ai_summary": "New insights for you will be available soon. Keep writing your daily journal!",
+                        "relapse_time_summary": {
+                          "title": "Relapse Time Analysis",
+                          "analysis": "Relapse pattern shows peak at UTC hours: 21:00.",
+                          "summary": "Most frequent trigger: work stress.",
+                          "generated_at": "2026-07-16T01:00:00.000Z"
+                        },
+                        "relapse_trigger_summary": {
+                          "title": "Quick Recovery Steps",
+                          "analysis": "Relapse detected with mood anxious. Current trigger pattern: work stress.",
+                          "summary": "Best immediate action: cut off access to the trigger now, stabilize your emotions briefly, then switch to a pre-planned safe activity.",
+                          "generated_at": "2026-07-16T01:00:00.000Z"
+                        }
                       },
                       "meta": null
                     }
@@ -13997,11 +14210,14 @@
         "type": "object",
         "required": [
           "id",
-          "userId",
+          "user_id",
+          "check_in_date",
+          "check_in_day_name",
           "mood",
-          "note",
-          "localDate",
-          "createdAt"
+          "is_successful",
+          "commitment",
+          "relapse_trigger",
+          "created_at"
         ],
         "properties": {
           "id": {
@@ -14009,30 +14225,44 @@
             "format": "uuid",
             "example": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
           },
-          "userId": {
+          "user_id": {
             "type": "string",
             "format": "uuid",
             "example": "11111111-1111-4111-8111-111111111111"
           },
-          "mood": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 5,
-            "example": 4
+          "check_in_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-07-16"
           },
-          "note": {
+          "check_in_day_name": {
+            "type": "string",
+            "example": "Rabu"
+          },
+          "mood": {
+            "type": "string",
+            "maxLength": 50,
+            "example": "tenang"
+          },
+          "is_successful": {
+            "type": "boolean",
+            "example": true
+          },
+          "commitment": {
             "type": [
               "string",
               "null"
             ],
             "example": "Feeling better today."
           },
-          "localDate": {
-            "type": "string",
-            "format": "date",
-            "example": "2026-07-16"
+          "relapse_trigger": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": []
           },
-          "createdAt": {
+          "created_at": {
             "type": "string",
             "format": "date-time",
             "example": "2026-07-16T01:00:00.000Z"
@@ -14043,12 +14273,14 @@
         "type": "object",
         "required": [
           "id",
-          "userId",
+          "user_id",
+          "relapse_date",
+          "relapse_day_name",
           "mood",
-          "triggers",
-          "note",
-          "localDate",
-          "createdAt"
+          "commitment",
+          "relapse_trigger",
+          "check_in_id",
+          "created_at"
         ],
         "properties": {
           "id": {
@@ -14056,41 +14288,52 @@
             "format": "uuid",
             "example": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
           },
-          "userId": {
+          "user_id": {
             "type": "string",
             "format": "uuid",
             "example": "11111111-1111-4111-8111-111111111111"
           },
+          "relapse_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-07-16"
+          },
+          "relapse_day_name": {
+            "type": "string",
+            "example": "Rabu"
+          },
           "mood": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 5,
-            "example": 2
+            "type": "string",
+            "maxLength": 50,
+            "example": "cemas"
           },
-          "triggers": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 100
-            },
-            "example": [
-              "stress",
-              "late-night scrolling"
-            ]
-          },
-          "note": {
+          "commitment": {
             "type": [
               "string",
               "null"
             ],
             "example": "Late-night stress."
           },
-          "localDate": {
-            "type": "string",
-            "format": "date",
-            "example": "2026-07-16"
+          "relapse_trigger": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "example": [
+              "stress",
+              "late-night scrolling"
+            ]
           },
-          "createdAt": {
+          "check_in_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "format": "uuid"
+          },
+          "created_at": {
             "type": "string",
             "format": "date-time",
             "example": "2026-07-16T01:00:00.000Z"
@@ -14100,36 +14343,283 @@
       "RoutineStatistics": {
         "type": "object",
         "required": [
-          "currentStreak",
-          "longestStreak",
-          "checkInCount",
-          "relapseCount",
-          "lastCheckInDate"
+          "current_streak",
+          "longest_streak",
+          "total_checkins",
+          "total_attempts",
+          "success_rate",
+          "streak_calendar",
+          "relapse_calendar",
+          "relapse_count",
+          "relapse_rate",
+          "recovery_success_rate",
+          "checkin_consistency_score",
+          "weekly_progress",
+          "monthly_progress",
+          "mood_trend",
+          "last_check_in_date",
+          "last_check_in_day_name",
+          "last_relapse_date",
+          "last_relapse_day_name",
+          "weekday_summary",
+          "streak_goal_comparison"
         ],
         "properties": {
-          "currentStreak": {
+          "current_streak": {
             "type": "integer",
             "example": 7
           },
-          "longestStreak": {
+          "longest_streak": {
             "type": "integer",
             "example": 14
           },
-          "checkInCount": {
+          "total_checkins": {
             "type": "integer",
             "example": 21
           },
-          "relapseCount": {
+          "total_attempts": {
+            "type": "integer",
+            "example": 23
+          },
+          "success_rate": {
+            "type": "number",
+            "example": 0.91
+          },
+          "streak_calendar": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": [
+              "2026-07-10",
+              "2026-07-11"
+            ]
+          },
+          "relapse_calendar": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": [
+              "2026-07-09"
+            ]
+          },
+          "relapse_count": {
             "type": "integer",
             "example": 2
           },
-          "lastCheckInDate": {
+          "relapse_rate": {
+            "type": "number",
+            "example": 0.09
+          },
+          "recovery_success_rate": {
+            "type": "number",
+            "example": 0.91
+          },
+          "checkin_consistency_score": {
+            "type": "number",
+            "example": 0.67
+          },
+          "weekly_progress": {
+            "type": "object",
+            "required": [
+              "window_days",
+              "current_successful_checkins",
+              "previous_successful_checkins",
+              "delta",
+              "delta_rate"
+            ],
+            "properties": {
+              "window_days": {
+                "type": "integer",
+                "example": 7
+              },
+              "current_successful_checkins": {
+                "type": "integer",
+                "example": 5
+              },
+              "previous_successful_checkins": {
+                "type": "integer",
+                "example": 4
+              },
+              "delta": {
+                "type": "integer",
+                "example": 1
+              },
+              "delta_rate": {
+                "type": "number",
+                "example": 0.25
+              }
+            }
+          },
+          "monthly_progress": {
+            "type": "object",
+            "required": [
+              "window_days",
+              "current_successful_checkins",
+              "previous_successful_checkins",
+              "delta",
+              "delta_rate"
+            ],
+            "properties": {
+              "window_days": {
+                "type": "integer",
+                "example": 30
+              },
+              "current_successful_checkins": {
+                "type": "integer",
+                "example": 18
+              },
+              "previous_successful_checkins": {
+                "type": "integer",
+                "example": 15
+              },
+              "delta": {
+                "type": "integer",
+                "example": 3
+              },
+              "delta_rate": {
+                "type": "number",
+                "example": 0.2
+              }
+            }
+          },
+          "mood_trend": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "date",
+                "day_name",
+                "dominant_mood",
+                "successful_ratio"
+              ],
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date",
+                  "example": "2026-07-16"
+                },
+                "day_name": {
+                  "type": "string",
+                  "example": "Rabu"
+                },
+                "dominant_mood": {
+                  "type": "string",
+                  "example": "tenang"
+                },
+                "successful_ratio": {
+                  "type": "number",
+                  "example": 1
+                }
+              }
+            }
+          },
+          "last_check_in_date": {
             "type": [
               "string",
               "null"
             ],
             "example": "2026-07-16",
             "format": "date"
+          },
+          "last_check_in_day_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Rabu"
+          },
+          "last_relapse_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2026-07-09",
+            "format": "date"
+          },
+          "last_relapse_day_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Sabtu"
+          },
+          "weekday_summary": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "day_name",
+                "successful_checkins",
+                "relapse_count",
+                "total_checkins",
+                "success_rate"
+              ],
+              "properties": {
+                "day_name": {
+                  "type": "string",
+                  "example": "Senin"
+                },
+                "successful_checkins": {
+                  "type": "integer",
+                  "example": 2
+                },
+                "relapse_count": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "total_checkins": {
+                  "type": "integer",
+                  "example": 3
+                },
+                "success_rate": {
+                  "type": "number",
+                  "example": 0.67
+                }
+              }
+            }
+          },
+          "streak_goal_comparison": {
+            "type": "object",
+            "required": [
+              "porn_free_goal",
+              "current_streak",
+              "longest_streak",
+              "goal_reached",
+              "remaining_days",
+              "progress_rate"
+            ],
+            "properties": {
+              "porn_free_goal": {
+                "type": "integer",
+                "nullable": true,
+                "example": 90
+              },
+              "current_streak": {
+                "type": "integer",
+                "example": 7
+              },
+              "longest_streak": {
+                "type": "integer",
+                "example": 14
+              },
+              "goal_reached": {
+                "type": "boolean",
+                "example": false
+              },
+              "remaining_days": {
+                "type": "integer",
+                "nullable": true,
+                "example": 83
+              },
+              "progress_rate": {
+                "type": "number",
+                "example": 0.08
+              }
+            }
           }
         }
       },
@@ -14483,6 +14973,280 @@
             "type": "string",
             "format": "email",
             "example": "demo@example.com"
+          }
+        }
+      },
+      "CheckInResponse": {
+        "type": "object",
+        "required": [
+          "check_in",
+          "statistics",
+          "relapse_solution"
+        ],
+        "properties": {
+          "check_in": {
+            "$ref": "#/components/schemas/CheckIn"
+          },
+          "statistics": {
+            "$ref": "#/components/schemas/RoutineStatistics"
+          },
+          "relapse_solution": {
+            "type": "null",
+            "example": null
+          }
+        }
+      },
+      "RelapseResponse": {
+        "type": "object",
+        "required": [
+          "relapse",
+          "statistics",
+          "relapse_solution"
+        ],
+        "properties": {
+          "relapse": {
+            "$ref": "#/components/schemas/Relapse"
+          },
+          "statistics": {
+            "$ref": "#/components/schemas/RoutineStatistics"
+          },
+          "relapse_solution": {
+            "type": "object",
+            "required": [
+              "title",
+              "analysis",
+              "summary",
+              "generated_at"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "example": "Quick Recovery Steps"
+              },
+              "analysis": {
+                "type": "string",
+                "example": "Relapse detected with mood anxious. Current trigger pattern: stress."
+              },
+              "summary": {
+                "type": "string",
+                "example": "Best immediate action: cut off access to the trigger now, stabilize your emotions briefly, then switch to a pre-planned safe activity."
+              },
+              "generated_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-07-16T01:00:00.000Z"
+              }
+            }
+          }
+        }
+      },
+      "ActivitySummary": {
+        "type": "object",
+        "required": [
+          "window_days",
+          "successful_checkins",
+          "relapses",
+          "active_days",
+          "recent_activity"
+        ],
+        "properties": {
+          "window_days": {
+            "type": "integer",
+            "example": 30
+          },
+          "successful_checkins": {
+            "type": "integer",
+            "example": 18
+          },
+          "relapses": {
+            "type": "integer",
+            "example": 3
+          },
+          "active_days": {
+            "type": "integer",
+            "example": 21
+          },
+          "recent_activity": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "date",
+                "day_name",
+                "type"
+              ],
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date",
+                  "example": "2026-07-16"
+                },
+                "day_name": {
+                  "type": "string",
+                  "example": "Rabu"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "checkin_success",
+                    "checkin_relapse",
+                    "relapse",
+                    "journal"
+                  ],
+                  "example": "checkin_success"
+                },
+                "mood": {
+                  "type": "string",
+                  "example": "tenang"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RelapseStatistics": {
+        "type": "object",
+        "required": [
+          "statistics",
+          "relapses",
+          "hourly_relapse_distribution",
+          "relapse_triggers_distribution",
+          "peak_relapse_hours_utc",
+          "peak_relapse_count",
+          "ai_summary",
+          "relapse_time_summary",
+          "relapse_trigger_summary"
+        ],
+        "properties": {
+          "statistics": {
+            "$ref": "#/components/schemas/RoutineStatistics"
+          },
+          "relapses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Relapse"
+            }
+          },
+          "hourly_relapse_distribution": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "hour_utc",
+                "relapse_count"
+              ],
+              "properties": {
+                "hour_utc": {
+                  "type": "integer",
+                  "example": 21
+                },
+                "relapse_count": {
+                  "type": "integer",
+                  "example": 3
+                }
+              }
+            }
+          },
+          "relapse_triggers_distribution": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "relapse_trigger",
+                "relapse_trigger_count"
+              ],
+              "properties": {
+                "relapse_trigger": {
+                  "type": "string",
+                  "example": "stres kerja"
+                },
+                "relapse_trigger_count": {
+                  "type": "integer",
+                  "example": 5
+                }
+              }
+            }
+          },
+          "peak_relapse_hours_utc": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "example": [
+              21,
+              22
+            ]
+          },
+          "peak_relapse_count": {
+            "type": "integer",
+            "example": 3
+          },
+          "ai_summary": {
+            "type": "string",
+            "example": "New insights for you will be available soon. Keep writing your daily journal!"
+          },
+          "relapse_time_summary": {
+            "type": "object",
+            "required": [
+              "title",
+              "analysis",
+              "summary",
+              "generated_at"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "example": "Relapse Time Analysis"
+              },
+              "analysis": {
+                "type": "string",
+                "example": "Relapse pattern shows peak at UTC hours: 21:00."
+              },
+              "summary": {
+                "type": "string",
+                "example": "Most frequent trigger: work stress."
+              },
+              "generated_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-07-16T01:00:00.000Z"
+              }
+            }
+          },
+          "relapse_trigger_summary": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "title",
+                  "analysis",
+                  "summary",
+                  "generated_at"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "example": "Quick Recovery Steps"
+                  },
+                  "analysis": {
+                    "type": "string",
+                    "example": "Relapse detected with mood anxious. Current trigger pattern: work stress."
+                  },
+                  "summary": {
+                    "type": "string",
+                    "example": "Best immediate action: cut off access to the trigger now, stabilize your emotions briefly, then switch to a pre-planned safe activity."
+                  },
+                  "generated_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-07-16T01:00:00.000Z"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       }

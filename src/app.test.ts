@@ -34,6 +34,22 @@ describe("request baseline", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe("http://localhost:3001");
   });
 
+  test("allows same-origin API docs requests without CORS allowlist entry", async () => {
+    const app = createApp(baseEnv);
+
+    const response = await app.request("http://localhost/api/v1/validation-demo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "http://localhost",
+      },
+      body: JSON.stringify({ name: "Pulih Demo", email: "demo@example.com" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBe("http://localhost");
+  });
+
   test("rejects disallowed origin", async () => {
     const app = createApp(baseEnv);
 

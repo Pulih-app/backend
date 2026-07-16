@@ -234,27 +234,28 @@ export const paymentEvents = pgTable("payment_events", {
 export const checkIns = pgTable("check_ins", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  mood: integer("mood").notNull(),
-  note: text("note"),
+  mood: varchar("mood", { length: 50 }).notNull(),
+  isSuccessful: boolean("is_successful").notNull().default(true),
+  commitment: text("commitment"),
   localDate: date("local_date", { mode: "string" }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => ({
   userDateUnique: uniqueIndex("uq_check_ins_user_local_date").on(table.userId, table.localDate),
   userDateIndex: index("idx_check_ins_user_local_date").on(table.userId, table.localDate),
-  moodCheck: check("ck_check_ins_mood", sql`${table.mood} >= 1 AND ${table.mood} <= 5`),
 }));
 
 export const relapses = pgTable("relapses", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  mood: integer("mood").notNull(),
+  mood: varchar("mood", { length: 50 }).notNull(),
   triggers: text("triggers").array().notNull(),
-  note: text("note"),
+  commitment: text("commitment"),
+  checkInId: uuid("check_in_id").references(() => checkIns.id, { onDelete: "set null" }),
   localDate: date("local_date", { mode: "string" }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => ({
+  userDateUnique: uniqueIndex("uq_relapses_user_local_date").on(table.userId, table.localDate),
   userDateIndex: index("idx_relapses_user_local_date").on(table.userId, table.localDate),
-  moodCheck: check("ck_relapses_mood", sql`${table.mood} >= 1 AND ${table.mood} <= 5`),
 }));
 
 export const streaks = pgTable("streaks", {

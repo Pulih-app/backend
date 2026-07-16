@@ -59,7 +59,6 @@ const scalarHtml = `<!doctype html>
           documentDownloadType: 'both',
           defaultHttpClient: { targetKey: 'shell', clientKey: 'curl' },
           authentication: { preferredSecurityScheme: 'bearerAuth' },
-          proxyUrl: 'https://proxy.scalar.com',
         })
       }
       init()
