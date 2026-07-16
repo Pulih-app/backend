@@ -1,18 +1,15 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { createDatabaseHandle, type HyperdriveLike } from "./db/client";
+import { createHealthRoutes } from "./routes/health.routes";
+import { validationDemoRoutes } from "./routes/validation-demo.routes";
 import { loadConfig } from "./shared/config";
-import {
-  AppError,
-  AppErrorCode,
-  ERROR_STATUS_BY_CODE,
-  mapError,
-} from "./shared/errors";
+import { mapError } from "./shared/errors";
 import {
   RESPONSE_MESSAGES,
   createErrorResponse,
   createSuccessResponse,
 } from "./shared/response";
-import { validationDemoRoutes } from "./routes/validation-demo.routes";
 import { requestBaseline } from "./shared/middleware/request-baseline";
 
 const DEFAULT_ENV = {
@@ -32,9 +29,40 @@ const DEFAULT_ENV = {
   REQUEST_ID_HEADER: "x-request-id",
 } as const;
 
-function buildApp(env: Record<string, string | undefined> = DEFAULT_ENV) {
+export type AppEnv = Record<string, string | undefined>;
+export type AppBindings = {
+  HYPERDRIVE?: HyperdriveLike;
+};
+export type AppOptions = {
+  databaseHealthCheck?: () => Promise<void>;
+};
+
+async function createDefaultDatabaseHealthCheck(env: AppEnv, bindings: AppBindings, config = loadConfig(env)) {
+  const handle = await createDatabaseHandle({
+    hyperdrive: bindings.HYPERDRIVE,
+    databaseUrl: env.DATABASE_URL,
+    directDatabaseUrl: env.DIRECT_DATABASE_URL,
+  }, config);
+
+  try {
+    await handle.ping();
+  } finally {
+    await handle.close();
+  }
+}
+
+function normalizeEnv(env: AppEnv = {}) {
+  return {
+    ...DEFAULT_ENV,
+    ...env,
+  };
+}
+
+function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options: AppOptions = {}) {
+  const runtimeEnv = normalizeEnv(env);
   const app = new Hono<{ Variables: { requestId: string } }>();
-  const config = loadConfig(env);
+  const config = loadConfig(runtimeEnv);
+  const checkDatabase = options.databaseHealthCheck ?? (() => createDefaultDatabaseHealthCheck(runtimeEnv, bindings, config));
 
   app.use("*", requestBaseline({
     allowedOrigins: config.security.corsAllowedOrigins,
@@ -53,6 +81,7 @@ function buildApp(env: Record<string, string | undefined> = DEFAULT_ENV) {
     );
   });
 
+  app.route("/health", createHealthRoutes({ checkDatabase }));
   app.route("/api/v1", validationDemoRoutes);
   app.onError(handleGlobalError);
 
@@ -76,6 +105,6 @@ export function handleGlobalError(error: Error | HTTPException | unknown, contex
 
 export const app = buildApp(DEFAULT_ENV);
 
-export function createApp(env: Record<string, string | undefined> = DEFAULT_ENV) {
-  return buildApp(env);
+export function createApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options: AppOptions = {}) {
+  return buildApp(env, bindings, options);
 }

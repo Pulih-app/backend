@@ -2,6 +2,7 @@ export const RESPONSE_MESSAGES = {
   requestProcessedSuccessfully: "Request processed successfully",
   requestFailed: "Request failed",
   serviceIsLive: "Service is live",
+  serviceIsReady: "Service is ready",
 } as const;
 
 export type PaginationEnvelope = {
