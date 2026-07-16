@@ -43,6 +43,13 @@
       "when": 1784214323248,
       "tag": "0005_parallel_hobgoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784215688580,
+      "tag": "0006_ambitious_kinsey_walden",
+      "breakpoints": true
     }
   ]
 }

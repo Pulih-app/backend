@@ -41,6 +41,13 @@ export type AppConfig = {
     resendFromEmail: string;
     resendFromName: string;
   };
+  ai?: {
+    baseUrl: string;
+    apiKey: string;
+    model: string;
+    timeoutMs: number;
+    maxTokens: number;
+  };
 };
 
 function requireValue(issues: string[], key: string, value: string | undefined) {
@@ -113,6 +120,11 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   const resendApiKey = env.RESEND_API_KEY?.trim() || "local-resend-api-key";
   const resendFromEmail = env.RESEND_FROM_EMAIL?.trim() || "no-reply@salmanabdurrahman.web.id";
   const resendFromName = env.RESEND_FROM_NAME?.trim() || "Pulih";
+  const aiBaseUrl = env.AI_BASE_URL?.trim() || "https://ai.sumopod.com/v1";
+  const aiApiKey = env.AI_API_KEY?.trim() || "local-ai-api-key";
+  const aiModel = env.AI_MODEL?.trim() || "gpt-4o-mini";
+  const aiTimeoutMs = env.AI_TIMEOUT_MS ? parseNumber(issues, "AI_TIMEOUT_MS", env.AI_TIMEOUT_MS, 500, 30000) : 10000;
+  const aiMaxTokens = env.AI_MAX_TOKENS ? parseNumber(issues, "AI_MAX_TOKENS", env.AI_MAX_TOKENS, 64, 4000) : 800;
 
   if (appEnv && !["local", "development", "staging", "production"].includes(appEnv)) {
     issues.push("APP_ENV must be one of local, development, staging, production");
@@ -162,6 +174,13 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
       resendApiKey,
       resendFromEmail,
       resendFromName,
+    },
+    ai: {
+      baseUrl: aiBaseUrl,
+      apiKey: aiApiKey,
+      model: aiModel,
+      timeoutMs: aiTimeoutMs as number,
+      maxTokens: aiMaxTokens as number,
     },
   };
 }

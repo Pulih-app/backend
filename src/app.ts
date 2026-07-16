@@ -15,6 +15,9 @@ import { createRoutineRoutes } from "./modules/routine/routine.routes";
 import type { RoutineRepository } from "./modules/routine/routine.repository";
 import { createContentRoutes } from "./modules/content/content.routes";
 import type { ContentRepository } from "./modules/content/content.repository";
+import { createAiRoutes } from "./modules/ai/ai.routes";
+import type { AiProvider } from "./modules/ai/ai-provider";
+import type { AiRepository } from "./modules/ai/ai.repository";
 import type { NotificationsService } from "./modules/notifications/notifications.service";
 import { createHealthRoutes } from "./routes/health.routes";
 import { validationDemoRoutes } from "./routes/validation-demo.routes";
@@ -44,6 +47,11 @@ const DEFAULT_ENV = {
   REQUEST_ID_HEADER: "x-request-id",
   PAKASIR_API_KEY: "local-pakasir-api-key",
   PAKASIR_PROVIDER_TIMEOUT_MS: "10000",
+  AI_BASE_URL: "https://ai.sumopod.com/v1",
+  AI_API_KEY: "local-ai-api-key",
+  AI_MODEL: "gpt-4o-mini",
+  AI_TIMEOUT_MS: "10000",
+  AI_MAX_TOKENS: "800",
 } as const;
 
 export type AppEnv = Record<string, string | undefined>;
@@ -59,6 +67,8 @@ export type AppOptions = {
   bookingsRepository?: BookingsRepository;
   routineRepository?: RoutineRepository;
   contentRepository?: ContentRepository;
+  aiRepository?: AiRepository;
+  aiProvider?: AiProvider;
   credentialStorage?: CredentialStorage;
   notificationsService?: NotificationsService;
 };
@@ -179,6 +189,17 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
     },
     authRepository: options.authRepository,
     contentRepository: options.contentRepository,
+  }));
+  app.route("/api/v1", createAiRoutes({
+    config,
+    databaseSource: {
+      hyperdrive: bindings.HYPERDRIVE,
+      databaseUrl: runtimeEnv.DATABASE_URL,
+      directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
+    },
+    authRepository: options.authRepository,
+    aiRepository: options.aiRepository,
+    aiProvider: options.aiProvider,
   }));
   app.route("/api/v1", validationDemoRoutes);
   app.onError(handleGlobalError);

@@ -13,6 +13,8 @@ export const notificationEventTypeEnum = pgEnum("notification_event_type", ["pay
 export const notificationStatusEnum = pgEnum("notification_status", ["pending", "sent", "failed", "retrying", "cancelled"]);
 export const communityPostCategoryEnum = pgEnum("community_post_category", ["general", "support", "progress"]);
 export const contentStatusEnum = pgEnum("content_status", ["draft", "published", "archived"]);
+export const aiChatRoleEnum = pgEnum("ai_chat_role", ["user", "assistant"]);
+export const aiPersonaToneEnum = pgEnum("ai_persona_tone", ["gentle", "direct", "balanced"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -345,6 +347,21 @@ export const userAchievementProgress = pgTable("user_achievement_progress", {
   unlockedAt: timestamp("unlocked_at", { withTimezone: true, mode: "date" }),
 }, (table) => ({ userAchievementUnique: uniqueIndex("uq_user_achievement_progress_user_achievement").on(table.userId, table.achievementId) }));
 
+export const aiChatMessages = pgTable("ai_chat_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: aiChatRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => ({ userCreatedIndex: index("idx_ai_chat_messages_user_created").on(table.userId, table.createdAt) }));
+
+export const aiPersonaPreferences = pgTable("ai_persona_preferences", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  tone: aiPersonaToneEnum("tone").notNull().default("balanced"),
+  focusAreas: text("focus_areas").array().notNull().default(sql`'{}'::text[]`),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
 export const notificationEvents = pgTable("notification_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   type: notificationEventTypeEnum("type").notNull(),
@@ -379,6 +396,8 @@ export const schema = {
   checkIns,
   relapses,
   streaks,
+  aiChatMessages,
+  aiPersonaPreferences,
   notificationEvents,
   journals,
   communityPosts,
