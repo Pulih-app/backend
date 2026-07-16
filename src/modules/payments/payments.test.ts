@@ -8,6 +8,7 @@ const config = {
   database: { databaseUrl: "postgresql://localhost/test", directDatabaseUrl: "postgresql://localhost/test" },
   security: { jwtAccessSecret: "secret", jwtAccessTtlSeconds: 86400, passwordHashCost: 4, corsAllowedOrigins: ["http://localhost:3001"], requestIdHeader: "x-request-id" },
   payment: { pakasirProjectSlug: "pulih", pakasirBaseUrl: "https://app.pakasir.com", pakasirPaymentBaseUrl: "https://app.pakasir.com", pakasirApiKey: "test-key", pakasirProviderTimeoutMs: 1000 },
+  email: { resendApiKey: "test-resend-key", resendFromEmail: "no-reply@salmanabdurrahman.web.id", resendFromName: "Pulih" },
 };
 
 function createRepository(seed: { payment: PaymentRecord; booking: BookingDetailRecord }) {
@@ -29,7 +30,10 @@ function createRepository(seed: { payment: PaymentRecord; booking: BookingDetail
     async createPaymentEvent(input) { events.push(input); },
     async markPaymentCompleted(input) { payment.status = "completed"; payment.paymentMethod = input.paymentMethod; payment.completedAt = input.completedAt.toISOString(); },
     async markBookingPaymentCompleted() { booking.status = "payment_completed"; },
+    async markBookingConfirmed(input) { booking.status = "confirmed"; booking.meetLink = input.meetLink; booking.confirmedAt = input.confirmedAt.toISOString(); },
+    async markBookingRescheduled() { booking.status = "rescheduled"; },
     async markSessionSlotBooked() { return undefined; },
+    async markSessionSlotRescheduled() { return undefined; },
   };
   return { repository, payment, booking, events };
 }

@@ -107,7 +107,10 @@ export type BookingsRepository = {
   createPaymentEvent(input: { paymentId: string; provider: string; eventType: string; providerStatus: string; orderId: string; amount: number; rawPayloadSafe: Record<string, unknown>; processedAt?: Date | null }): Promise<void>;
   markPaymentCompleted(input: { paymentId: string; paymentMethod: string | null; completedAt: Date }): Promise<void>;
   markBookingPaymentCompleted(input: { bookingId: string; actorUserId?: string | null }): Promise<void>;
+  markBookingConfirmed(input: { bookingId: string; meetLink: string | null; confirmedAt: Date; actorUserId?: string | null }): Promise<void>;
+  markBookingRescheduled(input: { bookingId: string; sessionSlotId: string; scheduledStartAt: Date; scheduledEndAt: Date; consultationChannel: ConsultationChannel; rescheduledAt: Date; rescheduleReason: string; actorUserId?: string | null }): Promise<void>;
   markSessionSlotBooked(sessionSlotId: string): Promise<void>;
+  markSessionSlotRescheduled(sessionSlotId: string): Promise<void>;
 };
 
 function toNumber(value: unknown) {
@@ -393,8 +396,55 @@ function createRepository(source: NodePgDatabase): BookingsRepository {
         actorUserId: input.actorUserId ?? null,
       });
     },
+    async markBookingConfirmed(input) {
+      const booking = await loadBooking(source, input.bookingId);
+      if (!booking) return;
+      await source.update(bookings).set({
+        status: "confirmed",
+        meetLink: input.meetLink,
+        confirmedAt: input.confirmedAt,
+        rescheduledAt: null,
+        rescheduleReason: null,
+        updatedAt: new Date(),
+      }).where(eq(bookings.id, input.bookingId));
+      await source.update(psychologistSessionSlots).set({ status: "booked", heldUntil: null, updatedAt: new Date() }).where(eq(psychologistSessionSlots.id, booking.sessionSlotId));
+      await this.createBookingStatusEvent({
+        bookingId: input.bookingId,
+        fromStatus: booking.status,
+        toStatus: "confirmed",
+        actorUserId: input.actorUserId ?? null,
+      });
+    },
+    async markBookingRescheduled(input) {
+      const booking = await loadBooking(source, input.bookingId);
+      if (!booking) return;
+      await source.update(bookings).set({
+        sessionSlotId: input.sessionSlotId,
+        consultationChannel: input.consultationChannel,
+        scheduledStartAt: input.scheduledStartAt,
+        scheduledEndAt: input.scheduledEndAt,
+        status: "rescheduled",
+        rescheduledAt: input.rescheduledAt,
+        rescheduleReason: input.rescheduleReason,
+        meetLink: null,
+        confirmedAt: null,
+        updatedAt: new Date(),
+      }).where(eq(bookings.id, input.bookingId));
+      await source.update(psychologistSessionSlots).set({ status: "booked", heldUntil: null, updatedAt: new Date() }).where(eq(psychologistSessionSlots.id, input.sessionSlotId));
+      await this.createBookingStatusEvent({
+        bookingId: input.bookingId,
+        fromStatus: booking.status,
+        toStatus: "rescheduled",
+        reason: input.rescheduleReason,
+        actorUserId: input.actorUserId ?? null,
+      });
+      await source.update(psychologistSessionSlots).set({ status: "rescheduled", heldUntil: null, updatedAt: new Date() }).where(eq(psychologistSessionSlots.id, booking.sessionSlotId));
+    },
     async markSessionSlotBooked(sessionSlotId) {
       await source.update(psychologistSessionSlots).set({ status: "booked", heldUntil: null, updatedAt: new Date() }).where(eq(psychologistSessionSlots.id, sessionSlotId));
+    },
+    async markSessionSlotRescheduled(sessionSlotId) {
+      await source.update(psychologistSessionSlots).set({ status: "rescheduled", heldUntil: null, updatedAt: new Date() }).where(eq(psychologistSessionSlots.id, sessionSlotId));
     },
   };
 }

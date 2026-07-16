@@ -1,8 +1,9 @@
 import type { AppConfig } from "../../shared/config";
 import { AppError, AppErrorCode } from "../../shared/errors";
 import { buildPaymentInstruction, buildPakasirPaymentUrl, generateOrderId } from "../payments/pakasir";
-import type { BookingDetailRecord, BookingRecord, BookingsRepository, PaymentRecord } from "./bookings.repository";
-import type { CreateBookingInput } from "./bookings.schema";
+import type { BookingRecord, BookingsRepository, PaymentRecord } from "./bookings.repository";
+import type { ConfirmBookingInput, CreateBookingInput, RescheduleBookingInput } from "./bookings.schema";
+import type { NotificationsService } from "../notifications/notifications.service";
 
 function addHours(now: Date, hours: number) {
   return new Date(now.getTime() + hours * 60 * 60 * 1000);
@@ -22,7 +23,7 @@ export type CreateBookingResult = {
   instruction: string;
 };
 
-export function createBookingsService(repository: BookingsRepository, config: AppConfig) {
+export function createBookingsService(repository: BookingsRepository, config: AppConfig, notifications?: NotificationsService) {
   return {
     async createBooking(patientUserId: string, input: CreateBookingInput) {
       const now = new Date();
@@ -101,6 +102,54 @@ export function createBookingsService(repository: BookingsRepository, config: Ap
       if (role === "psychologist" && booking.psychologistUserId !== userId) throw new AppError(AppErrorCode.Forbidden, "You can only access your own bookings.");
       if (role !== "patient" && role !== "psychologist") throw new AppError(AppErrorCode.Forbidden, "You are not allowed to access bookings.");
       return hideMeetLink(booking);
+    },
+    async confirmBooking(userId: string, role: string, bookingId: string, input: ConfirmBookingInput) {
+      if (role !== "psychologist") throw new AppError(AppErrorCode.Forbidden, "Only psychologists can confirm bookings.");
+      const booking = await repository.findBookingById(bookingId);
+      if (!booking) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
+      if (booking.psychologistUserId !== userId) throw new AppError(AppErrorCode.Forbidden, "You can only manage your own bookings.");
+      if (!["payment_completed", "rescheduled"].includes(booking.status)) throw new AppError(AppErrorCode.Conflict, "Booking is not ready for confirmation.");
+      const meetLink = booking.psychologistType === "clinical" ? input.meetLink : null;
+      if (booking.psychologistType === "clinical" && !meetLink) throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["meetLink: Meet link is required for clinical psychologist sessions."]);
+      await repository.transaction(async (tx) => {
+        await tx.markBookingConfirmed({ bookingId, meetLink, confirmedAt: new Date(), actorUserId: userId });
+      });
+      const updated = await repository.findBookingById(bookingId);
+      if (!updated) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
+      if (notifications) await notifications.sendBookingConfirmedSessionReady(updated);
+      return hideMeetLink(updated);
+    },
+    async rescheduleBooking(userId: string, role: string, bookingId: string, input: RescheduleBookingInput) {
+      if (role !== "psychologist") throw new AppError(AppErrorCode.Forbidden, "Only psychologists can reschedule bookings.");
+      const booking = await repository.findBookingById(bookingId);
+      if (!booking) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
+      if (booking.psychologistUserId !== userId) throw new AppError(AppErrorCode.Forbidden, "You can only manage your own bookings.");
+      if (!["payment_completed", "confirmed"].includes(booking.status)) throw new AppError(AppErrorCode.Conflict, "Booking is not ready for reschedule.");
+
+      const nextSession = await repository.findSessionSlotForBooking(input.newSessionSlotId);
+      if (!nextSession) throw new AppError(AppErrorCode.NotFound, "Generated session was not found.");
+      if (nextSession.profileId !== booking.psychologistProfileId) throw new AppError(AppErrorCode.Conflict, "New generated session must belong to the same psychologist.");
+      if (nextSession.status !== "available") throw new AppError(AppErrorCode.Conflict, "Generated session is not available.");
+
+      await repository.transaction(async (tx) => {
+        const claimed = await tx.claimSessionSlot(nextSession.id, new Date(Date.now() + 60 * 60 * 1000));
+        if (!claimed) throw new AppError(AppErrorCode.Conflict, "Generated session is not available.");
+        await tx.markBookingRescheduled({
+          bookingId,
+          sessionSlotId: nextSession.id,
+          scheduledStartAt: new Date(nextSession.startsAt),
+          scheduledEndAt: new Date(nextSession.endsAt),
+          consultationChannel: nextSession.consultationChannel,
+          rescheduledAt: new Date(),
+          rescheduleReason: input.reason,
+          actorUserId: userId,
+        });
+      });
+
+      const updated = await repository.findBookingById(bookingId);
+      if (!updated) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
+      if (notifications) await notifications.sendBookingRescheduled(updated, input.reason);
+      return hideMeetLink(updated);
     },
   };
 }

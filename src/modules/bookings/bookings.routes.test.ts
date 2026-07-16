@@ -118,9 +118,28 @@ function createMemoryBookingsRepository(seed: {
       const booking = bookings.get(input.bookingId);
       if (booking) bookings.set(input.bookingId, { ...booking, status: "payment_completed" });
     },
+    async markBookingConfirmed(input) {
+      const booking = bookings.get(input.bookingId);
+      if (booking) bookings.set(input.bookingId, { ...booking, status: "confirmed", meetLink: input.meetLink, confirmedAt: input.confirmedAt.toISOString(), rescheduledAt: null, rescheduleReason: null });
+    },
+    async markBookingRescheduled(input) {
+      const booking = bookings.get(input.bookingId);
+      const previousSessionSlotId = booking?.sessionSlotId;
+      if (booking) bookings.set(input.bookingId, { ...booking, sessionSlotId: input.sessionSlotId, scheduledStartAt: input.scheduledStartAt.toISOString(), scheduledEndAt: input.scheduledEndAt.toISOString(), consultationChannel: input.consultationChannel, status: "rescheduled", rescheduledAt: input.rescheduledAt.toISOString(), rescheduleReason: input.rescheduleReason, meetLink: null, confirmedAt: null });
+      if (previousSessionSlotId) {
+        const oldSession = sessions.get(previousSessionSlotId);
+        if (oldSession) sessions.set(previousSessionSlotId, { ...oldSession, status: "rescheduled", heldUntil: null });
+      }
+      const nextSession = sessions.get(input.sessionSlotId);
+      if (nextSession) sessions.set(input.sessionSlotId, { ...nextSession, status: "booked", heldUntil: null });
+    },
     async markSessionSlotBooked(sessionSlotId) {
       const session = sessions.get(sessionSlotId);
       if (session) sessions.set(sessionSlotId, { ...session, status: "booked", heldUntil: null });
+    },
+    async markSessionSlotRescheduled(sessionSlotId) {
+      const session = sessions.get(sessionSlotId);
+      if (session) sessions.set(sessionSlotId, { ...session, status: "rescheduled", heldUntil: null });
     },
   };
 
@@ -289,5 +308,157 @@ describe("booking routes", () => {
     const psychListBody = await psychList.json();
     expect(psychListBody.data).toHaveLength(1);
     expect(psychListBody.data[0].meetLink).toBe("https://meet.example/session");
+  });
+
+  test("confirms clinical booking and sends email event", async () => {
+    const authRepository = createMemoryAuthRepository([
+      { id: "psych-1", email: "psych@example.com", passwordHash: await hashPassword("password123", 4), role: "psychologist", status: "active" },
+    ]);
+    const bookingsRepository = createMemoryBookingsRepository({
+      bookings: [toBookingDetail({
+        id: "55555555-5555-4555-8555-555555555555",
+        patientUserId: "patient-1",
+        psychologistProfileId: "profile-1",
+        psychologistUserId: "psych-1",
+        sessionSlotId: "11111111-1111-4111-8111-111111111111",
+        consultationChannel: "chat_and_meet",
+        status: "payment_completed",
+        scheduledStartAt: "2026-02-01T08:00:00.000Z",
+        scheduledEndAt: "2026-02-01T09:00:00.000Z",
+        priceAmount: 150000,
+        packageNameSnapshot: "Paket 1 Jam",
+        packageDurationMinutesSnapshot: 60,
+        paymentExpiresAt: "2026-02-01T08:30:00.000Z",
+        meetLink: null,
+        confirmedAt: null,
+        rescheduledAt: null,
+        rescheduleReason: null,
+        createdAt: "2026-02-01T07:00:00.000Z",
+        updatedAt: "2026-02-01T07:00:00.000Z",
+        psychologistType: "clinical",
+      }, { patientEmail: "patient@example.com", psychologistEmail: "psych@example.com", psychologistFullName: "Dr. Psych" })],
+    });
+    const notifications: string[] = [];
+    const app = createApp(baseEnv, {}, {
+      authRepository,
+      bookingsRepository,
+      notificationsService: {
+        async sendPaymentSuccessPatient() { notifications.push("payment_success_patient"); return { skipped: false, event: null as never }; },
+        async sendBookingReceivedPsychologist() { notifications.push("booking_received_psychologist"); return { skipped: false, event: null as never }; },
+        async sendBookingConfirmedSessionReady() { notifications.push("booking_confirmed_session_ready"); return { skipped: false, event: null as never }; },
+        async sendBookingRescheduled() { notifications.push("booking_rescheduled"); return { skipped: false, event: null as never }; },
+      },
+    });
+
+    const psychToken = (await (await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
+    })).json()).data.accessToken as string;
+
+    const response = await app.request("http://localhost/api/v1/bookings/55555555-5555-4555-8555-555555555555/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${psychToken}` },
+      body: JSON.stringify({ meetLink: "https://meet.example/new-session" }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data.status).toBe("confirmed");
+    expect(body.data.meetLink).toBe("https://meet.example/new-session");
+    expect(notifications).toContain("booking_confirmed_session_ready");
+  });
+
+  test("reschedules booking and sends email event", async () => {
+    const authRepository = createMemoryAuthRepository([
+      { id: "psych-1", email: "psych@example.com", passwordHash: await hashPassword("password123", 4), role: "psychologist", status: "active" },
+    ]);
+    const bookingsRepository = createMemoryBookingsRepository({
+      sessions: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          bundleId: "bundle-1",
+          profileId: "profile-1",
+          psychologistUserId: "psych-1",
+          psychologistType: "clinical",
+          consultationChannel: "chat_and_meet",
+          sessionDate: "2026-02-01T00:00:00.000Z",
+          startsAt: "2026-02-01T08:00:00.000Z",
+          endsAt: "2026-02-01T09:00:00.000Z",
+          status: "booked",
+          heldUntil: null,
+          packageName: "Paket 1 Jam",
+          packageDurationMinutes: 60,
+          priceAmount: 150000,
+        },
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          bundleId: "bundle-1",
+          profileId: "profile-1",
+          psychologistUserId: "psych-1",
+          psychologistType: "clinical",
+          consultationChannel: "chat_and_meet",
+          sessionDate: "2026-02-02T00:00:00.000Z",
+          startsAt: "2026-02-02T08:00:00.000Z",
+          endsAt: "2026-02-02T09:00:00.000Z",
+          status: "available",
+          heldUntil: null,
+          packageName: "Paket 1 Jam",
+          packageDurationMinutes: 60,
+          priceAmount: 150000,
+        },
+      ],
+      bookings: [toBookingDetail({
+        id: "66666666-6666-4666-8666-666666666666",
+        patientUserId: "patient-1",
+        psychologistProfileId: "profile-1",
+        psychologistUserId: "psych-1",
+        sessionSlotId: "11111111-1111-4111-8111-111111111111",
+        consultationChannel: "chat_and_meet",
+        status: "confirmed",
+        scheduledStartAt: "2026-02-01T08:00:00.000Z",
+        scheduledEndAt: "2026-02-01T09:00:00.000Z",
+        priceAmount: 150000,
+        packageNameSnapshot: "Paket 1 Jam",
+        packageDurationMinutesSnapshot: 60,
+        paymentExpiresAt: "2026-02-01T08:30:00.000Z",
+        meetLink: "https://meet.example/session",
+        confirmedAt: "2026-02-01T07:30:00.000Z",
+        rescheduledAt: null,
+        rescheduleReason: null,
+        createdAt: "2026-02-01T07:00:00.000Z",
+        updatedAt: "2026-02-01T07:00:00.000Z",
+        psychologistType: "clinical",
+      }, { patientEmail: "patient@example.com", psychologistEmail: "psych@example.com", psychologistFullName: "Dr. Psych" })],
+    });
+    const notifications: string[] = [];
+    const app = createApp(baseEnv, {}, {
+      authRepository,
+      bookingsRepository,
+      notificationsService: {
+        async sendPaymentSuccessPatient() { notifications.push("payment_success_patient"); return { skipped: false, event: null as never }; },
+        async sendBookingReceivedPsychologist() { notifications.push("booking_received_psychologist"); return { skipped: false, event: null as never }; },
+        async sendBookingConfirmedSessionReady() { notifications.push("booking_confirmed_session_ready"); return { skipped: false, event: null as never }; },
+        async sendBookingRescheduled() { notifications.push("booking_rescheduled"); return { skipped: false, event: null as never }; },
+      },
+    });
+
+    const psychToken = (await (await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "psych@example.com", password: "password123" }),
+    })).json()).data.accessToken as string;
+
+    const response = await app.request("http://localhost/api/v1/bookings/66666666-6666-4666-8666-666666666666/reschedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${psychToken}` },
+      body: JSON.stringify({ newSessionSlotId: "22222222-2222-4222-8222-222222222222", reason: "Schedule conflict" }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data.status).toBe("rescheduled");
+    expect(body.data.sessionSlotId).toBe("22222222-2222-4222-8222-222222222222");
+    expect(notifications).toContain("booking_rescheduled");
   });
 });

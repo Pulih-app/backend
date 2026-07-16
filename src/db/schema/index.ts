@@ -9,6 +9,8 @@ export const credentialDocumentTypeEnum = pgEnum("credential_document_type", ["s
 export const generatedSessionStatusEnum = pgEnum("generated_session_status", ["available", "held", "booked", "completed", "cancelled", "expired", "rescheduled"]);
 export const bookingStatusEnum = pgEnum("booking_status", ["draft", "pending_payment", "payment_completed", "confirmed", "reschedule_requested", "rescheduled", "cancelled", "expired", "completed", "no_show"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["created", "pending", "completed", "failed", "expired", "cancelled"]);
+export const notificationEventTypeEnum = pgEnum("notification_event_type", ["payment_success_patient", "booking_received_psychologist", "booking_confirmed_session_ready", "booking_rescheduled"]);
+export const notificationStatusEnum = pgEnum("notification_status", ["pending", "sent", "failed", "retrying", "cancelled"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -220,6 +222,23 @@ export const paymentEvents = pgTable("payment_events", {
   orderIndex: index("idx_payment_events_order_id").on(table.orderId),
 }));
 
+export const notificationEvents = pgTable("notification_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  type: notificationEventTypeEnum("type").notNull(),
+  recipientEmail: varchar("recipient_email", { length: 255 }).notNull(),
+  relatedBookingId: uuid("related_booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
+  status: notificationStatusEnum("status").notNull().default("pending"),
+  providerMessageId: varchar("provider_message_id", { length: 255 }),
+  lastError: text("last_error"),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  sentAt: timestamp("sent_at", { withTimezone: true, mode: "date" }),
+}, (table) => ({
+  bookingTypeUnique: uniqueIndex("uq_notification_events_booking_type").on(table.relatedBookingId, table.type),
+  bookingIndex: index("idx_notification_events_booking_id").on(table.relatedBookingId),
+  statusIndex: index("idx_notification_events_status").on(table.status),
+}));
+
 export const schema = {
   users,
   profiles,
@@ -234,6 +253,7 @@ export const schema = {
   bookingReviews,
   payments,
   paymentEvents,
+  notificationEvents,
 } as const;
 
 export const usersRelations = relations(users, ({ one }) => ({

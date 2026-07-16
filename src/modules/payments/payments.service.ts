@@ -3,11 +3,13 @@ import { AppError, AppErrorCode } from "../../shared/errors";
 import type { BookingsRepository } from "../bookings/bookings.repository";
 import { createPakasirClient, type PakasirClient } from "./pakasir";
 import type { PakasirWebhookInput } from "./payments.schema";
+import type { NotificationsService } from "../notifications/notifications.service";
 
 export type PaymentsServiceOptions = {
   repository: BookingsRepository;
   config: AppConfig;
   pakasirClient?: PakasirClient;
+  notifications?: NotificationsService;
 };
 
 function assertPaymentMatches(payment: { orderId: string; amount: number }, input: PakasirWebhookInput, config: AppConfig) {
@@ -58,6 +60,7 @@ export function createPaymentsService(options: PaymentsServiceOptions) {
       assertProviderCompleted(transaction, input);
       const completedAt = new Date(transaction.completedAt ?? input.completedAt ?? new Date().toISOString());
 
+      let booking = null as Awaited<ReturnType<BookingsRepository["findBookingById"]>>;
       await options.repository.transaction(async (tx) => {
         if (!duplicate) {
           await tx.createPaymentEvent({
@@ -79,11 +82,16 @@ export function createPaymentsService(options: PaymentsServiceOptions) {
           });
         }
         await tx.markPaymentCompleted({ paymentId: payment.id, paymentMethod: transaction.paymentMethod ?? input.paymentMethod, completedAt });
-        const booking = await tx.findBookingById(payment.bookingId);
+        booking = await tx.findBookingById(payment.bookingId);
         if (!booking) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
         await tx.markBookingPaymentCompleted({ bookingId: payment.bookingId });
         await tx.markSessionSlotBooked(booking.sessionSlotId);
       });
+
+      if (booking && options.notifications) {
+        await options.notifications.sendPaymentSuccessPatient(booking);
+        await options.notifications.sendBookingReceivedPsychologist(booking);
+      }
 
       return { paymentId: payment.id, bookingId: payment.bookingId, status: "completed", idempotent: false };
     },

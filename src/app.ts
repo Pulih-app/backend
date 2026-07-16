@@ -11,6 +11,7 @@ import type { PsychologistsRepository } from "./modules/psychologists/psychologi
 import { createBookingsRoutes } from "./modules/bookings/bookings.routes";
 import type { BookingsRepository } from "./modules/bookings/bookings.repository";
 import { createPaymentsRoutes } from "./modules/payments/payments.routes";
+import type { NotificationsService } from "./modules/notifications/notifications.service";
 import { createHealthRoutes } from "./routes/health.routes";
 import { validationDemoRoutes } from "./routes/validation-demo.routes";
 import { loadConfig } from "./shared/config";
@@ -53,6 +54,7 @@ export type AppOptions = {
   psychologistsRepository?: PsychologistsRepository;
   bookingsRepository?: BookingsRepository;
   credentialStorage?: CredentialStorage;
+  notificationsService?: NotificationsService;
 };
 
 async function createDefaultDatabaseHealthCheck(env: AppEnv, bindings: AppBindings, config = loadConfig(env)) {
@@ -140,6 +142,7 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
     },
     authRepository: options.authRepository,
     bookingsRepository: options.bookingsRepository,
+    notificationsService: options.notificationsService,
   }));
   app.route("/api/v1", createPaymentsRoutes({
     config,
@@ -149,6 +152,7 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
     bookingsRepository: options.bookingsRepository,
+    notificationsService: options.notificationsService,
   }));
   app.route("/api/v1", validationDemoRoutes);
   app.onError(handleGlobalError);

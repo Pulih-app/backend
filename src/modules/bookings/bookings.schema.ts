@@ -8,6 +8,15 @@ export type BookingParams = {
   bookingId: string;
 };
 
+export type ConfirmBookingInput = {
+  meetLink: string | null;
+};
+
+export type RescheduleBookingInput = {
+  newSessionSlotId: string;
+  reason: string;
+};
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function ensureObject(input: unknown) {
@@ -46,4 +55,46 @@ export const bookingParamsSchema: Schema<BookingParams> = (input) => {
   }
 
   return { ok: true, value: { bookingId } };
+};
+
+export const confirmBookingSchema: Schema<ConfirmBookingInput> = (input) => {
+  const object = ensureObject(input);
+  if (!object.ok) return object;
+
+  const issues: ValidationIssue[] = [];
+  const value = object.value;
+  for (const key of Object.keys(value)) {
+    if (key !== "meetLink") issues.push({ field: key, message: "Unknown field is not allowed." });
+  }
+
+  const meetLink = value.meetLink;
+  if (meetLink !== undefined && meetLink !== null && typeof meetLink !== "string") {
+    issues.push({ field: "meetLink", message: "Meet link must be a string." });
+  }
+
+  if (issues.length > 0) return { ok: false, issues } as const;
+  return { ok: true, value: { meetLink: typeof meetLink === "string" ? meetLink.trim() : null } } as const;
+};
+
+export const rescheduleBookingSchema: Schema<RescheduleBookingInput> = (input) => {
+  const object = ensureObject(input);
+  if (!object.ok) return object;
+
+  const issues: ValidationIssue[] = [];
+  const value = object.value;
+  for (const key of Object.keys(value)) {
+    if (key !== "newSessionSlotId" && key !== "reason") issues.push({ field: key, message: "Unknown field is not allowed." });
+  }
+
+  const newSessionSlotId = value.newSessionSlotId;
+  const reason = typeof value.reason === "string" ? value.reason.trim() : "";
+  if (typeof newSessionSlotId !== "string" || !UUID_PATTERN.test(newSessionSlotId)) {
+    issues.push({ field: "newSessionSlotId", message: "Must be a valid session slot id." });
+  }
+  if (reason.length === 0) {
+    issues.push({ field: "reason", message: "Reason is required." });
+  }
+
+  if (issues.length > 0) return { ok: false, issues } as const;
+  return { ok: true, value: { newSessionSlotId: newSessionSlotId as string, reason } } as const;
 };

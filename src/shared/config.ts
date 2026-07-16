@@ -36,6 +36,11 @@ export type AppConfig = {
     pakasirApiKey: string;
     pakasirProviderTimeoutMs: number;
   };
+  email: {
+    resendApiKey: string;
+    resendFromEmail: string;
+    resendFromName: string;
+  };
 };
 
 function requireValue(issues: string[], key: string, value: string | undefined) {
@@ -105,6 +110,9 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   const pakasirProviderTimeoutMs = env.PAKASIR_PROVIDER_TIMEOUT_MS
     ? parseNumber(issues, "PAKASIR_PROVIDER_TIMEOUT_MS", env.PAKASIR_PROVIDER_TIMEOUT_MS, 500, 30000)
     : 10000;
+  const resendApiKey = env.RESEND_API_KEY?.trim() || "local-resend-api-key";
+  const resendFromEmail = env.RESEND_FROM_EMAIL?.trim() || "no-reply@salmanabdurrahman.web.id";
+  const resendFromName = env.RESEND_FROM_NAME?.trim() || "Pulih";
 
   if (appEnv && !["local", "development", "staging", "production"].includes(appEnv)) {
     issues.push("APP_ENV must be one of local, development, staging, production");
@@ -149,6 +157,11 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
       pakasirPaymentBaseUrl,
       pakasirApiKey,
       pakasirProviderTimeoutMs: pakasirProviderTimeoutMs as number,
+    },
+    email: {
+      resendApiKey,
+      resendFromEmail,
+      resendFromName,
     },
   };
 }
