@@ -2,12 +2,14 @@ import type { AppConfig } from "../../shared/config";
 import { AppError, AppErrorCode } from "../../shared/errors";
 import { buildPaymentInstruction, buildPakasirPaymentUrl, generateOrderId } from "../payments/pakasir";
 import type { BookingRecord, BookingsRepository, PaymentRecord } from "./bookings.repository";
-import type { ConfirmBookingInput, CreateBookingInput, RescheduleBookingInput } from "./bookings.schema";
+import type { BookingMessageInput, BookingReviewInput, ConfirmBookingInput, CreateBookingInput, RescheduleBookingInput } from "./bookings.schema";
 import type { NotificationsService } from "../notifications/notifications.service";
 
 function addHours(now: Date, hours: number) {
   return new Date(now.getTime() + hours * 60 * 60 * 1000);
 }
+
+const CHAT_ALLOWED_STATUSES = new Set(["payment_completed", "confirmed", "rescheduled", "completed"]);
 
 function hideMeetLink<T extends { status: string; consultationChannel: string; meetLink: string | null }>(booking: T) {
   return {
@@ -25,11 +27,13 @@ export type CreateBookingResult = {
 
 export function createBookingsService(repository: BookingsRepository, config: AppConfig, notifications?: NotificationsService) {
   return {
-    async createBooking(patientUserId: string, input: CreateBookingInput) {
+    async createBooking(patientUserId: string, role: string, input: CreateBookingInput) {
+      if (role !== "patient") throw new AppError(AppErrorCode.Forbidden, "Only patients can create bookings.");
       const now = new Date();
       return repository.transaction(async (tx) => {
         const session = await tx.findSessionSlotForBooking(input.sessionSlotId);
         if (!session) throw new AppError(AppErrorCode.NotFound, "Generated session was not found.");
+        if (session.psychologistApprovalStatus !== "approved") throw new AppError(AppErrorCode.Forbidden, "Psychologist profile is not approved for booking.");
         if (session.status !== "available") throw new AppError(AppErrorCode.Conflict, "Generated session is not available.");
 
         const paymentExpiresAt = addHours(now, 1);
@@ -50,6 +54,7 @@ export function createBookingsService(repository: BookingsRepository, config: Ap
           packageDurationMinutesSnapshot: session.packageDurationMinutes,
           paymentExpiresAt,
           meetLink: null,
+          complaint: input.complaint,
           psychologistType: session.psychologistType,
         });
 
@@ -111,6 +116,17 @@ export function createBookingsService(repository: BookingsRepository, config: Ap
       if (!["payment_completed", "rescheduled"].includes(booking.status)) throw new AppError(AppErrorCode.Conflict, "Booking is not ready for confirmation.");
       const meetLink = booking.psychologistType === "clinical" ? input.meetLink : null;
       if (booking.psychologistType === "clinical" && !meetLink) throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["meetLink: Meet link is required for clinical psychologist sessions."]);
+      if (meetLink) {
+        let url: URL;
+        try {
+          url = new URL(meetLink);
+        } catch {
+          throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["meetLink: Must be a valid URL."]);
+        }
+        if (url.protocol !== "https:" || url.hostname !== "meet.google.com") {
+          throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["meetLink: Must be a Google Meet HTTPS URL."]);
+        }
+      }
       await repository.transaction(async (tx) => {
         await tx.markBookingConfirmed({ bookingId, meetLink, confirmedAt: new Date(), actorUserId: userId });
       });
@@ -118,6 +134,46 @@ export function createBookingsService(repository: BookingsRepository, config: Ap
       if (!updated) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
       if (notifications) await notifications.sendBookingConfirmedSessionReady(updated);
       return hideMeetLink(updated);
+    },
+    async completeBooking(userId: string, role: string, bookingId: string) {
+      if (role !== "psychologist") throw new AppError(AppErrorCode.Forbidden, "Only psychologists can complete bookings.");
+      const booking = await repository.findBookingById(bookingId);
+      if (!booking) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
+      if (booking.psychologistUserId !== userId) throw new AppError(AppErrorCode.Forbidden, "You can only manage your own bookings.");
+      if (!["confirmed", "rescheduled"].includes(booking.status)) throw new AppError(AppErrorCode.Conflict, "Booking is not ready for completion.");
+      await repository.transaction(async (tx) => {
+        await tx.markBookingCompleted({ bookingId, completedAt: new Date(), actorUserId: userId });
+        await tx.markSessionSlotCompleted(booking.sessionSlotId);
+      });
+      const updated = await repository.findBookingById(bookingId);
+      if (!updated) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
+      return hideMeetLink(updated);
+    },
+    async listMessages(userId: string, role: string, bookingId: string) {
+      const booking = await this.getBooking(userId, role, bookingId);
+      if (!CHAT_ALLOWED_STATUSES.has(booking.status)) throw new AppError(AppErrorCode.Conflict, "Booking chat is not available yet.");
+      return repository.listMessagesByBookingId(bookingId);
+    },
+    async createMessage(userId: string, role: string, bookingId: string, input: BookingMessageInput) {
+      const booking = await this.getBooking(userId, role, bookingId);
+      if (!CHAT_ALLOWED_STATUSES.has(booking.status)) throw new AppError(AppErrorCode.Conflict, "Booking chat is not available yet.");
+      return repository.createMessage({ bookingId, senderUserId: userId, content: input.content });
+    },
+    async createReview(userId: string, role: string, bookingId: string, input: BookingReviewInput) {
+      if (role !== "patient") throw new AppError(AppErrorCode.Forbidden, "Only patients can review bookings.");
+      const booking = await repository.findBookingById(bookingId);
+      if (!booking) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
+      if (booking.patientUserId !== userId) throw new AppError(AppErrorCode.Forbidden, "You can only review your own bookings.");
+      if (booking.status !== "completed") throw new AppError(AppErrorCode.Conflict, "Booking must be completed before review.");
+      const existing = await repository.findReviewByBookingId(bookingId);
+      if (existing) throw new AppError(AppErrorCode.Conflict, "Booking has already been reviewed.");
+      return repository.createReview({
+        bookingId,
+        patientUserId: userId,
+        psychologistProfileId: booking.psychologistProfileId,
+        rating: input.rating,
+        comment: input.comment,
+      });
     },
     async rescheduleBooking(userId: string, role: string, bookingId: string, input: RescheduleBookingInput) {
       if (role !== "psychologist") throw new AppError(AppErrorCode.Forbidden, "Only psychologists can reschedule bookings.");

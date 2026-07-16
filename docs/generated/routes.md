@@ -12,6 +12,7 @@ Source of truth: `src/routes/api-route-inventory.ts`. OpenAPI operations are gen
 | `GET` | `/docs/api` | `public` | Yes | `/docs/api` |
 | `GET` | `/docs/api/` | `public` | Yes | `/docs/api/` |
 | `POST` | `/api/v1/auth/register` | `public` | Yes | `/api/v1/auth/register` |
+| `POST` | `/api/v1/auth/register/psychologist` | `public` | Yes | `/api/v1/auth/register/psychologist` |
 | `POST` | `/api/v1/auth/login` | `public` | Yes | `/api/v1/auth/login` |
 | `POST` | `/api/v1/auth/logout` | `public` | Yes | `/api/v1/auth/logout` |
 | `GET` | `/api/v1/auth/me` | `bearer` | Yes | `/api/v1/auth/me` |
@@ -30,11 +31,17 @@ Source of truth: `src/routes/api-route-inventory.ts`. OpenAPI operations are gen
 | `GET` | `/api/v1/psychologists` | `public` | Yes | `/api/v1/psychologists` |
 | `GET` | `/api/v1/psychologists/:psychologistId` | `public` | Yes | `/api/v1/psychologists/{psychologistId}` |
 | `GET` | `/api/v1/psychologists/:psychologistId/sessions` | `public` | Yes | `/api/v1/psychologists/{psychologistId}/sessions` |
+| `GET` | `/api/v1/psychologist-sessions` | `public` | Yes | `/api/v1/psychologist-sessions` |
 | `POST` | `/api/v1/bookings` | `bearer` | Yes | `/api/v1/bookings` |
 | `GET` | `/api/v1/bookings` | `bearer` | Yes | `/api/v1/bookings` |
 | `GET` | `/api/v1/bookings/:bookingId` | `bearer` | Yes | `/api/v1/bookings/{bookingId}` |
 | `POST` | `/api/v1/bookings/:bookingId/confirm` | `bearer` | Yes | `/api/v1/bookings/{bookingId}/confirm` |
+| `POST` | `/api/v1/bookings/:bookingId/complete` | `bearer` | Yes | `/api/v1/bookings/{bookingId}/complete` |
+| `GET` | `/api/v1/bookings/:bookingId/messages` | `bearer` | Yes | `/api/v1/bookings/{bookingId}/messages` |
+| `POST` | `/api/v1/bookings/:bookingId/messages` | `bearer` | Yes | `/api/v1/bookings/{bookingId}/messages` |
+| `POST` | `/api/v1/bookings/:bookingId/review` | `bearer` | Yes | `/api/v1/bookings/{bookingId}/review` |
 | `POST` | `/api/v1/bookings/:bookingId/reschedule` | `bearer` | Yes | `/api/v1/bookings/{bookingId}/reschedule` |
+| `GET` | `/api/v1/payments/:paymentId/status` | `bearer` | Yes | `/api/v1/payments/{paymentId}/status` |
 | `POST` | `/api/v1/payments/pakasir/webhook` | `public` | Yes | `/api/v1/payments/pakasir/webhook` |
 | `POST` | `/api/v1/routine/checkin` | `bearer` | Yes | `/api/v1/routine/checkin` |
 | `POST` | `/api/v1/routine/relapses` | `bearer` | Yes | `/api/v1/routine/relapses` |

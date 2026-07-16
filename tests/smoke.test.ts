@@ -31,17 +31,20 @@ function createMemoryAuthRepository(seed: AuthUserRecord[] = []): AuthRepository
   const users = new Map(seed.map((user) => [user.id, user]));
 
   return {
-    async createPatient(input) {
+    async createUser(input) {
       const user: AuthUserRecord = {
         id: crypto.randomUUID(),
         email: input.email,
         username: input.username,
         passwordHash: input.passwordHash,
-        role: "patient",
+        role: input.role,
         status: "active",
       };
       users.set(user.id, user);
       return user;
+    },
+    async createPatient(input) {
+      return this.createUser({ ...input, role: "patient" });
     },
     async findByEmail(email) {
       return Array.from(users.values()).find((user) => user.email === email) ?? null;
@@ -116,7 +119,6 @@ function createMemoryPsychologistsRepository(seed: PsychologistProfileRecord[] =
 
   const cloneProfile = (profile: PsychologistProfileRecord): PsychologistProfileRecord => ({
     ...profile,
-    practicePlaces: profile.practicePlaces.map((place) => ({ ...place })),
     ratingSummary: { ...profile.ratingSummary },
     latestBundle: profile.latestBundle ? { ...profile.latestBundle } : null,
   });
@@ -131,9 +133,10 @@ function createMemoryPsychologistsRepository(seed: PsychologistProfileRecord[] =
         consultationChannel: input.consultationChannel,
         approvalStatus: existing?.approvalStatus ?? "approved",
         fullName: input.fullName,
-        licenseNumber: input.licenseNumber,
+        dateOfBirth: input.dateOfBirth,
+        address: input.address,
+        photoUrl: input.photoUrl,
         bio: input.bio,
-        practicePlaces: input.practicePlaces.map((place) => ({ id: crypto.randomUUID(), name: place.name, address: place.address, isActive: place.isActive ?? true })),
         ratingSummary: existing?.ratingSummary ?? { averageRating: 4.9, reviewCount: 12 },
         latestBundle: existing?.latestBundle ?? null,
       };
@@ -337,9 +340,10 @@ describe("smoke path", () => {
         consultationChannel: "chat_and_meet",
         approvalStatus: "approved",
         fullName: "Dr. Approved",
-        licenseNumber: "LIC-1",
+        dateOfBirth: "1990-01-01",
+        address: "Jl. Demo",
+        photoUrl: "https://example.com/photo.jpg",
         bio: "Bio",
-        practicePlaces: [],
         ratingSummary: { averageRating: 4.9, reviewCount: 12 },
         latestBundle: null,
       },
@@ -350,6 +354,7 @@ describe("smoke path", () => {
         bundleId: "bundle-1",
         profileId: "psych-profile-1",
         psychologistUserId: "psych-user-1",
+        psychologistApprovalStatus: "approved",
         psychologistType: "clinical",
         consultationChannel: "chat_and_meet",
         sessionDate: "2026-02-01T00:00:00.000Z",

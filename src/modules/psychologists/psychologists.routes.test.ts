@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createApp } from "../../app";
 import type { AuthRepository, AuthUserRecord } from "../auth/auth.repository";
-import type { PsychologistsRepository, PsychologistProfileRecord, PsychologistBundleRecord, PsychologistSessionRecord } from "./psychologists.repository";
+import type { PsychologistsRepository, PsychologistProfileRecord, PsychologistBundleRecord, PsychologistSessionRecord, PublicPsychologistSessionRecord } from "./psychologists.repository";
 import type { CredentialDocumentType } from "./psychologists.types";
 
 const baseEnv = {
@@ -24,10 +24,13 @@ const baseEnv = {
 function createMemoryAuthRepository(seed: AuthUserRecord[]): AuthRepository {
   const users = new Map(seed.map((user) => [user.id, user]));
   return {
-    async createPatient(input) {
-      const user: AuthUserRecord = { id: crypto.randomUUID(), email: input.email, username: input.username, passwordHash: input.passwordHash, role: "patient", status: "active" };
+    async createUser(input) {
+      const user: AuthUserRecord = { id: crypto.randomUUID(), email: input.email, username: input.username, passwordHash: input.passwordHash, role: input.role, status: "active" };
       users.set(user.id, user);
       return user;
+    },
+    async createPatient(input) {
+      return this.createUser({ ...input, role: "patient" });
     },
     async findByEmail(email) { return Array.from(users.values()).find((user) => user.email === email) ?? null; },
     async findByUsername(username) { return Array.from(users.values()).find((user) => user.username === username) ?? null; },
@@ -50,8 +53,8 @@ function createMemoryPsychologistsRepository(seed: PsychologistProfileRecord[] =
 
   const clone = (profile: PsychologistProfileRecord): PsychologistProfileRecord => ({
     ...profile,
-    practicePlaces: profile.practicePlaces.map((place) => ({ ...place })),
     ratingSummary: { ...profile.ratingSummary },
+    latestReviews: profile.latestReviews.map((review) => ({ ...review })),
     latestBundle: profile.latestBundle ? { ...profile.latestBundle } : null,
   });
 
@@ -65,10 +68,12 @@ function createMemoryPsychologistsRepository(seed: PsychologistProfileRecord[] =
         consultationChannel: input.consultationChannel,
         approvalStatus: existing?.approvalStatus ?? "draft",
         fullName: input.fullName,
-        licenseNumber: input.licenseNumber,
+        dateOfBirth: input.dateOfBirth,
+        address: input.address,
+        photoUrl: input.photoUrl,
         bio: input.bio,
-        practicePlaces: input.practicePlaces.map((place) => ({ id: crypto.randomUUID(), name: place.name, address: place.address, isActive: place.isActive ?? true })),
         ratingSummary: existing?.ratingSummary ?? { averageRating: 0, reviewCount: 0 },
+        latestReviews: existing?.latestReviews ?? [],
         latestBundle: existing?.latestBundle ?? null,
       };
       sync(profile);
@@ -102,6 +107,31 @@ function createMemoryPsychologistsRepository(seed: PsychologistProfileRecord[] =
     async deleteBundle(bundleId) { return bundles.delete(bundleId); },
     async deleteSessionsByBundleId(bundleId) { sessions.delete(bundleId); },
     async listSessionsByPsychologistId(psychologistId) { return Array.from(sessions.values()).flat().filter((session) => session.profileId === psychologistId).map((session) => ({ ...session })); },
+    async listApprovedAvailableSessions() {
+      const result: PublicPsychologistSessionRecord[] = [];
+      for (const session of Array.from(sessions.values()).flat()) {
+        if (session.status !== "available") continue;
+        const profile = profilesById.get(session.profileId);
+        if (!profile || profile.approvalStatus !== "approved") continue;
+        result.push({
+          ...session,
+          psychologist: {
+            id: profile.id,
+            userId: profile.userId,
+            type: profile.type,
+            consultationChannel: profile.consultationChannel,
+            fullName: profile.fullName,
+            dateOfBirth: profile.dateOfBirth,
+            address: profile.address,
+            photoUrl: profile.photoUrl,
+            bio: profile.bio,
+            ratingSummary: { ...profile.ratingSummary },
+            latestReviews: profile.latestReviews.map((review) => ({ ...review })),
+          },
+        });
+      }
+      return result;
+    },
     async listSessionsByBundleIds(bundleIds) { return bundleIds.flatMap((bundleId) => sessions.get(bundleId) ?? []).map((session) => ({ ...session })); },
   };
 }
@@ -116,10 +146,12 @@ describe("psychologist directory and bundles", () => {
         consultationChannel: "chat_and_meet",
         approvalStatus: "approved",
         fullName: "Dr. Approved",
-        licenseNumber: "LIC-1",
+        dateOfBirth: "1990-01-01",
+        address: "Jl. Demo",
+        photoUrl: "https://example.com/photo.jpg",
         bio: "Bio",
-        practicePlaces: [],
         ratingSummary: { averageRating: 4.8, reviewCount: 12 },
+        latestReviews: [{ id: "review-1", bookingId: "booking-1", patientUserId: "patient-1", psychologistProfileId: "11111111-1111-4111-8111-111111111111", rating: 5, comment: "Helpful", createdAt: "2026-07-16T01:10:00.000Z", updatedAt: "2026-07-16T01:10:00.000Z" }],
         latestBundle: null,
       },
       {
@@ -129,10 +161,12 @@ describe("psychologist directory and bundles", () => {
         consultationChannel: "chat",
         approvalStatus: "pending_review",
         fullName: "Dr. Pending",
-        licenseNumber: "LIC-2",
+        dateOfBirth: "1991-02-02",
+        address: "Jl. Contoh",
+        photoUrl: "https://example.com/photo2.jpg",
         bio: "Bio",
-        practicePlaces: [],
         ratingSummary: { averageRating: 0, reviewCount: 0 },
+        latestReviews: [],
         latestBundle: null,
       },
     ]);
@@ -144,9 +178,13 @@ describe("psychologist directory and bundles", () => {
     expect(listBody.data).toHaveLength(1);
     expect(listBody.data[0].consultationChannel).toBe("chat_and_meet");
     expect(listBody.data[0].ratingSummary).toMatchObject({ averageRating: 4.8, reviewCount: 12 });
+    expect(listBody.data[0].latestReviews).toHaveLength(1);
+    expect(listBody.data[0].latestReviews[0]).toMatchObject({ rating: 5, comment: "Helpful" });
 
     const detail = await app.request("http://localhost/api/v1/psychologists/11111111-1111-4111-8111-111111111111", { headers: { Origin: "http://localhost:3001" } });
     expect(detail.status).toBe(200);
+    const detailBody = await detail.json();
+    expect(detailBody.data.latestReviews).toHaveLength(1);
 
     const hidden = await app.request("http://localhost/api/v1/psychologists/33333333-3333-4333-8333-333333333333", { headers: { Origin: "http://localhost:3001" } });
     expect(hidden.status).toBe(404);
@@ -169,7 +207,7 @@ describe("psychologist directory and bundles", () => {
     await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: "clinical", fullName: "Dr. Approved" }),
+      body: JSON.stringify({ type: "clinical", fullName: "Dr. Approved", dateOfBirth: "1990-01-01", address: "Jl. Demo", photoUrl: "https://example.com/photo.jpg" }),
     });
     await psychologistsRepository.updateApprovalStatus(userId, "approved");
 
@@ -193,6 +231,23 @@ describe("psychologist directory and bundles", () => {
     expect(sessions.status).toBe(200);
     const sessionsBody = await sessions.json();
     expect(sessionsBody.data).toHaveLength(2);
+
+    const allSessions = await app.request("http://localhost/api/v1/psychologist-sessions", { headers: { Origin: "http://localhost:3001" } });
+    expect(allSessions.status).toBe(200);
+    const allSessionsBody = await allSessions.json();
+    expect(allSessionsBody.data).toHaveLength(2);
+    expect(allSessionsBody.data[0]).toMatchObject({
+      status: "available",
+      packageName: "Paket 3 Jam",
+      priceAmount: 150000,
+      psychologist: {
+        id: userId,
+        fullName: "Dr. Approved",
+        type: "clinical",
+        consultationChannel: "chat_and_meet",
+        latestReviews: [],
+      },
+    });
   });
 
   test("rejects invalid bundle times, overlap, and ownership mismatch", async () => {
@@ -212,7 +267,7 @@ describe("psychologist directory and bundles", () => {
     await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${ownerToken}` },
-      body: JSON.stringify({ type: "clinical", fullName: "Dr. Owner" }),
+      body: JSON.stringify({ type: "clinical", fullName: "Dr. Owner", dateOfBirth: "1990-01-01", address: "Jl. Demo", photoUrl: "https://example.com/photo.jpg" }),
     });
     await psychologistsRepository.updateApprovalStatus(ownerUserId, "approved");
 
@@ -266,7 +321,7 @@ describe("psychologist directory and bundles", () => {
     await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${otherToken}` },
-      body: JSON.stringify({ type: "clinical", fullName: "Dr. Other" }),
+      body: JSON.stringify({ type: "clinical", fullName: "Dr. Other", dateOfBirth: "1990-01-01", address: "Jl. Demo", photoUrl: "https://example.com/photo.jpg" }),
     });
     await psychologistsRepository.updateApprovalStatus(otherBody.data.user.id as string, "approved");
 

@@ -136,6 +136,11 @@ export function createPsychologistsRoutes(options: PsychologistsRoutesOptions) {
     return context.json(createSuccessResponse({ data }));
   }));
 
+  routes.get("/psychologist-sessions", async (context) => withService(options, async (service) => {
+    const data = await service.listAllPublicSessions();
+    return context.json(createSuccessResponse({ message: "Psychologist sessions retrieved successfully", data }));
+  }));
+
   routes.get("/psychologists/:psychologistId", async (context) => withService(options, async (service) => {
     const params = validateParams(context, psychologistPublicParamsSchema);
     const data = await service.getPublicProfile(params.psychologistId);

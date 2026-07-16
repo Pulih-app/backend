@@ -44,34 +44,42 @@ export function createAuthService(repository: AuthRepository, config: AppConfig)
     };
   }
 
+  async function registerWithRole(input: { email: string; username: string; password: string; confirm_password: string }, role: "patient" | "psychologist") {
+    validatePassword(input.password);
+
+    if (input.password !== input.confirm_password) {
+      throw new AppError(AppErrorCode.ValidationError, "Password validation failed.", [
+        "confirm_password: Passwords do not match.",
+      ]);
+    }
+
+    const existingEmail = await repository.findByEmail(input.email);
+    if (existingEmail) {
+      throw new AppError(AppErrorCode.Conflict, "Email is already registered.", ["email: Email is already registered."]);
+    }
+
+    const existingUsername = await repository.findByUsername(input.username);
+    if (existingUsername) {
+      throw new AppError(AppErrorCode.Conflict, "Username is already taken.", ["username: Username is already taken."]);
+    }
+
+    const passwordHash = await hashPassword(input.password, config.security.passwordHashCost);
+    const user = await repository.createUser({
+      email: input.email,
+      username: input.username,
+      passwordHash,
+      role,
+    });
+
+    return buildResult(user);
+  }
+
   return {
     async register(input: { email: string; username: string; password: string; confirm_password: string }) {
-      validatePassword(input.password);
-
-      if (input.password !== input.confirm_password) {
-        throw new AppError(AppErrorCode.ValidationError, "Password validation failed.", [
-          "confirm_password: Passwords do not match.",
-        ]);
-      }
-
-      const existingEmail = await repository.findByEmail(input.email);
-      if (existingEmail) {
-        throw new AppError(AppErrorCode.Conflict, "Email is already registered.", ["email: Email is already registered."]);
-      }
-
-      const existingUsername = await repository.findByUsername(input.username);
-      if (existingUsername) {
-        throw new AppError(AppErrorCode.Conflict, "Username is already taken.", ["username: Username is already taken."]);
-      }
-
-      const passwordHash = await hashPassword(input.password, config.security.passwordHashCost);
-      const user = await repository.createPatient({
-        email: input.email,
-        username: input.username,
-        passwordHash,
-      });
-
-      return buildResult(user);
+      return registerWithRole(input, "patient");
+    },
+    async registerPsychologist(input: { email: string; username: string; password: string; confirm_password: string }) {
+      return registerWithRole(input, "psychologist");
     },
     async login(input: { identifier: string; password: string }) {
       const user = await repository.findByLoginIdentifier(input.identifier);
@@ -87,6 +95,9 @@ export function createAuthService(repository: AuthRepository, config: AppConfig)
       const user = await repository.findById(id);
       if (!user) {
         throw new AppError(AppErrorCode.Unauthenticated, "Authenticated user was not found.");
+      }
+      if (user.status !== "active") {
+        throw new AppError(AppErrorCode.Forbidden, "Authenticated user is not active.");
       }
       return toAuthUser(user);
     },

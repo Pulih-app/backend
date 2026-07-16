@@ -36,6 +36,27 @@ export function createPaymentsService(options: PaymentsServiceOptions) {
     async verifyTransactionDetail(input: { project: string; orderId: string; amount: number }) {
       return client.getTransactionDetail(input);
     },
+    async getPaymentStatus(userId: string, role: string, paymentId: string) {
+      const payment = await options.repository.findPaymentById(paymentId);
+      if (!payment) throw new AppError(AppErrorCode.NotFound, "Payment was not found.");
+      const booking = await options.repository.findBookingById(payment.bookingId);
+      if (!booking) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
+      if (role === "patient" && booking.patientUserId !== userId) throw new AppError(AppErrorCode.Forbidden, "You can only access your own payment status.");
+      if (role === "psychologist" && booking.psychologistUserId !== userId) throw new AppError(AppErrorCode.Forbidden, "You can only access your own payment status.");
+      if (role !== "patient" && role !== "psychologist") throw new AppError(AppErrorCode.Forbidden, "You are not allowed to access payment status.");
+      return {
+        id: payment.id,
+        bookingId: payment.bookingId,
+        provider: payment.provider,
+        orderId: payment.orderId,
+        amount: payment.amount,
+        status: payment.status,
+        paymentMethod: payment.paymentMethod,
+        paymentUrl: payment.paymentUrl,
+        completedAt: payment.completedAt,
+        expiresAt: payment.expiresAt,
+      };
+    },
     async simulatePakasirPayment(input: { orderId: string }) {
       const payment = await options.repository.findPaymentByOrderId(input.orderId);
       if (!payment) throw new AppError(AppErrorCode.NotFound, "Payment was not found.");
@@ -55,6 +76,12 @@ export function createPaymentsService(options: PaymentsServiceOptions) {
         amount: input.amount,
       });
       if (duplicate && payment.status === "completed") return { paymentId: payment.id, bookingId: payment.bookingId, status: "completed", idempotent: true };
+
+      const bookingBeforePayment = await options.repository.findBookingById(payment.bookingId);
+      if (!bookingBeforePayment) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
+      if (bookingBeforePayment.status === "expired" || new Date(bookingBeforePayment.paymentExpiresAt).getTime() < Date.now()) {
+        throw new AppError(AppErrorCode.Conflict, "Payment has expired and requires manual review.");
+      }
 
       const transaction = await client.getTransactionDetail({ project: input.project, orderId: input.orderId, amount: input.amount });
       assertProviderCompleted(transaction, input);
@@ -86,6 +113,8 @@ export function createPaymentsService(options: PaymentsServiceOptions) {
         if (!booking) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
         await tx.markBookingPaymentCompleted({ bookingId: payment.bookingId });
         await tx.markSessionSlotBooked(booking.sessionSlotId);
+        booking = await tx.findBookingById(payment.bookingId);
+        if (!booking) throw new AppError(AppErrorCode.NotFound, "Booking was not found.");
       });
 
       if (booking && options.notifications) {

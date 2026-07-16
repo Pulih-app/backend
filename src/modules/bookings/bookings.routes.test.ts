@@ -25,10 +25,13 @@ const baseEnv = {
 function createMemoryAuthRepository(seed: AuthUserRecord[]): AuthRepository {
   const users = new Map(seed.map((user) => [user.id, user]));
   return {
-    async createPatient(input) {
-      const user: AuthUserRecord = { id: crypto.randomUUID(), email: input.email, username: input.username, passwordHash: input.passwordHash, role: "patient", status: "active" };
+    async createUser(input) {
+      const user: AuthUserRecord = { id: crypto.randomUUID(), email: input.email, username: input.username, passwordHash: input.passwordHash, role: input.role, status: "active" };
       users.set(user.id, user);
       return user;
+    },
+    async createPatient(input) {
+      return this.createUser({ ...input, role: "patient" });
     },
     async findByEmail(email) { return Array.from(users.values()).find((user) => user.email === email) ?? null; },
     async findByUsername(username) { return Array.from(users.values()).find((user) => user.username === username) ?? null; },
@@ -38,7 +41,7 @@ function createMemoryAuthRepository(seed: AuthUserRecord[]): AuthRepository {
 }
 
 function toBookingDetail(record: BookingRecord, extra: { patientEmail: string; psychologistEmail: string; psychologistFullName: string }): BookingDetailRecord {
-  return { ...record, ...extra };
+  return { ...record, ...extra, ratingSummary: { averageRating: 0, reviewCount: 0 }, latestReviews: [] };
 }
 
 function createMemoryBookingsRepository(seed: {
@@ -49,6 +52,8 @@ function createMemoryBookingsRepository(seed: {
   const sessions = new Map((seed.sessions ?? []).map((session) => [session.id, { ...session }]));
   const bookings = new Map((seed.bookings ?? []).map((booking) => [booking.id, { ...booking }]));
   const payments = new Map((seed.payments ?? []).map((payment) => [payment.id, { ...payment }]));
+  const messages: Array<{ id: string; bookingId: string; senderUserId: string; content: string; createdAt: string }> = [];
+  const reviews = new Map<string, { id: string; bookingId: string; patientUserId: string; psychologistProfileId: string; rating: number; comment: string | null; createdAt: string; updatedAt: string }>();
 
   const repository: BookingsRepository = {
     async transaction<T>(callback: (repository: BookingsRepository) => Promise<T>) { return callback(repository); },
@@ -79,6 +84,7 @@ function createMemoryBookingsRepository(seed: {
         confirmedAt: input.confirmedAt ? input.confirmedAt.toISOString() : null,
         rescheduledAt: input.rescheduledAt ? input.rescheduledAt.toISOString() : null,
         rescheduleReason: input.rescheduleReason ?? null,
+        complaint: input.complaint,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         psychologistType: input.psychologistType,
@@ -110,6 +116,8 @@ function createMemoryBookingsRepository(seed: {
     async listBookingsByPatientUserId(userId) { return Array.from(bookings.values()).filter((booking) => booking.patientUserId === userId); },
     async listBookingsByPsychologistUserId(userId) { return Array.from(bookings.values()).filter((booking) => booking.psychologistUserId === userId); },
     async findPaymentByOrderId(orderId) { return Array.from(payments.values()).find((payment) => payment.orderId === orderId) ?? null; },
+    async findPaymentById(paymentId) { return payments.get(paymentId) ?? null; },
+    async findPaymentByBookingId(bookingId) { return Array.from(payments.values()).find((payment) => payment.bookingId === bookingId) ?? null; },
     async hasPaymentEvent() { return false; },
     async createPaymentEvent() { return undefined; },
     async markPaymentCompleted(input) {
@@ -123,6 +131,10 @@ function createMemoryBookingsRepository(seed: {
     async markBookingConfirmed(input) {
       const booking = bookings.get(input.bookingId);
       if (booking) bookings.set(input.bookingId, { ...booking, status: "confirmed", meetLink: input.meetLink, confirmedAt: input.confirmedAt.toISOString(), rescheduledAt: null, rescheduleReason: null });
+    },
+    async markBookingCompleted(input) {
+      const booking = bookings.get(input.bookingId);
+      if (booking) bookings.set(input.bookingId, { ...booking, status: "completed", updatedAt: input.completedAt.toISOString() });
     },
     async markBookingRescheduled(input) {
       const booking = bookings.get(input.bookingId);
@@ -139,9 +151,25 @@ function createMemoryBookingsRepository(seed: {
       const session = sessions.get(sessionSlotId);
       if (session) sessions.set(sessionSlotId, { ...session, status: "booked", heldUntil: null });
     },
+    async markSessionSlotCompleted(sessionSlotId) {
+      const session = sessions.get(sessionSlotId);
+      if (session) sessions.set(sessionSlotId, { ...session, status: "completed", heldUntil: null });
+    },
     async markSessionSlotRescheduled(sessionSlotId) {
       const session = sessions.get(sessionSlotId);
       if (session) sessions.set(sessionSlotId, { ...session, status: "rescheduled", heldUntil: null });
+    },
+    async listMessagesByBookingId(bookingId) { return messages.filter((message) => message.bookingId === bookingId); },
+    async createMessage(input) {
+      const message = { id: crypto.randomUUID(), bookingId: input.bookingId, senderUserId: input.senderUserId, content: input.content, createdAt: new Date().toISOString() };
+      messages.push(message);
+      return message;
+    },
+    async findReviewByBookingId(bookingId) { return reviews.get(bookingId) ?? null; },
+    async createReview(input) {
+      const review = { id: crypto.randomUUID(), ...input, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      reviews.set(input.bookingId, review);
+      return review;
     },
   };
 
@@ -174,6 +202,7 @@ describe("booking routes", () => {
         bundleId: "22222222-2222-4222-8222-222222222222",
         profileId: "33333333-3333-4333-8333-333333333333",
         psychologistUserId: "psych-1",
+        psychologistApprovalStatus: "approved",
         psychologistType: "clinical",
         consultationChannel: "chat_and_meet",
         sessionDate: "2026-02-01T00:00:00.000Z",
@@ -207,12 +236,13 @@ describe("booking routes", () => {
     const create = await app.request("http://localhost/api/v1/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ sessionSlotId: "11111111-1111-4111-8111-111111111111" }),
+      body: JSON.stringify({ sessionSlotId: "11111111-1111-4111-8111-111111111111", complaint: "Sulit tidur dan mudah cemas." }),
     });
 
     expect(create.status).toBe(201);
     const createBody = await create.json();
     expect(createBody.data.booking.status).toBe("pending_payment");
+    expect(createBody.data.booking.complaint).toBe("Sulit tidur dan mudah cemas.");
     expect(createBody.data.booking.meetLink).toBeNull();
     expect(createBody.data.paymentUrl).toContain("https://app.pakasir.com/pay/pulih/150000");
 
@@ -229,13 +259,93 @@ describe("booking routes", () => {
     expect(detail.status).toBe(200);
     const detailBody = await detail.json();
     expect(detailBody.data.meetLink).toBeNull();
+    expect(detailBody.data.ratingSummary).toMatchObject({ averageRating: 0, reviewCount: 0 });
+    expect(detailBody.data.latestReviews).toEqual([]);
 
     const duplicate = await app.request("http://localhost/api/v1/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ sessionSlotId: "11111111-1111-4111-8111-111111111111" }),
+      body: JSON.stringify({ sessionSlotId: "11111111-1111-4111-8111-111111111111", complaint: "Sulit tidur dan mudah cemas." }),
     });
     expect(duplicate.status).toBe(409);
+  });
+
+  test("rejects booking for non-approved psychologist slot", async () => {
+    const authRepository = createMemoryAuthRepository([]);
+    const bookingsRepository = createMemoryBookingsRepository({
+      sessions: [{
+        id: "11111111-1111-4111-8111-111111111111",
+        bundleId: "22222222-2222-4222-8222-222222222222",
+        profileId: "33333333-3333-4333-8333-333333333333",
+        psychologistUserId: "psych-1",
+        psychologistApprovalStatus: "draft",
+        psychologistType: "clinical",
+        consultationChannel: "chat_and_meet",
+        sessionDate: "2026-02-01T00:00:00.000Z",
+        startsAt: "2026-02-01T08:00:00.000Z",
+        endsAt: "2026-02-01T11:00:00.000Z",
+        status: "available",
+        heldUntil: null,
+        packageName: "Paket 3 Jam",
+        packageDurationMinutes: 180,
+        priceAmount: 150000,
+      }],
+    });
+    const app = createApp(baseEnv, {}, { authRepository, bookingsRepository });
+    const register = await app.request("http://localhost/api/v1/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "patient@example.com", username: "patient1", password: "password123", confirm_password: "password123" }),
+    });
+    const token = (await register.json()).data.session.access_token as string;
+
+    const response = await app.request("http://localhost/api/v1/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ sessionSlotId: "11111111-1111-4111-8111-111111111111", complaint: "Sulit tidur dan mudah cemas." }),
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  test("rejects booking creation by psychologist role", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const authRepository = createMemoryAuthRepository([
+      { id: "psych-1", email: "psych@example.com", username: null, passwordHash, role: "psychologist", status: "active" },
+    ]);
+    const bookingsRepository = createMemoryBookingsRepository({
+      sessions: [{
+        id: "11111111-1111-4111-8111-111111111111",
+        bundleId: "22222222-2222-4222-8222-222222222222",
+        profileId: "33333333-3333-4333-8333-333333333333",
+        psychologistUserId: "psych-1",
+        psychologistApprovalStatus: "approved",
+        psychologistType: "clinical",
+        consultationChannel: "chat_and_meet",
+        sessionDate: "2026-02-01T00:00:00.000Z",
+        startsAt: "2026-02-01T08:00:00.000Z",
+        endsAt: "2026-02-01T11:00:00.000Z",
+        status: "available",
+        heldUntil: null,
+        packageName: "Paket 3 Jam",
+        packageDurationMinutes: 180,
+        priceAmount: 150000,
+      }],
+    });
+    const app = createApp(baseEnv, {}, { authRepository, bookingsRepository });
+    const token = (await (await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ identifier: "psych@example.com", password: "password123" }),
+    })).json()).data.session.access_token as string;
+
+    const response = await app.request("http://localhost/api/v1/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ sessionSlotId: "11111111-1111-4111-8111-111111111111", complaint: "Sulit tidur dan mudah cemas." }),
+    });
+
+    expect(response.status).toBe(403);
   });
 
   test("enforces owner-only booking access", async () => {
@@ -261,10 +371,11 @@ describe("booking routes", () => {
           packageNameSnapshot: "Paket 3 Jam",
           packageDurationMinutesSnapshot: 180,
           paymentExpiresAt: "2026-02-01T09:00:00.000Z",
-          meetLink: "https://meet.example/session",
+          meetLink: "https://meet.google.com/abc-defg-hij",
           confirmedAt: "2026-02-01T07:30:00.000Z",
           rescheduledAt: null,
           rescheduleReason: null,
+          complaint: "Sulit tidur dan mudah cemas.",
           createdAt: "2026-02-01T07:00:00.000Z",
           updatedAt: "2026-02-01T07:00:00.000Z",
           psychologistType: "clinical",
@@ -284,7 +395,7 @@ describe("booking routes", () => {
     });
     expect(own.status).toBe(200);
     const ownBody = await own.json();
-    expect(ownBody.data.meetLink).toBe("https://meet.example/session");
+    expect(ownBody.data.meetLink).toBe("https://meet.google.com/abc-defg-hij");
 
     const otherToken = (await (await app.request("http://localhost/api/v1/auth/login", {
       method: "POST",
@@ -309,7 +420,7 @@ describe("booking routes", () => {
     expect(psychList.status).toBe(200);
     const psychListBody = await psychList.json();
     expect(psychListBody.data).toHaveLength(1);
-    expect(psychListBody.data[0].meetLink).toBe("https://meet.example/session");
+    expect(psychListBody.data[0].meetLink).toBe("https://meet.google.com/abc-defg-hij");
   });
 
   test("confirms clinical booking and sends email event", async () => {
@@ -335,6 +446,7 @@ describe("booking routes", () => {
         confirmedAt: null,
         rescheduledAt: null,
         rescheduleReason: null,
+        complaint: "Sulit tidur dan mudah cemas.",
         createdAt: "2026-02-01T07:00:00.000Z",
         updatedAt: "2026-02-01T07:00:00.000Z",
         psychologistType: "clinical",
@@ -361,14 +473,137 @@ describe("booking routes", () => {
     const response = await app.request("http://localhost/api/v1/bookings/55555555-5555-4555-8555-555555555555/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${psychToken}` },
-      body: JSON.stringify({ meetLink: "https://meet.example/new-session" }),
+      body: JSON.stringify({ meetLink: "https://meet.google.com/new-session" }),
     });
 
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.data.status).toBe("confirmed");
-    expect(body.data.meetLink).toBe("https://meet.example/new-session");
+    expect(body.data.meetLink).toBe("https://meet.google.com/new-session");
     expect(notifications).toContain("booking_confirmed_session_ready");
+  });
+
+  test("rejects non-Google Meet link for clinical confirmation", async () => {
+    const authRepository = createMemoryAuthRepository([
+      { id: "psych-1", email: "psych@example.com", username: null, passwordHash: await hashPassword("password123", 4), role: "psychologist", status: "active" },
+    ]);
+    const bookingsRepository = createMemoryBookingsRepository({
+      bookings: [toBookingDetail({
+        id: "77777777-7777-4777-8777-777777777777",
+        patientUserId: "patient-1",
+        psychologistProfileId: "profile-1",
+        psychologistUserId: "psych-1",
+        sessionSlotId: "11111111-1111-4111-8111-111111111111",
+        consultationChannel: "chat_and_meet",
+        status: "payment_completed",
+        scheduledStartAt: "2026-02-01T08:00:00.000Z",
+        scheduledEndAt: "2026-02-01T09:00:00.000Z",
+        priceAmount: 150000,
+        packageNameSnapshot: "Paket 1 Jam",
+        packageDurationMinutesSnapshot: 60,
+        paymentExpiresAt: "2026-02-01T08:30:00.000Z",
+        meetLink: null,
+        confirmedAt: null,
+        rescheduledAt: null,
+        rescheduleReason: null,
+        complaint: "Sulit tidur dan mudah cemas.",
+        createdAt: "2026-02-01T07:00:00.000Z",
+        updatedAt: "2026-02-01T07:00:00.000Z",
+        psychologistType: "clinical",
+      }, { patientEmail: "patient@example.com", psychologistEmail: "psych@example.com", psychologistFullName: "Dr. Psych" })],
+    });
+    const app = createApp(baseEnv, {}, { authRepository, bookingsRepository });
+    const psychToken = (await (await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ identifier: "psych@example.com", password: "password123" }),
+    })).json()).data.session.access_token as string;
+
+    const response = await app.request("http://localhost/api/v1/bookings/77777777-7777-4777-8777-777777777777/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${psychToken}` },
+      body: JSON.stringify({ meetLink: "https://evil.example/session" }),
+    });
+
+    expect(response.status).toBe(422);
+  });
+
+  test("supports booking chat, completion, and one patient review", async () => {
+    const passwordHash = await hashPassword("password123", 4);
+    const authRepository = createMemoryAuthRepository([
+      { id: "patient-1", email: "patient@example.com", username: null, passwordHash, role: "patient", status: "active" },
+      { id: "psych-1", email: "psych@example.com", username: null, passwordHash, role: "psychologist", status: "active" },
+    ]);
+    const bookingsRepository = createMemoryBookingsRepository({
+      bookings: [toBookingDetail({
+        id: "88888888-8888-4888-8888-888888888888",
+        patientUserId: "patient-1",
+        psychologistProfileId: "profile-1",
+        psychologistUserId: "psych-1",
+        sessionSlotId: "11111111-1111-4111-8111-111111111111",
+        consultationChannel: "chat_and_meet",
+        status: "confirmed",
+        scheduledStartAt: "2026-02-01T08:00:00.000Z",
+        scheduledEndAt: "2026-02-01T09:00:00.000Z",
+        priceAmount: 150000,
+        packageNameSnapshot: "Paket 1 Jam",
+        packageDurationMinutesSnapshot: 60,
+        paymentExpiresAt: "2026-02-01T08:30:00.000Z",
+        meetLink: "https://meet.google.com/abc-defg-hij",
+        confirmedAt: "2026-02-01T07:30:00.000Z",
+        rescheduledAt: null,
+        rescheduleReason: null,
+        complaint: "Sulit tidur dan mudah cemas.",
+        createdAt: "2026-02-01T07:00:00.000Z",
+        updatedAt: "2026-02-01T07:00:00.000Z",
+        psychologistType: "clinical",
+      }, { patientEmail: "patient@example.com", psychologistEmail: "psych@example.com", psychologistFullName: "Dr. Psych" })],
+    });
+    const app = createApp(baseEnv, {}, { authRepository, bookingsRepository });
+    const patientToken = (await (await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ identifier: "patient@example.com", password: "password123" }),
+    })).json()).data.session.access_token as string;
+    const psychToken = (await (await app.request("http://localhost/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ identifier: "psych@example.com", password: "password123" }),
+    })).json()).data.session.access_token as string;
+
+    const message = await app.request("http://localhost/api/v1/bookings/88888888-8888-4888-8888-888888888888/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${patientToken}` },
+      body: JSON.stringify({ content: "Hello doctor" }),
+    });
+    expect(message.status).toBe(201);
+
+    const messages = await app.request("http://localhost/api/v1/bookings/88888888-8888-4888-8888-888888888888/messages", {
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${psychToken}` },
+    });
+    expect(messages.status).toBe(200);
+    expect((await messages.json()).data).toHaveLength(1);
+
+    const complete = await app.request("http://localhost/api/v1/bookings/88888888-8888-4888-8888-888888888888/complete", {
+      method: "POST",
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${psychToken}` },
+    });
+    expect(complete.status).toBe(200);
+    expect((await complete.json()).data.status).toBe("completed");
+
+    const review = await app.request("http://localhost/api/v1/bookings/88888888-8888-4888-8888-888888888888/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${patientToken}` },
+      body: JSON.stringify({ rating: 5, comment: "Helpful" }),
+    });
+    expect(review.status).toBe(201);
+
+    const duplicate = await app.request("http://localhost/api/v1/bookings/88888888-8888-4888-8888-888888888888/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${patientToken}` },
+      body: JSON.stringify({ rating: 4, comment: "Again" }),
+    });
+    expect(duplicate.status).toBe(409);
   });
 
   test("reschedules booking and sends email event", async () => {
@@ -382,6 +617,7 @@ describe("booking routes", () => {
           bundleId: "bundle-1",
           profileId: "profile-1",
           psychologistUserId: "psych-1",
+          psychologistApprovalStatus: "approved",
           psychologistType: "clinical",
           consultationChannel: "chat_and_meet",
           sessionDate: "2026-02-01T00:00:00.000Z",
@@ -398,6 +634,7 @@ describe("booking routes", () => {
           bundleId: "bundle-1",
           profileId: "profile-1",
           psychologistUserId: "psych-1",
+          psychologistApprovalStatus: "approved",
           psychologistType: "clinical",
           consultationChannel: "chat_and_meet",
           sessionDate: "2026-02-02T00:00:00.000Z",
@@ -424,10 +661,11 @@ describe("booking routes", () => {
         packageNameSnapshot: "Paket 1 Jam",
         packageDurationMinutesSnapshot: 60,
         paymentExpiresAt: "2026-02-01T08:30:00.000Z",
-        meetLink: "https://meet.example/session",
+        meetLink: "https://meet.google.com/abc-defg-hij",
         confirmedAt: "2026-02-01T07:30:00.000Z",
         rescheduledAt: null,
         rescheduleReason: null,
+        complaint: "Sulit tidur dan mudah cemas.",
         createdAt: "2026-02-01T07:00:00.000Z",
         updatedAt: "2026-02-01T07:00:00.000Z",
         psychologistType: "clinical",

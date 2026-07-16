@@ -26,14 +26,22 @@ function createRepository(seed: { payment: PaymentRecord; booking: BookingDetail
     async listBookingsByPatientUserId() { return []; },
     async listBookingsByPsychologistUserId() { return []; },
     async findPaymentByOrderId(orderId) { return orderId === payment.orderId ? payment : null; },
+    async findPaymentById(paymentId) { return paymentId === payment.id ? payment : null; },
+    async findPaymentByBookingId(bookingId) { return bookingId === booking.id ? payment : null; },
     async hasPaymentEvent(input) { return events.some((event) => event.eventType === input.eventType && event.providerStatus === input.providerStatus && event.orderId === input.orderId && event.amount === input.amount); },
     async createPaymentEvent(input) { events.push(input); },
     async markPaymentCompleted(input) { payment.status = "completed"; payment.paymentMethod = input.paymentMethod; payment.completedAt = input.completedAt.toISOString(); },
     async markBookingPaymentCompleted() { booking.status = "payment_completed"; },
     async markBookingConfirmed(input) { booking.status = "confirmed"; booking.meetLink = input.meetLink; booking.confirmedAt = input.confirmedAt.toISOString(); },
     async markBookingRescheduled() { booking.status = "rescheduled"; },
+    async markBookingCompleted() { booking.status = "completed"; },
     async markSessionSlotBooked() { return undefined; },
+    async markSessionSlotCompleted() { return undefined; },
     async markSessionSlotRescheduled() { return undefined; },
+    async listMessagesByBookingId() { return []; },
+    async createMessage() { throw new Error("not used"); },
+    async findReviewByBookingId() { return null; },
+    async createReview() { throw new Error("not used"); },
   };
   return { repository, payment, booking, events };
 }
@@ -52,17 +60,20 @@ function seedRecords() {
     priceAmount: 150000,
     packageNameSnapshot: "Paket 1 Jam",
     packageDurationMinutesSnapshot: 60,
-    paymentExpiresAt: "2026-02-01T08:30:00.000Z",
+    paymentExpiresAt: "2099-02-01T08:30:00.000Z",
     meetLink: null,
     confirmedAt: null,
     rescheduledAt: null,
     rescheduleReason: null,
+    complaint: "Sulit tidur dan mudah cemas.",
     createdAt: "2026-02-01T07:00:00.000Z",
     updatedAt: "2026-02-01T07:00:00.000Z",
     psychologistType: "general",
     patientEmail: "patient@example.com",
     psychologistEmail: "psych@example.com",
     psychologistFullName: "Dr. Psych",
+    ratingSummary: { averageRating: 0, reviewCount: 0 },
+    latestReviews: [],
   };
   const payment: PaymentRecord = {
     id: "payment-1",
@@ -74,7 +85,7 @@ function seedRecords() {
     paymentMethod: null,
     paymentUrl: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12",
     completedAt: null,
-    expiresAt: "2026-02-01T08:30:00.000Z",
+    expiresAt: "2099-02-01T08:30:00.000Z",
     providerMetadata: {},
     createdAt: "2026-02-01T07:00:00.000Z",
     updatedAt: "2026-02-01T07:00:00.000Z",
@@ -107,6 +118,17 @@ describe("Pakasir client", () => {
 });
 
 describe("payment service", () => {
+  test("returns owner-only safe payment status", async () => {
+    const { booking, payment } = seedRecords();
+    const state = createRepository({ booking, payment });
+    const service = createPaymentsService({ repository: state.repository, config, pakasirClient: { async getTransactionDetail() { throw new Error("not used"); }, async simulatePayment() { return undefined; } } });
+
+    const status = await service.getPaymentStatus("patient-1", "patient", payment.id);
+    expect(status).toMatchObject({ id: payment.id, status: "created" });
+    expect(status).not.toHaveProperty("providerMetadata");
+    await expect(service.getPaymentStatus("other", "patient", payment.id)).rejects.toThrow("own payment status");
+  });
+
   test("processes completed webhook idempotently", async () => {
     const { booking, payment } = seedRecords();
     const state = createRepository({ booking, payment });
@@ -128,6 +150,25 @@ describe("payment service", () => {
     expect(state.payment.status).toBe("completed");
     expect(state.booking.status).toBe("payment_completed");
     expect(state.events).toHaveLength(1);
+  });
+
+  test("rejects completed webhook after booking payment expiry without mutation", async () => {
+    const { booking, payment } = seedRecords();
+    booking.paymentExpiresAt = "2020-02-01T08:30:00.000Z";
+    const state = createRepository({ booking, payment });
+    const service = createPaymentsService({
+      repository: state.repository,
+      config,
+      pakasirClient: {
+        async getTransactionDetail() { throw new Error("should not call provider for expired payment"); },
+        async simulatePayment() { return undefined; },
+      },
+    });
+
+    await expect(service.processPakasirWebhook({ project: "pulih", orderId: payment.orderId, amount: 150000, status: "completed", paymentMethod: "qris", completedAt: null })).rejects.toThrow("Payment has expired");
+    expect(state.payment.status).toBe("created");
+    expect(state.booking.status).toBe("pending_payment");
+    expect(state.events).toHaveLength(0);
   });
 
   test("rejects webhook amount mismatch", async () => {

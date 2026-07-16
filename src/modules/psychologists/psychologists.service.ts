@@ -96,6 +96,14 @@ async function ensureNoOverlap(repository: PsychologistsRepository, profileId: s
   }
 }
 
+async function ensureBundleHasNoLockedSessions(repository: PsychologistsRepository, bundleId: string) {
+  const sessions = await repository.listSessionsByBundleIds([bundleId]);
+  const locked = sessions.find((session) => !["available", "cancelled", "expired"].includes(session.status));
+  if (locked) {
+    throw new AppError(AppErrorCode.Conflict, "Session bundle has booked or held sessions and cannot be changed.");
+  }
+}
+
 export function validateCredentialFile(file: File) {
   if (!ALLOWED_CONTENT_TYPES.has(file.type)) {
     throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["file: Credential file must be PDF, JPG, JPEG, or PNG."]);
@@ -108,22 +116,15 @@ export function validateCredentialFile(file: File) {
 export function createPsychologistsService(repository: PsychologistsRepository, storage?: CredentialStorage) {
   return {
     async upsertProfile(userId: string, input: PsychologistProfileInput) {
-      const activePlaces = (input.practicePlaces ?? []).filter((place) => place.isActive !== false);
-      if (input.type === "clinical" && activePlaces.length > 3) {
-        throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["practicePlaces: Clinical psychologists can submit at most 3 active practice places."]);
-      }
-      if (input.type === "general" && activePlaces.length > 0) {
-        throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["practicePlaces: Practice places are only accepted for clinical psychologists."]);
-      }
-
       return repository.upsertProfile({
         userId,
         type: input.type,
         consultationChannel: channelForType(input.type),
         fullName: input.fullName,
-        licenseNumber: input.licenseNumber ?? null,
+        dateOfBirth: input.dateOfBirth,
+        address: input.address,
+        photoUrl: input.photoUrl,
         bio: input.bio ?? null,
-        practicePlaces: input.practicePlaces ?? [],
       });
     },
     async getProfile(userId: string) {
@@ -140,7 +141,11 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
     async listPublicSessions(psychologistId: string) {
       const profile = await repository.findApprovedById(psychologistId);
       if (!profile) throw new AppError(AppErrorCode.NotFound, "Psychologist profile was not found.");
-      return repository.listSessionsByPsychologistId(profile.id);
+      const sessions = await repository.listSessionsByPsychologistId(profile.id);
+      return sessions.filter((session) => session.status === "available");
+    },
+    async listAllPublicSessions() {
+      return repository.listApprovedAvailableSessions();
     },
     async uploadCredentialFile(userId: string, documentType: CredentialDocumentType, file: File) {
       const profile = await repository.findByUserId(userId);
@@ -167,9 +172,6 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
       const profile = await repository.findByUserId(userId);
       if (!profile) throw new AppError(AppErrorCode.Conflict, "Psychologist profile must be completed before review submission.");
       if (!profile.fullName) throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["fullName: Full name is required."]);
-      if (profile.type === "clinical" && profile.practicePlaces.filter((place) => place.isActive).length > 3) {
-        throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["practicePlaces: Clinical psychologists can have at most 3 active practice places."]);
-      }
       const files = await repository.listCredentialFiles(profile.id);
       const provided = new Set(files.map((file) => file.documentType));
       const missing = REQUIRED_DOCUMENTS_BY_TYPE[profile.type].filter((documentType) => !provided.has(documentType));
@@ -218,6 +220,7 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
       if (!bundle) throw new AppError(AppErrorCode.NotFound, "Session bundle was not found.");
       if (bundle.profileId !== profile.id) throw new AppError(AppErrorCode.Forbidden, "You can only manage your own session bundles.");
       if (profile.approvalStatus !== "approved") throw new AppError(AppErrorCode.Forbidden, "Only approved psychologists can manage session bundles.");
+      await ensureBundleHasNoLockedSessions(repository, bundleId);
 
       const validated = validateBundleInput(input);
       const packageName = buildPackageName(validated.packageDurationMinutes);
@@ -243,6 +246,7 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
       if (!bundle) throw new AppError(AppErrorCode.NotFound, "Session bundle was not found.");
       if (bundle.profileId !== profile.id) throw new AppError(AppErrorCode.Forbidden, "You can only manage your own session bundles.");
       if (profile.approvalStatus !== "approved") throw new AppError(AppErrorCode.Forbidden, "Only approved psychologists can manage session bundles.");
+      await ensureBundleHasNoLockedSessions(repository, bundleId);
       await repository.deleteSessionsByBundleId(bundleId);
       await repository.deleteBundle(bundleId);
       return { deleted: true };

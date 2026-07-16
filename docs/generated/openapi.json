@@ -1192,6 +1192,284 @@
         }
       }
     },
+    "/api/v1/auth/register/psychologist": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register psychologist account",
+        "description": "Creates a psychologist auth account with email, username and password. Continue with /psychologists/register to complete type-specific professional profile and credentials.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "operationId": "post_api_v1_auth_register_psychologist",
+        "responses": {
+          "201": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AuthTokenResponse"
+                    },
+                    "meta": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "201 success",
+                    "value": {
+                      "success": true,
+                      "message": "Psychologist registration successful",
+                      "data": {
+                        "user": {
+                          "id": "11111111-1111-4111-8111-111111111111",
+                          "email": "patient@example.com",
+                          "nickname": null,
+                          "recovery_reason": null,
+                          "daily_checkin_time": null,
+                          "porn_free_goal": null,
+                          "onboarding_completed": false
+                        },
+                        "session": {
+                          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo",
+                          "token_type": "Bearer",
+                          "expires_in": 86400
+                        }
+                      },
+                      "meta": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Bad request",
+                    "value": {
+                      "success": false,
+                      "message": "Request body is malformed.",
+                      "data": null,
+                      "error": {
+                        "code": "BAD_REQUEST",
+                        "details": [
+                          "Request body must be valid JSON."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Conflict",
+                    "value": {
+                      "success": false,
+                      "message": "Email already registered.",
+                      "data": null,
+                      "error": {
+                        "code": "CONFLICT",
+                        "details": [
+                          "email: Email is already registered."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Validation error",
+                    "value": {
+                      "success": false,
+                      "message": "Request validation failed.",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          "email: Email must be valid.",
+                          "password: Password must be at least 8 characters."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Rate limited",
+                    "value": {
+                      "success": false,
+                      "message": "Too many registration attempts.",
+                      "data": null,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "details": [
+                          "Too many registration attempts. Please retry later."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Internal error",
+                    "value": {
+                      "success": false,
+                      "message": "Unexpected internal error.",
+                      "data": null,
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "details": [
+                          "Failed to create auth account."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "cURL",
+            "source": "curl -X POST http://localhost:3000/api/v1/auth/register/psychologist"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "email",
+                  "username",
+                  "password",
+                  "confirm_password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "patient@example.com"
+                  },
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 50,
+                    "pattern": "^[a-z0-9_]{3,50}$",
+                    "example": "patient1"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 72,
+                    "format": "password",
+                    "example": "password123"
+                  },
+                  "confirm_password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "format": "password",
+                    "example": "password123"
+                  }
+                }
+              },
+              "examples": {
+                "psychologist": {
+                  "summary": "psychologist",
+                  "value": {
+                    "email": "psychologist@example.com",
+                    "username": "psychologist1",
+                    "password": "password123",
+                    "confirm_password": "password123"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -1443,6 +1721,13 @@
                   "summary": "patient",
                   "value": {
                     "identifier": "patient@example.com",
+                    "password": "password123"
+                  }
+                },
+                "psychologist": {
+                  "summary": "psychologist",
+                  "value": {
+                    "identifier": "psychologist@example.com",
                     "password": "password123"
                   }
                 }
@@ -2355,7 +2640,7 @@
           "psychologists"
         ],
         "summary": "Create or update psychologist profile",
-        "description": "Creates psychologist profile shell. General psychologists cannot submit practice places. Clinical psychologists can submit max 3 practice places.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Creates psychologist profile shell with identity fields for psychologist listing and booking.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_psychologists_register",
         "responses": {
           "201": {
@@ -2407,19 +2692,30 @@
                         "id": "22222222-2222-4222-8222-222222222222",
                         "userId": "11111111-1111-4111-8111-111111111111",
                         "type": "clinical",
+                        "consultationChannel": "chat_and_meet",
                         "fullName": "Dr. Demo",
-                        "status": "draft",
-                        "licenseNumber": "STR-123456",
+                        "approvalStatus": "draft",
+                        "dateOfBirth": "1990-01-01",
+                        "address": "Jl. Demo No. 1",
+                        "photoUrl": "https://example.com/photo.jpg",
                         "bio": "Licensed clinical psychologist.",
-                        "practicePlaces": [
+                        "ratingSummary": {
+                          "averageRating": 4.8,
+                          "reviewCount": 12
+                        },
+                        "latestReviews": [
                           {
-                            "name": "Pulih Clinic",
-                            "address": "Jl. Demo No. 1",
-                            "isActive": true
+                            "id": "review_001",
+                            "bookingId": "55555555-5555-4555-8555-555555555555",
+                            "patientUserId": "11111111-1111-4111-8111-111111111111",
+                            "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                            "rating": 5,
+                            "comment": "Helpful",
+                            "createdAt": "2026-07-16T01:10:00.000Z",
+                            "updatedAt": "2026-07-16T01:10:00.000Z"
                           }
                         ],
-                        "createdAt": "2026-07-16T10:00:00.000Z",
-                        "updatedAt": "2026-07-16T10:00:00.000Z"
+                        "latestBundle": null
                       },
                       "meta": null
                     }
@@ -2586,7 +2882,10 @@
                 "additionalProperties": false,
                 "required": [
                   "type",
-                  "fullName"
+                  "fullName",
+                  "dateOfBirth",
+                  "address",
+                  "photoUrl"
                 ],
                 "properties": {
                   "type": {
@@ -2602,13 +2901,21 @@
                     "maxLength": 255,
                     "example": "Dr. Demo"
                   },
-                  "licenseNumber": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "example": "STR-123456",
-                    "maxLength": 128
+                  "dateOfBirth": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "1990-01-01"
+                  },
+                  "address": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Jl. Demo No. 1"
+                  },
+                  "photoUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2000,
+                    "example": "https://example.com/photo.jpg"
                   },
                   "bio": {
                     "type": [
@@ -2617,13 +2924,6 @@
                     ],
                     "example": "Licensed clinical psychologist.",
                     "maxLength": 2000
-                  },
-                  "practicePlaces": {
-                    "type": "array",
-                    "maxItems": 3,
-                    "items": {
-                      "$ref": "#/components/schemas/PracticePlace"
-                    }
                   }
                 }
               },
@@ -2633,15 +2933,10 @@
                   "value": {
                     "type": "clinical",
                     "fullName": "Dr. Demo",
-                    "licenseNumber": "STR-123456",
-                    "bio": "Licensed clinical psychologist.",
-                    "practicePlaces": [
-                      {
-                        "name": "Pulih Clinic",
-                        "address": "Jl. Demo No. 1",
-                        "isActive": true
-                      }
-                    ]
+                    "dateOfBirth": "1990-01-01",
+                    "address": "Jl. Demo No. 1",
+                    "photoUrl": "https://example.com/photo.jpg",
+                    "bio": "Licensed clinical psychologist."
                   }
                 },
                 "general": {
@@ -2649,7 +2944,9 @@
                   "value": {
                     "type": "general",
                     "fullName": "Konselor Demo",
-                    "licenseNumber": "SIPP-123456",
+                    "dateOfBirth": "1991-01-01",
+                    "address": "Jl. Demo No. 2",
+                    "photoUrl": "https://example.com/photo2.jpg",
                     "bio": "General counseling support."
                   }
                 }
@@ -2717,19 +3014,30 @@
                         "id": "22222222-2222-4222-8222-222222222222",
                         "userId": "11111111-1111-4111-8111-111111111111",
                         "type": "clinical",
+                        "consultationChannel": "chat_and_meet",
                         "fullName": "Dr. Demo",
-                        "status": "draft",
-                        "licenseNumber": "STR-123456",
+                        "approvalStatus": "draft",
+                        "dateOfBirth": "1990-01-01",
+                        "address": "Jl. Demo No. 1",
+                        "photoUrl": "https://example.com/photo.jpg",
                         "bio": "Licensed clinical psychologist.",
-                        "practicePlaces": [
+                        "ratingSummary": {
+                          "averageRating": 4.8,
+                          "reviewCount": 12
+                        },
+                        "latestReviews": [
                           {
-                            "name": "Pulih Clinic",
-                            "address": "Jl. Demo No. 1",
-                            "isActive": true
+                            "id": "review_001",
+                            "bookingId": "55555555-5555-4555-8555-555555555555",
+                            "patientUserId": "11111111-1111-4111-8111-111111111111",
+                            "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                            "rating": 5,
+                            "comment": "Helpful",
+                            "createdAt": "2026-07-16T01:10:00.000Z",
+                            "updatedAt": "2026-07-16T01:10:00.000Z"
                           }
                         ],
-                        "createdAt": "2026-07-16T10:00:00.000Z",
-                        "updatedAt": "2026-07-16T10:00:00.000Z"
+                        "latestBundle": null
                       },
                       "meta": null
                     }
@@ -2972,19 +3280,30 @@
                         "id": "22222222-2222-4222-8222-222222222222",
                         "userId": "11111111-1111-4111-8111-111111111111",
                         "type": "clinical",
+                        "consultationChannel": "chat_and_meet",
                         "fullName": "Dr. Demo",
-                        "status": "draft",
-                        "licenseNumber": "STR-123456",
+                        "approvalStatus": "draft",
+                        "dateOfBirth": "1990-01-01",
+                        "address": "Jl. Demo No. 1",
+                        "photoUrl": "https://example.com/photo.jpg",
                         "bio": "Licensed clinical psychologist.",
-                        "practicePlaces": [
+                        "ratingSummary": {
+                          "averageRating": 4.8,
+                          "reviewCount": 12
+                        },
+                        "latestReviews": [
                           {
-                            "name": "Pulih Clinic",
-                            "address": "Jl. Demo No. 1",
-                            "isActive": true
+                            "id": "review_001",
+                            "bookingId": "55555555-5555-4555-8555-555555555555",
+                            "patientUserId": "11111111-1111-4111-8111-111111111111",
+                            "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                            "rating": 5,
+                            "comment": "Helpful",
+                            "createdAt": "2026-07-16T01:10:00.000Z",
+                            "updatedAt": "2026-07-16T01:10:00.000Z"
                           }
                         ],
-                        "createdAt": "2026-07-16T10:00:00.000Z",
-                        "updatedAt": "2026-07-16T10:00:00.000Z"
+                        "latestBundle": null
                       },
                       "meta": null
                     }
@@ -3178,7 +3497,10 @@
                 "additionalProperties": false,
                 "required": [
                   "type",
-                  "fullName"
+                  "fullName",
+                  "dateOfBirth",
+                  "address",
+                  "photoUrl"
                 ],
                 "properties": {
                   "type": {
@@ -3194,13 +3516,21 @@
                     "maxLength": 255,
                     "example": "Dr. Demo"
                   },
-                  "licenseNumber": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "example": "STR-123456",
-                    "maxLength": 128
+                  "dateOfBirth": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "1990-01-01"
+                  },
+                  "address": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Jl. Demo No. 1"
+                  },
+                  "photoUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2000,
+                    "example": "https://example.com/photo.jpg"
                   },
                   "bio": {
                     "type": [
@@ -3209,13 +3539,6 @@
                     ],
                     "example": "Licensed clinical psychologist.",
                     "maxLength": 2000
-                  },
-                  "practicePlaces": {
-                    "type": "array",
-                    "maxItems": 3,
-                    "items": {
-                      "$ref": "#/components/schemas/PracticePlace"
-                    }
                   }
                 }
               },
@@ -3225,15 +3548,10 @@
                   "value": {
                     "type": "clinical",
                     "fullName": "Dr. Demo",
-                    "licenseNumber": "STR-123456",
-                    "bio": "Updated bio.",
-                    "practicePlaces": [
-                      {
-                        "name": "Pulih Clinic",
-                        "address": "Jl. Demo No. 1",
-                        "isActive": true
-                      }
-                    ]
+                    "dateOfBirth": "1990-01-01",
+                    "address": "Jl. Demo No. 1",
+                    "photoUrl": "https://example.com/photo.jpg",
+                    "bio": "Updated bio."
                   }
                 }
               }
@@ -3298,11 +3616,12 @@
                       "message": "Credential file uploaded successfully",
                       "data": {
                         "id": "77777777-7777-4777-8777-777777777777",
+                        "profileId": "22222222-2222-4222-8222-222222222222",
                         "documentType": "str",
+                        "objectKey": "psychologist-credentials/demo/str/uuid-credential-str.pdf",
                         "fileName": "credential-str.pdf",
                         "contentType": "application/pdf",
-                        "sizeBytes": 248000,
-                        "createdAt": "2026-07-16T10:00:00.000Z"
+                        "sizeBytes": 248000
                       },
                       "meta": null
                     }
@@ -3509,7 +3828,7 @@
           "psychologists"
         ],
         "summary": "Submit psychologist profile for review",
-        "description": "Validates required profile fields and credential file metadata, then moves profile to in_review for manual ops approval.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Validates required profile fields and credential file metadata, then moves profile to pending_review for manual ops approval.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_psychologists_me_submit_for_review",
         "responses": {
           "201": {
@@ -3561,19 +3880,30 @@
                         "id": "22222222-2222-4222-8222-222222222222",
                         "userId": "11111111-1111-4111-8111-111111111111",
                         "type": "clinical",
+                        "consultationChannel": "chat_and_meet",
                         "fullName": "Dr. Demo",
-                        "status": "draft",
-                        "licenseNumber": "STR-123456",
+                        "approvalStatus": "draft",
+                        "dateOfBirth": "1990-01-01",
+                        "address": "Jl. Demo No. 1",
+                        "photoUrl": "https://example.com/photo.jpg",
                         "bio": "Licensed clinical psychologist.",
-                        "practicePlaces": [
+                        "ratingSummary": {
+                          "averageRating": 4.8,
+                          "reviewCount": 12
+                        },
+                        "latestReviews": [
                           {
-                            "name": "Pulih Clinic",
-                            "address": "Jl. Demo No. 1",
-                            "isActive": true
+                            "id": "review_001",
+                            "bookingId": "55555555-5555-4555-8555-555555555555",
+                            "patientUserId": "11111111-1111-4111-8111-111111111111",
+                            "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                            "rating": 5,
+                            "comment": "Helpful",
+                            "createdAt": "2026-07-16T01:10:00.000Z",
+                            "updatedAt": "2026-07-16T01:10:00.000Z"
                           }
                         ],
-                        "createdAt": "2026-07-16T10:00:00.000Z",
-                        "updatedAt": "2026-07-16T10:00:00.000Z"
+                        "latestBundle": null
                       },
                       "meta": null
                     }
@@ -3788,8 +4118,9 @@
                       "message": "Request processed successfully",
                       "data": {
                         "fileId": "77777777-7777-4777-8777-777777777777",
-                        "reviewUrl": "https://example-r2-signed-url.local/credential.pdf",
-                        "expiresAt": "2026-07-16T10:15:00.000Z"
+                        "reviewUrl": null,
+                        "expiresAt": null,
+                        "message": "Signed review URL is not configured. Use Cloudflare R2 dashboard/manual operations for private review."
                       },
                       "meta": null
                     }
@@ -3964,7 +4295,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/SessionBundle"
+                      "$ref": "#/components/schemas/SessionBundleResult"
                     },
                     "meta": {
                       "oneOf": [
@@ -3989,15 +4320,32 @@
                       "success": true,
                       "message": "Session bundle created successfully",
                       "data": {
-                        "id": "33333333-3333-4333-8333-333333333333",
-                        "psychologistId": "22222222-2222-4222-8222-222222222222",
-                        "name": "Clinical session bundle 2026-06-01 to 2026-06-07",
-                        "dateStart": "2026-06-01",
-                        "dateEnd": "2026-06-07",
-                        "dailyStartTime": "09:00:00",
-                        "dailyEndTime": "12:00:00",
-                        "priceAmount": 150000,
-                        "generatedSessionCount": 7
+                        "bundle": {
+                          "id": "33333333-3333-4333-8333-333333333333",
+                          "profileId": "22222222-2222-4222-8222-222222222222",
+                          "packageName": "Clinical session bundle 2026-06-01 to 2026-06-07",
+                          "packageDurationMinutes": 180,
+                          "priceAmount": 150000,
+                          "dateStart": "2026-06-01",
+                          "dateEnd": "2026-06-07",
+                          "dailyStartTime": "09:00:00",
+                          "dailyEndTime": "12:00:00"
+                        },
+                        "sessions": [
+                          {
+                            "id": "44444444-4444-4444-8444-444444444444",
+                            "bundleId": "33333333-3333-4333-8333-333333333333",
+                            "profileId": "22222222-2222-4222-8222-222222222222",
+                            "sessionDate": "2026-06-03",
+                            "startsAt": "2026-06-03T09:00:00.000Z",
+                            "endsAt": "2026-06-03T12:00:00.000Z",
+                            "status": "available",
+                            "heldUntil": null,
+                            "packageName": "Paket 3 Jam",
+                            "packageDurationMinutes": 180,
+                            "priceAmount": 150000
+                          }
+                        ]
                       },
                       "meta": null
                     }
@@ -4272,7 +4620,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/SessionBundle"
+                      "$ref": "#/components/schemas/SessionBundleResult"
                     },
                     "meta": {
                       "oneOf": [
@@ -4297,15 +4645,32 @@
                       "success": true,
                       "message": "Session bundle updated successfully",
                       "data": {
-                        "id": "33333333-3333-4333-8333-333333333333",
-                        "psychologistId": "22222222-2222-4222-8222-222222222222",
-                        "name": "Clinical session bundle 2026-06-01 to 2026-06-07",
-                        "dateStart": "2026-06-01",
-                        "dateEnd": "2026-06-07",
-                        "dailyStartTime": "09:00:00",
-                        "dailyEndTime": "12:00:00",
-                        "priceAmount": 150000,
-                        "generatedSessionCount": 7
+                        "bundle": {
+                          "id": "33333333-3333-4333-8333-333333333333",
+                          "profileId": "22222222-2222-4222-8222-222222222222",
+                          "packageName": "Clinical session bundle 2026-06-01 to 2026-06-07",
+                          "packageDurationMinutes": 180,
+                          "priceAmount": 150000,
+                          "dateStart": "2026-06-01",
+                          "dateEnd": "2026-06-07",
+                          "dailyStartTime": "09:00:00",
+                          "dailyEndTime": "12:00:00"
+                        },
+                        "sessions": [
+                          {
+                            "id": "44444444-4444-4444-8444-444444444444",
+                            "bundleId": "33333333-3333-4333-8333-333333333333",
+                            "profileId": "22222222-2222-4222-8222-222222222222",
+                            "sessionDate": "2026-06-03",
+                            "startsAt": "2026-06-03T09:00:00.000Z",
+                            "endsAt": "2026-06-03T12:00:00.000Z",
+                            "status": "available",
+                            "heldUntil": null,
+                            "packageName": "Paket 3 Jam",
+                            "packageDurationMinutes": 180,
+                            "priceAmount": 150000
+                          }
+                        ]
                       },
                       "meta": null
                     }
@@ -4891,16 +5256,32 @@
                       "data": [
                         {
                           "id": "22222222-2222-4222-8222-222222222222",
+                          "userId": "11111111-1111-4111-8111-111111111111",
                           "type": "clinical",
+                          "consultationChannel": "chat_and_meet",
+                          "approvalStatus": "approved",
                           "fullName": "Dr. Demo",
+                          "dateOfBirth": "1990-01-01",
+                          "address": "Jl. Demo No. 1",
+                          "photoUrl": "https://example.com/photo.jpg",
                           "bio": "Licensed clinical psychologist.",
-                          "practicePlaces": [
+                          "ratingSummary": {
+                            "averageRating": 4.8,
+                            "reviewCount": 12
+                          },
+                          "latestReviews": [
                             {
-                              "name": "Pulih Clinic",
-                              "address": "Jl. Demo No. 1",
-                              "isActive": true
+                              "id": "review_001",
+                              "bookingId": "55555555-5555-4555-8555-555555555555",
+                              "patientUserId": "11111111-1111-4111-8111-111111111111",
+                              "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                              "rating": 5,
+                              "comment": "Helpful",
+                              "createdAt": "2026-07-16T01:10:00.000Z",
+                              "updatedAt": "2026-07-16T01:10:00.000Z"
                             }
-                          ]
+                          ],
+                          "latestBundle": null
                         }
                       ],
                       "meta": null
@@ -5057,16 +5438,32 @@
                       "message": "Request processed successfully",
                       "data": {
                         "id": "22222222-2222-4222-8222-222222222222",
+                        "userId": "11111111-1111-4111-8111-111111111111",
                         "type": "clinical",
+                        "consultationChannel": "chat_and_meet",
+                        "approvalStatus": "approved",
                         "fullName": "Dr. Demo",
+                        "dateOfBirth": "1990-01-01",
+                        "address": "Jl. Demo No. 1",
+                        "photoUrl": "https://example.com/photo.jpg",
                         "bio": "Licensed clinical psychologist.",
-                        "practicePlaces": [
+                        "ratingSummary": {
+                          "averageRating": 4.8,
+                          "reviewCount": 12
+                        },
+                        "latestReviews": [
                           {
-                            "name": "Pulih Clinic",
-                            "address": "Jl. Demo No. 1",
-                            "isActive": true
+                            "id": "review_001",
+                            "bookingId": "55555555-5555-4555-8555-555555555555",
+                            "patientUserId": "11111111-1111-4111-8111-111111111111",
+                            "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                            "rating": 5,
+                            "comment": "Helpful",
+                            "createdAt": "2026-07-16T01:10:00.000Z",
+                            "updatedAt": "2026-07-16T01:10:00.000Z"
                           }
-                        ]
+                        ],
+                        "latestBundle": null
                       },
                       "meta": null
                     }
@@ -5185,7 +5582,7 @@
           "psychologists"
         ],
         "summary": "List generated sessions",
-        "description": "Returns public available session slots generated from psychologist bundles.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns public available session slots generated from one approved psychologist.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_psychologists_psychologistId_sessions",
         "responses": {
           "200": {
@@ -5211,7 +5608,7 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/SessionSlot"
+                        "$ref": "#/components/schemas/PsychologistSession"
                       }
                     },
                     "meta": {
@@ -5239,14 +5636,16 @@
                       "data": [
                         {
                           "id": "44444444-4444-4444-8444-444444444444",
-                          "psychologistId": "22222222-2222-4222-8222-222222222222",
                           "bundleId": "33333333-3333-4333-8333-333333333333",
-                          "date": "2026-06-03",
-                          "startTime": "09:00:00",
-                          "endTime": "12:00:00",
-                          "priceAmount": 150000,
+                          "profileId": "22222222-2222-4222-8222-222222222222",
+                          "sessionDate": "2026-06-03",
+                          "startsAt": "2026-06-03T09:00:00.000Z",
+                          "endsAt": "2026-06-03T12:00:00.000Z",
                           "status": "available",
-                          "channel": "meet"
+                          "heldUntil": null,
+                          "packageName": "Paket 3 Jam",
+                          "packageDurationMinutes": 180,
+                          "priceAmount": 150000
                         }
                       ],
                       "meta": null
@@ -5360,6 +5759,203 @@
         ]
       }
     },
+    "/api/v1/psychologist-sessions": {
+      "get": {
+        "tags": [
+          "psychologist-sessions"
+        ],
+        "summary": "List all available psychologist sessions",
+        "description": "Returns all available session slots from approved psychologists with nested public psychologist summary. Use this endpoint when the client wants one global browse list.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "operationId": "get_api_v1_psychologist_sessions",
+        "responses": {
+          "200": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PublicPsychologistSession"
+                      }
+                    },
+                    "meta": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "200 success",
+                    "value": {
+                      "success": true,
+                      "message": "Psychologist sessions retrieved successfully",
+                      "data": [
+                        {
+                          "id": "44444444-4444-4444-8444-444444444444",
+                          "bundleId": "33333333-3333-4333-8333-333333333333",
+                          "profileId": "22222222-2222-4222-8222-222222222222",
+                          "sessionDate": "2026-06-03",
+                          "startsAt": "2026-06-03T09:00:00.000Z",
+                          "endsAt": "2026-06-03T12:00:00.000Z",
+                          "status": "available",
+                          "heldUntil": null,
+                          "packageName": "Paket 3 Jam",
+                          "packageDurationMinutes": 180,
+                          "priceAmount": 150000,
+                          "psychologist": {
+                            "id": "22222222-2222-4222-8222-222222222222",
+                            "userId": "11111111-1111-4111-8111-111111111111",
+                            "type": "clinical",
+                            "consultationChannel": "chat_and_meet",
+                            "fullName": "Dr. Demo",
+                            "dateOfBirth": "1990-01-01",
+                            "address": "Jl. Demo No. 1",
+                            "photoUrl": "https://example.com/photo.jpg",
+                            "bio": "Licensed clinical psychologist.",
+                            "ratingSummary": {
+                              "averageRating": 4.8,
+                              "reviewCount": 12
+                            },
+                            "latestReviews": [
+                              {
+                                "id": "review_001",
+                                "bookingId": "55555555-5555-4555-8555-555555555555",
+                                "patientUserId": "11111111-1111-4111-8111-111111111111",
+                                "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                                "rating": 5,
+                                "comment": "Helpful",
+                                "createdAt": "2026-07-16T01:10:00.000Z",
+                                "updatedAt": "2026-07-16T01:10:00.000Z"
+                              }
+                            ]
+                          }
+                        }
+                      ],
+                      "meta": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Bad request",
+                    "value": {
+                      "success": false,
+                      "message": "Request body is malformed.",
+                      "data": null,
+                      "error": {
+                        "code": "BAD_REQUEST",
+                        "details": [
+                          "Request body must be valid JSON."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Validation error",
+                    "value": {
+                      "success": false,
+                      "message": "Request validation failed.",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          "field: Must be valid."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Internal error",
+                    "value": {
+                      "success": false,
+                      "message": "Unexpected internal error.",
+                      "data": null,
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "details": [
+                          "An unexpected error occurred."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "cURL",
+            "source": "curl -X GET http://localhost:3000/api/v1/psychologist-sessions"
+          }
+        ]
+      }
+    },
     "/api/v1/bookings": {
       "post": {
         "tags": [
@@ -5390,7 +5986,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Booking"
+                      "$ref": "#/components/schemas/BookingCreateResult"
                     },
                     "meta": {
                       "oneOf": [
@@ -5415,22 +6011,64 @@
                       "success": true,
                       "message": "Booking created successfully",
                       "data": {
-                        "id": "55555555-5555-4555-8555-555555555555",
-                        "patientId": "11111111-1111-4111-8111-111111111111",
-                        "psychologistId": "22222222-2222-4222-8222-222222222222",
-                        "sessionSlotId": "44444444-4444-4444-8444-444444444444",
-                        "status": "pending_payment",
+                        "booking": {
+                          "id": "55555555-5555-4555-8555-555555555555",
+                          "patientUserId": "11111111-1111-4111-8111-111111111111",
+                          "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                          "psychologistUserId": "11111111-1111-4111-8111-111111111111",
+                          "sessionSlotId": "44444444-4444-4444-8444-444444444444",
+                          "consultationChannel": "chat_and_meet",
+                          "status": "pending_payment",
+                          "scheduledStartAt": "2026-06-03T08:00:00.000Z",
+                          "scheduledEndAt": "2026-06-03T11:00:00.000Z",
+                          "priceAmount": 150000,
+                          "packageNameSnapshot": "Paket 3 Jam",
+                          "packageDurationMinutesSnapshot": 180,
+                          "paymentExpiresAt": "2026-06-03T09:00:00.000Z",
+                          "complaint": "Sulit tidur dan mudah cemas.",
+                          "meetLink": null,
+                          "confirmedAt": null,
+                          "rescheduledAt": null,
+                          "rescheduleReason": null,
+                          "createdAt": "2026-06-03T08:00:00.000Z",
+                          "updatedAt": "2026-06-03T08:00:00.000Z",
+                          "psychologistType": "clinical",
+                          "patientEmail": "patient@example.com",
+                          "psychologistEmail": "psych@example.com",
+                          "psychologistFullName": "Dr. Psych",
+                          "ratingSummary": {
+                            "averageRating": 4.8,
+                            "reviewCount": 12
+                          },
+                          "latestReviews": [
+                            {
+                              "id": "review_001",
+                              "bookingId": "55555555-5555-4555-8555-555555555555",
+                              "patientUserId": "11111111-1111-4111-8111-111111111111",
+                              "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                              "rating": 5,
+                              "comment": "Helpful",
+                              "createdAt": "2026-07-16T01:10:00.000Z",
+                              "updatedAt": "2026-07-16T01:10:00.000Z"
+                            }
+                          ]
+                        },
                         "payment": {
                           "id": "66666666-6666-4666-8666-666666666666",
+                          "bookingId": "55555555-5555-4555-8555-555555555555",
                           "provider": "pakasir",
-                          "status": "pending",
+                          "orderId": "PLH-20260201T070000-ABCDEF12",
                           "amount": 150000,
-                          "paymentUrl": "https://pakasir.zone.id/pay/pulih-demo/order_123",
-                          "expiresAt": "2026-07-16T17:00:00.000Z"
+                          "status": "created",
+                          "paymentMethod": null,
+                          "paymentUrl": "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12",
+                          "completedAt": null,
+                          "expiresAt": "2026-07-16T17:00:00.000Z",
+                          "createdAt": "2026-07-16T16:00:00.000Z",
+                          "updatedAt": "2026-07-16T16:00:00.000Z"
                         },
-                        "sessionChannel": "meet",
-                        "meetLink": null,
-                        "scheduledAt": "2026-06-03T02:00:00.000Z"
+                        "paymentUrl": "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12",
+                        "instruction": "Pay via Pakasir using the link above."
                       },
                       "meta": null
                     }
@@ -5622,13 +6260,20 @@
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "sessionSlotId"
+                  "sessionSlotId",
+                  "complaint"
                 ],
                 "properties": {
                   "sessionSlotId": {
                     "type": "string",
                     "format": "uuid",
                     "example": "44444444-4444-4444-8444-444444444444"
+                  },
+                  "complaint": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "example": "Sulit tidur dan mudah cemas."
                   }
                 }
               },
@@ -5636,7 +6281,8 @@
                 "slot": {
                   "summary": "slot",
                   "value": {
-                    "sessionSlotId": "44444444-4444-4444-8444-444444444444"
+                    "sessionSlotId": "44444444-4444-4444-8444-444444444444",
+                    "complaint": "Sulit tidur dan mudah cemas."
                   }
                 }
               }
@@ -5703,21 +6349,45 @@
                       "data": [
                         {
                           "id": "55555555-5555-4555-8555-555555555555",
-                          "patientId": "11111111-1111-4111-8111-111111111111",
-                          "psychologistId": "22222222-2222-4222-8222-222222222222",
+                          "patientUserId": "11111111-1111-4111-8111-111111111111",
+                          "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                          "psychologistUserId": "11111111-1111-4111-8111-111111111111",
                           "sessionSlotId": "44444444-4444-4444-8444-444444444444",
+                          "consultationChannel": "chat_and_meet",
                           "status": "pending_payment",
-                          "payment": {
-                            "id": "66666666-6666-4666-8666-666666666666",
-                            "provider": "pakasir",
-                            "status": "pending",
-                            "amount": 150000,
-                            "paymentUrl": "https://pakasir.zone.id/pay/pulih-demo/order_123",
-                            "expiresAt": "2026-07-16T17:00:00.000Z"
-                          },
-                          "sessionChannel": "meet",
+                          "scheduledStartAt": "2026-06-03T08:00:00.000Z",
+                          "scheduledEndAt": "2026-06-03T11:00:00.000Z",
+                          "priceAmount": 150000,
+                          "packageNameSnapshot": "Paket 3 Jam",
+                          "packageDurationMinutesSnapshot": 180,
+                          "paymentExpiresAt": "2026-06-03T09:00:00.000Z",
+                          "complaint": "Sulit tidur dan mudah cemas.",
                           "meetLink": null,
-                          "scheduledAt": "2026-06-03T02:00:00.000Z"
+                          "confirmedAt": null,
+                          "rescheduledAt": null,
+                          "rescheduleReason": null,
+                          "createdAt": "2026-06-03T08:00:00.000Z",
+                          "updatedAt": "2026-06-03T08:00:00.000Z",
+                          "psychologistType": "clinical",
+                          "patientEmail": "patient@example.com",
+                          "psychologistEmail": "psych@example.com",
+                          "psychologistFullName": "Dr. Psych",
+                          "ratingSummary": {
+                            "averageRating": 4.8,
+                            "reviewCount": 12
+                          },
+                          "latestReviews": [
+                            {
+                              "id": "review_001",
+                              "bookingId": "55555555-5555-4555-8555-555555555555",
+                              "patientUserId": "11111111-1111-4111-8111-111111111111",
+                              "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                              "rating": 5,
+                              "comment": "Helpful",
+                              "createdAt": "2026-07-16T01:10:00.000Z",
+                              "updatedAt": "2026-07-16T01:10:00.000Z"
+                            }
+                          ]
                         }
                       ],
                       "meta": null
@@ -5960,21 +6630,45 @@
                       "message": "Booking retrieved successfully",
                       "data": {
                         "id": "55555555-5555-4555-8555-555555555555",
-                        "patientId": "11111111-1111-4111-8111-111111111111",
-                        "psychologistId": "22222222-2222-4222-8222-222222222222",
+                        "patientUserId": "11111111-1111-4111-8111-111111111111",
+                        "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                        "psychologistUserId": "11111111-1111-4111-8111-111111111111",
                         "sessionSlotId": "44444444-4444-4444-8444-444444444444",
+                        "consultationChannel": "chat_and_meet",
                         "status": "pending_payment",
-                        "payment": {
-                          "id": "66666666-6666-4666-8666-666666666666",
-                          "provider": "pakasir",
-                          "status": "pending",
-                          "amount": 150000,
-                          "paymentUrl": "https://pakasir.zone.id/pay/pulih-demo/order_123",
-                          "expiresAt": "2026-07-16T17:00:00.000Z"
-                        },
-                        "sessionChannel": "meet",
+                        "scheduledStartAt": "2026-06-03T08:00:00.000Z",
+                        "scheduledEndAt": "2026-06-03T11:00:00.000Z",
+                        "priceAmount": 150000,
+                        "packageNameSnapshot": "Paket 3 Jam",
+                        "packageDurationMinutesSnapshot": 180,
+                        "paymentExpiresAt": "2026-06-03T09:00:00.000Z",
+                        "complaint": "Sulit tidur dan mudah cemas.",
                         "meetLink": null,
-                        "scheduledAt": "2026-06-03T02:00:00.000Z"
+                        "confirmedAt": null,
+                        "rescheduledAt": null,
+                        "rescheduleReason": null,
+                        "createdAt": "2026-06-03T08:00:00.000Z",
+                        "updatedAt": "2026-06-03T08:00:00.000Z",
+                        "psychologistType": "clinical",
+                        "patientEmail": "patient@example.com",
+                        "psychologistEmail": "psych@example.com",
+                        "psychologistFullName": "Dr. Psych",
+                        "ratingSummary": {
+                          "averageRating": 4.8,
+                          "reviewCount": 12
+                        },
+                        "latestReviews": [
+                          {
+                            "id": "review_001",
+                            "bookingId": "55555555-5555-4555-8555-555555555555",
+                            "patientUserId": "11111111-1111-4111-8111-111111111111",
+                            "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                            "rating": 5,
+                            "comment": "Helpful",
+                            "createdAt": "2026-07-16T01:10:00.000Z",
+                            "updatedAt": "2026-07-16T01:10:00.000Z"
+                          }
+                        ]
                       },
                       "meta": null
                     }
@@ -6229,21 +6923,45 @@
                       "message": "Booking confirmed successfully",
                       "data": {
                         "id": "55555555-5555-4555-8555-555555555555",
-                        "patientId": "11111111-1111-4111-8111-111111111111",
-                        "psychologistId": "22222222-2222-4222-8222-222222222222",
+                        "patientUserId": "11111111-1111-4111-8111-111111111111",
+                        "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                        "psychologistUserId": "11111111-1111-4111-8111-111111111111",
                         "sessionSlotId": "44444444-4444-4444-8444-444444444444",
+                        "consultationChannel": "chat_and_meet",
                         "status": "pending_payment",
-                        "payment": {
-                          "id": "66666666-6666-4666-8666-666666666666",
-                          "provider": "pakasir",
-                          "status": "pending",
-                          "amount": 150000,
-                          "paymentUrl": "https://pakasir.zone.id/pay/pulih-demo/order_123",
-                          "expiresAt": "2026-07-16T17:00:00.000Z"
-                        },
-                        "sessionChannel": "meet",
+                        "scheduledStartAt": "2026-06-03T08:00:00.000Z",
+                        "scheduledEndAt": "2026-06-03T11:00:00.000Z",
+                        "priceAmount": 150000,
+                        "packageNameSnapshot": "Paket 3 Jam",
+                        "packageDurationMinutesSnapshot": 180,
+                        "paymentExpiresAt": "2026-06-03T09:00:00.000Z",
+                        "complaint": "Sulit tidur dan mudah cemas.",
                         "meetLink": null,
-                        "scheduledAt": "2026-06-03T02:00:00.000Z"
+                        "confirmedAt": null,
+                        "rescheduledAt": null,
+                        "rescheduleReason": null,
+                        "createdAt": "2026-06-03T08:00:00.000Z",
+                        "updatedAt": "2026-06-03T08:00:00.000Z",
+                        "psychologistType": "clinical",
+                        "patientEmail": "patient@example.com",
+                        "psychologistEmail": "psych@example.com",
+                        "psychologistFullName": "Dr. Psych",
+                        "ratingSummary": {
+                          "averageRating": 4.8,
+                          "reviewCount": 12
+                        },
+                        "latestReviews": [
+                          {
+                            "id": "review_001",
+                            "bookingId": "55555555-5555-4555-8555-555555555555",
+                            "patientUserId": "11111111-1111-4111-8111-111111111111",
+                            "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                            "rating": 5,
+                            "comment": "Helpful",
+                            "createdAt": "2026-07-16T01:10:00.000Z",
+                            "updatedAt": "2026-07-16T01:10:00.000Z"
+                          }
+                        ]
                       },
                       "meta": null
                     }
@@ -6478,6 +7196,1148 @@
         }
       }
     },
+    "/api/v1/bookings/{bookingId}/complete": {
+      "post": {
+        "tags": [
+          "bookings"
+        ],
+        "summary": "Complete booking",
+        "description": "Assigned psychologist marks confirmed or rescheduled booking as completed so patient can submit review.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "operationId": "post_api_v1_bookings_bookingId_complete",
+        "responses": {
+          "201": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Booking"
+                    },
+                    "meta": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "201 success",
+                    "value": {
+                      "success": true,
+                      "message": "Booking completed successfully",
+                      "data": {
+                        "id": "55555555-5555-4555-8555-555555555555",
+                        "patientUserId": "11111111-1111-4111-8111-111111111111",
+                        "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                        "psychologistUserId": "11111111-1111-4111-8111-111111111111",
+                        "sessionSlotId": "44444444-4444-4444-8444-444444444444",
+                        "consultationChannel": "chat_and_meet",
+                        "status": "pending_payment",
+                        "scheduledStartAt": "2026-06-03T08:00:00.000Z",
+                        "scheduledEndAt": "2026-06-03T11:00:00.000Z",
+                        "priceAmount": 150000,
+                        "packageNameSnapshot": "Paket 3 Jam",
+                        "packageDurationMinutesSnapshot": 180,
+                        "paymentExpiresAt": "2026-06-03T09:00:00.000Z",
+                        "complaint": "Sulit tidur dan mudah cemas.",
+                        "meetLink": null,
+                        "confirmedAt": null,
+                        "rescheduledAt": null,
+                        "rescheduleReason": null,
+                        "createdAt": "2026-06-03T08:00:00.000Z",
+                        "updatedAt": "2026-06-03T08:00:00.000Z",
+                        "psychologistType": "clinical",
+                        "patientEmail": "patient@example.com",
+                        "psychologistEmail": "psych@example.com",
+                        "psychologistFullName": "Dr. Psych",
+                        "ratingSummary": {
+                          "averageRating": 4.8,
+                          "reviewCount": 12
+                        },
+                        "latestReviews": [
+                          {
+                            "id": "review_001",
+                            "bookingId": "55555555-5555-4555-8555-555555555555",
+                            "patientUserId": "11111111-1111-4111-8111-111111111111",
+                            "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                            "rating": 5,
+                            "comment": "Helpful",
+                            "createdAt": "2026-07-16T01:10:00.000Z",
+                            "updatedAt": "2026-07-16T01:10:00.000Z"
+                          }
+                        ]
+                      },
+                      "meta": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Unauthenticated",
+                    "value": {
+                      "success": false,
+                      "message": "Authentication required.",
+                      "data": null,
+                      "error": {
+                        "code": "UNAUTHENTICATED",
+                        "details": [
+                          "Bearer token is missing or invalid."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Forbidden",
+                    "value": {
+                      "success": false,
+                      "message": "Access denied.",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": [
+                          "You can only access your own booking."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Not found",
+                    "value": {
+                      "success": false,
+                      "message": "Booking not found.",
+                      "data": null,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "details": [
+                          "Booking was not found."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Conflict",
+                    "value": {
+                      "success": false,
+                      "message": "Booking conflicts with current state.",
+                      "data": null,
+                      "error": {
+                        "code": "CONFLICT",
+                        "details": [
+                          "Booking state cannot be changed."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Validation error",
+                    "value": {
+                      "success": false,
+                      "message": "Request validation failed.",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          "sessionSlotId: Must be a valid session slot id."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Internal error",
+                    "value": {
+                      "success": false,
+                      "message": "Unexpected internal error.",
+                      "data": null,
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "details": [
+                          "Failed to process booking request."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "cURL",
+            "source": "curl -X POST http://localhost:3000/api/v1/bookings/{bookingId}/complete"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "bookingId_uuid"
+            },
+            "description": "Route parameter: bookingId."
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bookings/{bookingId}/messages": {
+      "get": {
+        "tags": [
+          "bookings"
+        ],
+        "summary": "List booking messages",
+        "description": "Returns booking chat messages for booking patient or assigned psychologist. Chat is available only after payment completion or later.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "operationId": "get_api_v1_bookings_bookingId_messages",
+        "responses": {
+          "200": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BookingMessage"
+                      }
+                    },
+                    "meta": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "200 success",
+                    "value": {
+                      "success": true,
+                      "message": "Booking messages retrieved successfully",
+                      "data": [
+                        {
+                          "id": "msg_001",
+                          "bookingId": "55555555-5555-4555-8555-555555555555",
+                          "senderUserId": "11111111-1111-4111-8111-111111111111",
+                          "content": "Hello doctor",
+                          "createdAt": "2026-07-16T01:10:00.000Z"
+                        }
+                      ],
+                      "meta": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Unauthenticated",
+                    "value": {
+                      "success": false,
+                      "message": "Authentication required.",
+                      "data": null,
+                      "error": {
+                        "code": "UNAUTHENTICATED",
+                        "details": [
+                          "Bearer token is missing or invalid."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Forbidden",
+                    "value": {
+                      "success": false,
+                      "message": "Access denied.",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": [
+                          "You can only access your own booking."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Not found",
+                    "value": {
+                      "success": false,
+                      "message": "Booking not found.",
+                      "data": null,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "details": [
+                          "Booking was not found."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Conflict",
+                    "value": {
+                      "success": false,
+                      "message": "Booking conflicts with current state.",
+                      "data": null,
+                      "error": {
+                        "code": "CONFLICT",
+                        "details": [
+                          "Booking state cannot be changed."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Validation error",
+                    "value": {
+                      "success": false,
+                      "message": "Request validation failed.",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          "sessionSlotId: Must be a valid session slot id."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Internal error",
+                    "value": {
+                      "success": false,
+                      "message": "Unexpected internal error.",
+                      "data": null,
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "details": [
+                          "Failed to process booking request."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "cURL",
+            "source": "curl -X GET http://localhost:3000/api/v1/bookings/{bookingId}/messages"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "bookingId_uuid"
+            },
+            "description": "Route parameter: bookingId."
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "bookings"
+        ],
+        "summary": "Create booking message",
+        "description": "Creates booking chat message for booking patient or assigned psychologist. Chat is available only after payment completion or later.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "operationId": "post_api_v1_bookings_bookingId_messages",
+        "responses": {
+          "201": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BookingMessage"
+                    },
+                    "meta": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "201 success",
+                    "value": {
+                      "success": true,
+                      "message": "Booking message created successfully",
+                      "data": {
+                        "id": "msg_001",
+                        "bookingId": "55555555-5555-4555-8555-555555555555",
+                        "senderUserId": "11111111-1111-4111-8111-111111111111",
+                        "content": "Hello doctor",
+                        "createdAt": "2026-07-16T01:10:00.000Z"
+                      },
+                      "meta": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Unauthenticated",
+                    "value": {
+                      "success": false,
+                      "message": "Authentication required.",
+                      "data": null,
+                      "error": {
+                        "code": "UNAUTHENTICATED",
+                        "details": [
+                          "Bearer token is missing or invalid."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Forbidden",
+                    "value": {
+                      "success": false,
+                      "message": "Access denied.",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": [
+                          "You can only access your own booking."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Not found",
+                    "value": {
+                      "success": false,
+                      "message": "Booking not found.",
+                      "data": null,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "details": [
+                          "Booking was not found."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Conflict",
+                    "value": {
+                      "success": false,
+                      "message": "Booking conflicts with current state.",
+                      "data": null,
+                      "error": {
+                        "code": "CONFLICT",
+                        "details": [
+                          "Booking state cannot be changed."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Validation error",
+                    "value": {
+                      "success": false,
+                      "message": "Request validation failed.",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          "sessionSlotId: Must be a valid session slot id."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Internal error",
+                    "value": {
+                      "success": false,
+                      "message": "Unexpected internal error.",
+                      "data": null,
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "details": [
+                          "Failed to process booking request."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "cURL",
+            "source": "curl -X POST http://localhost:3000/api/v1/bookings/{bookingId}/messages"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "bookingId_uuid"
+            },
+            "description": "Route parameter: bookingId."
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "content"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "example": "Hello doctor"
+                  }
+                }
+              },
+              "examples": {
+                "message": {
+                  "summary": "message",
+                  "value": {
+                    "content": "Hello doctor"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{bookingId}/review": {
+      "post": {
+        "tags": [
+          "bookings"
+        ],
+        "summary": "Create booking review",
+        "description": "Creates one patient review after booking is completed. Rating must be 1-5.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "operationId": "post_api_v1_bookings_bookingId_review",
+        "responses": {
+          "201": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BookingReview"
+                    },
+                    "meta": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "201 success",
+                    "value": {
+                      "success": true,
+                      "message": "Booking review created successfully",
+                      "data": {
+                        "id": "review_001",
+                        "bookingId": "55555555-5555-4555-8555-555555555555",
+                        "patientUserId": "11111111-1111-4111-8111-111111111111",
+                        "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                        "rating": 5,
+                        "comment": "Helpful",
+                        "createdAt": "2026-07-16T01:10:00.000Z",
+                        "updatedAt": "2026-07-16T01:10:00.000Z"
+                      },
+                      "meta": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Unauthenticated",
+                    "value": {
+                      "success": false,
+                      "message": "Authentication required.",
+                      "data": null,
+                      "error": {
+                        "code": "UNAUTHENTICATED",
+                        "details": [
+                          "Bearer token is missing or invalid."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Forbidden",
+                    "value": {
+                      "success": false,
+                      "message": "Access denied.",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": [
+                          "You can only access your own booking."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Not found",
+                    "value": {
+                      "success": false,
+                      "message": "Booking not found.",
+                      "data": null,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "details": [
+                          "Booking was not found."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Conflict",
+                    "value": {
+                      "success": false,
+                      "message": "Booking conflicts with current state.",
+                      "data": null,
+                      "error": {
+                        "code": "CONFLICT",
+                        "details": [
+                          "Booking state cannot be changed."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Validation error",
+                    "value": {
+                      "success": false,
+                      "message": "Request validation failed.",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          "sessionSlotId: Must be a valid session slot id."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Internal error",
+                    "value": {
+                      "success": false,
+                      "message": "Unexpected internal error.",
+                      "data": null,
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "details": [
+                          "Failed to process booking request."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "cURL",
+            "source": "curl -X POST http://localhost:3000/api/v1/bookings/{bookingId}/review"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "bookingId_uuid"
+            },
+            "description": "Route parameter: bookingId."
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rating"
+                ],
+                "properties": {
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "example": 5
+                  },
+                  "comment": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": "Helpful",
+                    "maxLength": 2000
+                  }
+                }
+              },
+              "examples": {
+                "review": {
+                  "summary": "review",
+                  "value": {
+                    "rating": 5,
+                    "comment": "Helpful"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/bookings/{bookingId}/reschedule": {
       "post": {
         "tags": [
@@ -6534,21 +8394,45 @@
                       "message": "Booking rescheduled successfully",
                       "data": {
                         "id": "55555555-5555-4555-8555-555555555555",
-                        "patientId": "11111111-1111-4111-8111-111111111111",
-                        "psychologistId": "22222222-2222-4222-8222-222222222222",
+                        "patientUserId": "11111111-1111-4111-8111-111111111111",
+                        "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                        "psychologistUserId": "11111111-1111-4111-8111-111111111111",
                         "sessionSlotId": "44444444-4444-4444-8444-444444444444",
+                        "consultationChannel": "chat_and_meet",
                         "status": "pending_payment",
-                        "payment": {
-                          "id": "66666666-6666-4666-8666-666666666666",
-                          "provider": "pakasir",
-                          "status": "pending",
-                          "amount": 150000,
-                          "paymentUrl": "https://pakasir.zone.id/pay/pulih-demo/order_123",
-                          "expiresAt": "2026-07-16T17:00:00.000Z"
-                        },
-                        "sessionChannel": "meet",
+                        "scheduledStartAt": "2026-06-03T08:00:00.000Z",
+                        "scheduledEndAt": "2026-06-03T11:00:00.000Z",
+                        "priceAmount": 150000,
+                        "packageNameSnapshot": "Paket 3 Jam",
+                        "packageDurationMinutesSnapshot": 180,
+                        "paymentExpiresAt": "2026-06-03T09:00:00.000Z",
+                        "complaint": "Sulit tidur dan mudah cemas.",
                         "meetLink": null,
-                        "scheduledAt": "2026-06-03T02:00:00.000Z"
+                        "confirmedAt": null,
+                        "rescheduledAt": null,
+                        "rescheduleReason": null,
+                        "createdAt": "2026-06-03T08:00:00.000Z",
+                        "updatedAt": "2026-06-03T08:00:00.000Z",
+                        "psychologistType": "clinical",
+                        "patientEmail": "patient@example.com",
+                        "psychologistEmail": "psych@example.com",
+                        "psychologistFullName": "Dr. Psych",
+                        "ratingSummary": {
+                          "averageRating": 4.8,
+                          "reviewCount": 12
+                        },
+                        "latestReviews": [
+                          {
+                            "id": "review_001",
+                            "bookingId": "55555555-5555-4555-8555-555555555555",
+                            "patientUserId": "11111111-1111-4111-8111-111111111111",
+                            "psychologistProfileId": "22222222-2222-4222-8222-222222222222",
+                            "rating": 5,
+                            "comment": "Helpful",
+                            "createdAt": "2026-07-16T01:10:00.000Z",
+                            "updatedAt": "2026-07-16T01:10:00.000Z"
+                          }
+                        ]
                       },
                       "meta": null
                     }
@@ -6784,6 +8668,297 @@
         }
       }
     },
+    "/api/v1/payments/{paymentId}/status": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Read payment status",
+        "description": "Returns safe payment status for owner only. No provider metadata or secrets are exposed.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "operationId": "get_api_v1_payments_paymentId_status",
+        "responses": {
+          "200": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PaymentStatus"
+                    },
+                    "meta": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "200 success",
+                    "value": {
+                      "success": true,
+                      "message": "Payment status retrieved successfully",
+                      "data": {
+                        "id": "66666666-6666-4666-8666-666666666666",
+                        "bookingId": "55555555-5555-4555-8555-555555555555",
+                        "provider": "pakasir",
+                        "orderId": "PLH-20260201T070000-ABCDEF12",
+                        "amount": 150000,
+                        "status": "created",
+                        "paymentMethod": null,
+                        "paymentUrl": "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12",
+                        "completedAt": null,
+                        "expiresAt": "2026-07-16T17:00:00.000Z"
+                      },
+                      "meta": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Bad request",
+                    "value": {
+                      "success": false,
+                      "message": "Webhook body is malformed.",
+                      "data": null,
+                      "error": {
+                        "code": "BAD_REQUEST",
+                        "details": [
+                          "Request body must be valid JSON."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Not found",
+                    "value": {
+                      "success": false,
+                      "message": "Booking not found.",
+                      "data": null,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "details": [
+                          "Webhook order_id does not match any booking."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Conflict",
+                    "value": {
+                      "success": false,
+                      "message": "Payment amount mismatch.",
+                      "data": null,
+                      "error": {
+                        "code": "CONFLICT",
+                        "details": [
+                          "amount: Webhook amount does not match booking amount."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Validation error",
+                    "value": {
+                      "success": false,
+                      "message": "Request validation failed.",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          "project: Project is required.",
+                          "order_id: Order id is required."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Internal error",
+                    "value": {
+                      "success": false,
+                      "message": "Unexpected internal error.",
+                      "data": null,
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "details": [
+                          "Failed to process payment webhook."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Downstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Downstream error",
+                    "value": {
+                      "success": false,
+                      "message": "Payment provider detail lookup failed.",
+                      "data": null,
+                      "error": {
+                        "code": "DOWNSTREAM_ERROR",
+                        "details": [
+                          "Failed to verify Pakasir transaction detail."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Service unavailable",
+                    "value": {
+                      "success": false,
+                      "message": "Payment provider is temporarily unavailable.",
+                      "data": null,
+                      "error": {
+                        "code": "SERVICE_UNAVAILABLE",
+                        "details": [
+                          "Pakasir webhook verification is temporarily unavailable."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "cURL",
+            "source": "curl -X GET http://localhost:3000/api/v1/payments/{paymentId}/status"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "paymentId_uuid"
+            },
+            "description": "Route parameter: paymentId."
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/payments/pakasir/webhook": {
       "post": {
         "tags": [
@@ -6839,11 +9014,10 @@
                       "success": true,
                       "message": "Payment webhook processed successfully",
                       "data": {
-                        "orderId": "order_123",
+                        "paymentId": "66666666-6666-4666-8666-666666666666",
                         "bookingId": "55555555-5555-4555-8555-555555555555",
-                        "paymentStatus": "paid",
-                        "bookingStatus": "paid",
-                        "processed": true
+                        "status": "completed",
+                        "idempotent": false
                       },
                       "meta": null
                     }
@@ -11951,16 +14125,10 @@
                       "success": true,
                       "message": "Relapse prevention plan generated successfully",
                       "data": {
-                        "delay": [
-                          "Wait 10 minutes before acting on the urge."
-                        ],
-                        "distract": [
-                          "Take a short walk."
-                        ],
-                        "decide": [
-                          "Message a trusted person."
-                        ],
-                        "safetyNotice": "Seek local emergency help if you may harm yourself or others."
+                        "delay": "Wait 10 minutes before acting on the urge.",
+                        "distract": "Do a grounding activity for a few minutes.",
+                        "decide": "Choose the safest next step and contact support if needed.",
+                        "raw": "delay: Wait 10 minutes before acting on the urge.\ndistract: Do a grounding activity for a few minutes.\ndecide: Choose the safest next step and contact support if needed."
                       },
                       "meta": null
                     }
@@ -13976,43 +16144,22 @@
           }
         }
       },
-      "PracticePlace": {
-        "type": "object",
-        "required": [
-          "name",
-          "address",
-          "isActive"
-        ],
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 255,
-            "example": "Pulih Clinic"
-          },
-          "address": {
-            "type": "string",
-            "maxLength": 1000,
-            "example": "Jl. Demo No. 1"
-          },
-          "isActive": {
-            "type": "boolean",
-            "example": true
-          }
-        }
-      },
       "PsychologistProfile": {
         "type": "object",
         "required": [
           "id",
           "userId",
           "type",
+          "consultationChannel",
+          "approvalStatus",
           "fullName",
-          "status",
-          "licenseNumber",
+          "dateOfBirth",
+          "address",
+          "photoUrl",
           "bio",
-          "practicePlaces",
-          "createdAt",
-          "updatedAt"
+          "ratingSummary",
+          "latestReviews",
+          "latestBundle"
         ],
         "properties": {
           "id": {
@@ -14033,26 +16180,42 @@
             ],
             "example": "clinical"
           },
+          "consultationChannel": {
+            "type": "string",
+            "enum": [
+              "chat",
+              "chat_and_meet"
+            ],
+            "example": "chat_and_meet"
+          },
           "fullName": {
             "type": "string",
             "example": "Dr. Demo"
           },
-          "status": {
+          "approvalStatus": {
             "type": "string",
             "enum": [
               "draft",
-              "in_review",
+              "pending_review",
               "approved",
-              "rejected"
+              "rejected",
+              "suspended"
             ],
             "example": "draft"
           },
-          "licenseNumber": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "example": "STR-123456"
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "example": "1990-01-01"
+          },
+          "address": {
+            "type": "string",
+            "example": "Jl. Demo No. 1"
+          },
+          "photoUrl": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://example.com/photo.jpg"
           },
           "bio": {
             "type": [
@@ -14061,21 +16224,455 @@
             ],
             "example": "Licensed clinical psychologist."
           },
-          "practicePlaces": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PracticePlace"
+          "ratingSummary": {
+            "type": "object",
+            "required": [
+              "averageRating",
+              "reviewCount"
+            ],
+            "properties": {
+              "averageRating": {
+                "type": "number",
+                "example": 4.8
+              },
+              "reviewCount": {
+                "type": "integer",
+                "example": 12
+              }
             }
+          },
+          "latestReviews": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/BookingReview"
+            }
+          },
+          "latestBundle": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SessionBundle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PsychologistSession": {
+        "type": "object",
+        "required": [
+          "id",
+          "bundleId",
+          "profileId",
+          "sessionDate",
+          "startsAt",
+          "endsAt",
+          "status",
+          "packageName",
+          "packageDurationMinutes",
+          "priceAmount"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "44444444-4444-4444-8444-444444444444"
+          },
+          "bundleId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "33333333-3333-4333-8333-333333333333"
+          },
+          "profileId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "22222222-2222-4222-8222-222222222222"
+          },
+          "sessionDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-06-03"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-03T09:00:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-03T12:00:00.000Z"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "held",
+              "booked",
+              "completed",
+              "cancelled",
+              "expired",
+              "rescheduled"
+            ],
+            "example": "available"
+          },
+          "heldUntil": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "format": "date-time"
+          },
+          "packageName": {
+            "type": "string",
+            "example": "Paket 3 Jam"
+          },
+          "packageDurationMinutes": {
+            "type": "integer",
+            "example": 180
+          },
+          "priceAmount": {
+            "type": "integer",
+            "example": 150000
+          }
+        }
+      },
+      "PublicPsychologistSession": {
+        "type": "object",
+        "required": [
+          "id",
+          "bundleId",
+          "profileId",
+          "sessionDate",
+          "startsAt",
+          "endsAt",
+          "status",
+          "packageName",
+          "packageDurationMinutes",
+          "priceAmount",
+          "psychologist"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "44444444-4444-4444-8444-444444444444"
+          },
+          "bundleId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "33333333-3333-4333-8333-333333333333"
+          },
+          "profileId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "22222222-2222-4222-8222-222222222222"
+          },
+          "sessionDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-06-03"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-03T09:00:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-03T12:00:00.000Z"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available"
+            ],
+            "example": "available"
+          },
+          "heldUntil": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "format": "date-time"
+          },
+          "packageName": {
+            "type": "string",
+            "example": "Paket 3 Jam"
+          },
+          "packageDurationMinutes": {
+            "type": "integer",
+            "example": 180
+          },
+          "priceAmount": {
+            "type": "integer",
+            "example": 150000
+          },
+          "psychologist": {
+            "type": "object",
+            "required": [
+              "id",
+              "userId",
+              "type",
+              "consultationChannel",
+              "fullName",
+              "dateOfBirth",
+              "address",
+              "photoUrl",
+              "bio",
+              "ratingSummary",
+              "latestReviews"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "example": "22222222-2222-4222-8222-222222222222"
+              },
+              "userId": {
+                "type": "string",
+                "format": "uuid",
+                "example": "11111111-1111-4111-8111-111111111111"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "general",
+                  "clinical"
+                ],
+                "example": "clinical"
+              },
+              "consultationChannel": {
+                "type": "string",
+                "enum": [
+                  "chat",
+                  "chat_and_meet"
+                ],
+                "example": "chat_and_meet"
+              },
+              "fullName": {
+                "type": "string",
+                "example": "Dr. Demo"
+              },
+              "dateOfBirth": {
+                "type": "string",
+                "format": "date",
+                "example": "1990-01-01"
+              },
+              "address": {
+                "type": "string",
+                "example": "Jl. Demo No. 1"
+              },
+              "photoUrl": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://example.com/photo.jpg"
+              },
+              "bio": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "Licensed clinical psychologist."
+              },
+              "ratingSummary": {
+                "type": "object",
+                "required": [
+                  "averageRating",
+                  "reviewCount"
+                ],
+                "properties": {
+                  "averageRating": {
+                    "type": "number",
+                    "example": 4.8
+                  },
+                  "reviewCount": {
+                    "type": "integer",
+                    "example": 12
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "BookingMessage": {
+        "type": "object",
+        "required": [
+          "id",
+          "bookingId",
+          "senderUserId",
+          "content",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "msg_001"
+          },
+          "bookingId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "55555555-5555-4555-8555-555555555555"
+          },
+          "senderUserId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "11111111-1111-4111-8111-111111111111"
+          },
+          "content": {
+            "type": "string",
+            "example": "Hello doctor"
           },
           "createdAt": {
             "type": "string",
             "format": "date-time",
-            "example": "2026-07-16T10:00:00.000Z"
+            "example": "2026-07-16T01:10:00.000Z"
+          }
+        }
+      },
+      "BookingReview": {
+        "type": "object",
+        "required": [
+          "id",
+          "bookingId",
+          "patientUserId",
+          "psychologistProfileId",
+          "rating",
+          "comment",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "review_001"
+          },
+          "bookingId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "55555555-5555-4555-8555-555555555555"
+          },
+          "patientUserId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "11111111-1111-4111-8111-111111111111"
+          },
+          "psychologistProfileId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "22222222-2222-4222-8222-222222222222"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "example": 5
+          },
+          "comment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Helpful",
+            "maxLength": 2000
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-16T01:10:00.000Z"
           },
           "updatedAt": {
             "type": "string",
             "format": "date-time",
-            "example": "2026-07-16T10:00:00.000Z"
+            "example": "2026-07-16T01:10:00.000Z"
+          }
+        }
+      },
+      "PaymentStatus": {
+        "type": "object",
+        "required": [
+          "id",
+          "bookingId",
+          "provider",
+          "orderId",
+          "amount",
+          "status",
+          "paymentMethod",
+          "paymentUrl",
+          "completedAt",
+          "expiresAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "66666666-6666-4666-8666-666666666666"
+          },
+          "bookingId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "55555555-5555-4555-8555-555555555555"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "pakasir"
+            ],
+            "example": "pakasir"
+          },
+          "orderId": {
+            "type": "string",
+            "example": "PLH-20260201T070000-ABCDEF12"
+          },
+          "amount": {
+            "type": "integer",
+            "example": 150000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "pending",
+              "completed",
+              "failed",
+              "expired",
+              "cancelled"
+            ],
+            "example": "created"
+          },
+          "paymentMethod": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "qris"
+          },
+          "paymentUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12",
+            "format": "uri"
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-16T17:00:00.000Z"
           }
         }
       },
@@ -14083,17 +16680,23 @@
         "type": "object",
         "required": [
           "id",
+          "profileId",
           "documentType",
+          "objectKey",
           "fileName",
           "contentType",
-          "sizeBytes",
-          "createdAt"
+          "sizeBytes"
         ],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid",
             "example": "77777777-7777-4777-8777-777777777777"
+          },
+          "profileId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "22222222-2222-4222-8222-222222222222"
           },
           "documentType": {
             "type": "string",
@@ -14105,6 +16708,10 @@
               "sippk"
             ],
             "example": "str"
+          },
+          "objectKey": {
+            "type": "string",
+            "example": "psychologist-credentials/demo/str/uuid-credential-str.pdf"
           },
           "fileName": {
             "type": "string",
@@ -14123,11 +16730,6 @@
             "type": "integer",
             "maximum": 5242880,
             "example": 248000
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2026-07-16T10:00:00.000Z"
           }
         }
       },
@@ -14136,7 +16738,8 @@
         "required": [
           "fileId",
           "reviewUrl",
-          "expiresAt"
+          "expiresAt",
+          "message"
         ],
         "properties": {
           "fileId": {
@@ -14159,6 +16762,10 @@
             ],
             "example": "2026-07-16T10:15:00.000Z",
             "format": "date-time"
+          },
+          "message": {
+            "type": "string",
+            "example": "Signed review URL is not configured. Use Cloudflare R2 dashboard/manual operations for private review."
           }
         }
       },
@@ -14166,14 +16773,14 @@
         "type": "object",
         "required": [
           "id",
-          "psychologistId",
-          "name",
+          "profileId",
+          "packageName",
+          "packageDurationMinutes",
+          "priceAmount",
           "dateStart",
           "dateEnd",
           "dailyStartTime",
-          "dailyEndTime",
-          "priceAmount",
-          "generatedSessionCount"
+          "dailyEndTime"
         ],
         "properties": {
           "id": {
@@ -14181,14 +16788,24 @@
             "format": "uuid",
             "example": "33333333-3333-4333-8333-333333333333"
           },
-          "psychologistId": {
+          "profileId": {
             "type": "string",
             "format": "uuid",
             "example": "22222222-2222-4222-8222-222222222222"
           },
-          "name": {
+          "packageName": {
             "type": "string",
             "example": "Clinical session bundle 2026-06-01 to 2026-06-07"
+          },
+          "packageDurationMinutes": {
+            "type": "integer",
+            "example": 180
+          },
+          "priceAmount": {
+            "type": "integer",
+            "minimum": 100000,
+            "maximum": 300000,
+            "example": 150000
           },
           "dateStart": {
             "type": "string",
@@ -14207,16 +16824,24 @@
           "dailyEndTime": {
             "type": "string",
             "example": "12:00:00"
+          }
+        }
+      },
+      "SessionBundleResult": {
+        "type": "object",
+        "required": [
+          "bundle",
+          "sessions"
+        ],
+        "properties": {
+          "bundle": {
+            "$ref": "#/components/schemas/SessionBundle"
           },
-          "priceAmount": {
-            "type": "integer",
-            "minimum": 100000,
-            "maximum": 300000,
-            "example": 150000
-          },
-          "generatedSessionCount": {
-            "type": "integer",
-            "example": 7
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PsychologistSession"
+            }
           }
         }
       },
@@ -14224,16 +16849,29 @@
         "type": "object",
         "required": [
           "id",
+          "userId",
           "type",
+          "consultationChannel",
+          "approvalStatus",
           "fullName",
+          "dateOfBirth",
+          "address",
+          "photoUrl",
           "bio",
-          "practicePlaces"
+          "ratingSummary",
+          "latestReviews",
+          "latestBundle"
         ],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid",
             "example": "22222222-2222-4222-8222-222222222222"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "11111111-1111-4111-8111-111111111111"
           },
           "type": {
             "type": "string",
@@ -14243,9 +16881,42 @@
             ],
             "example": "clinical"
           },
+          "consultationChannel": {
+            "type": "string",
+            "enum": [
+              "chat",
+              "chat_and_meet"
+            ],
+            "example": "chat_and_meet"
+          },
+          "approvalStatus": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "approved",
+              "rejected",
+              "suspended"
+            ],
+            "example": "approved"
+          },
           "fullName": {
             "type": "string",
             "example": "Dr. Demo"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "example": "1990-01-01"
+          },
+          "address": {
+            "type": "string",
+            "example": "Jl. Demo No. 1"
+          },
+          "photoUrl": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://example.com/photo.jpg"
           },
           "bio": {
             "type": [
@@ -14254,11 +16925,39 @@
             ],
             "example": "Licensed clinical psychologist."
           },
-          "practicePlaces": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PracticePlace"
+          "ratingSummary": {
+            "type": "object",
+            "required": [
+              "averageRating",
+              "reviewCount"
+            ],
+            "properties": {
+              "averageRating": {
+                "type": "number",
+                "example": 4.8
+              },
+              "reviewCount": {
+                "type": "integer",
+                "example": 12
+              }
             }
+          },
+          "latestReviews": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/BookingReview"
+            }
+          },
+          "latestBundle": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SessionBundle"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -14331,17 +17030,26 @@
         "type": "object",
         "required": [
           "id",
+          "bookingId",
           "provider",
-          "status",
+          "orderId",
           "amount",
+          "status",
           "paymentUrl",
-          "expiresAt"
+          "expiresAt",
+          "createdAt",
+          "updatedAt"
         ],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid",
             "example": "66666666-6666-4666-8666-666666666666"
+          },
+          "bookingId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "55555555-5555-4555-8555-555555555555"
           },
           "provider": {
             "type": "string",
@@ -14350,29 +17058,63 @@
             ],
             "example": "pakasir"
           },
-          "status": {
+          "orderId": {
             "type": "string",
-            "enum": [
-              "pending",
-              "paid",
-              "expired",
-              "failed"
-            ],
-            "example": "pending"
+            "example": "PLH-20260201T070000-ABCDEF12"
           },
           "amount": {
             "type": "integer",
             "example": 150000
           },
-          "paymentUrl": {
+          "status": {
             "type": "string",
-            "format": "uri",
-            "example": "https://pakasir.zone.id/pay/pulih-demo/order_123"
+            "enum": [
+              "created",
+              "pending",
+              "completed",
+              "failed",
+              "expired",
+              "cancelled"
+            ],
+            "example": "created"
+          },
+          "paymentMethod": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "qris"
+          },
+          "paymentUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12",
+            "format": "uri"
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "format": "date-time"
           },
           "expiresAt": {
             "type": "string",
             "format": "date-time",
             "example": "2026-07-16T17:00:00.000Z"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-16T16:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-16T16:00:00.000Z"
           }
         }
       },
@@ -14380,14 +17122,27 @@
         "type": "object",
         "required": [
           "id",
-          "patientId",
-          "psychologistId",
+          "patientUserId",
+          "psychologistProfileId",
+          "psychologistUserId",
           "sessionSlotId",
+          "consultationChannel",
           "status",
-          "payment",
-          "sessionChannel",
-          "meetLink",
-          "scheduledAt"
+          "scheduledStartAt",
+          "scheduledEndAt",
+          "priceAmount",
+          "packageNameSnapshot",
+          "packageDurationMinutesSnapshot",
+          "paymentExpiresAt",
+          "complaint",
+          "createdAt",
+          "updatedAt",
+          "psychologistType",
+          "patientEmail",
+          "psychologistEmail",
+          "psychologistFullName",
+          "ratingSummary",
+          "latestReviews"
         ],
         "properties": {
           "id": {
@@ -14395,43 +17150,76 @@
             "format": "uuid",
             "example": "55555555-5555-4555-8555-555555555555"
           },
-          "patientId": {
+          "patientUserId": {
             "type": "string",
             "format": "uuid",
             "example": "11111111-1111-4111-8111-111111111111"
           },
-          "psychologistId": {
+          "psychologistProfileId": {
             "type": "string",
             "format": "uuid",
             "example": "22222222-2222-4222-8222-222222222222"
+          },
+          "psychologistUserId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "11111111-1111-4111-8111-111111111111"
           },
           "sessionSlotId": {
             "type": "string",
             "format": "uuid",
             "example": "44444444-4444-4444-8444-444444444444"
           },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending_payment",
-              "paid",
-              "confirmed",
-              "completed",
-              "rescheduled",
-              "expired"
-            ],
-            "example": "pending_payment"
-          },
-          "payment": {
-            "$ref": "#/components/schemas/Payment"
-          },
-          "sessionChannel": {
+          "consultationChannel": {
             "type": "string",
             "enum": [
               "chat",
-              "meet"
+              "chat_and_meet"
             ],
-            "example": "meet"
+            "example": "chat_and_meet"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_payment",
+              "payment_completed",
+              "confirmed",
+              "reschedule_requested",
+              "rescheduled",
+              "cancelled",
+              "expired",
+              "completed",
+              "no_show"
+            ],
+            "example": "pending_payment"
+          },
+          "scheduledStartAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-03T08:00:00.000Z"
+          },
+          "scheduledEndAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-03T11:00:00.000Z"
+          },
+          "priceAmount": {
+            "type": "integer",
+            "example": 150000
+          },
+          "packageNameSnapshot": {
+            "type": "string",
+            "example": "Paket 3 Jam"
+          },
+          "packageDurationMinutesSnapshot": {
+            "type": "integer",
+            "example": 180
+          },
+          "paymentExpiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-03T09:00:00.000Z"
           },
           "meetLink": {
             "type": [
@@ -14441,10 +17229,116 @@
             "example": null,
             "format": "uri"
           },
-          "scheduledAt": {
+          "confirmedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "format": "date-time"
+          },
+          "rescheduledAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "format": "date-time"
+          },
+          "rescheduleReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null,
+            "maxLength": 2000
+          },
+          "complaint": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "Sulit tidur dan mudah cemas."
+          },
+          "createdAt": {
             "type": "string",
             "format": "date-time",
-            "example": "2026-06-03T02:00:00.000Z"
+            "example": "2026-06-03T08:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-03T08:00:00.000Z"
+          },
+          "psychologistType": {
+            "type": "string",
+            "enum": [
+              "general",
+              "clinical"
+            ],
+            "example": "clinical"
+          },
+          "patientEmail": {
+            "type": "string",
+            "format": "email",
+            "example": "patient@example.com"
+          },
+          "psychologistEmail": {
+            "type": "string",
+            "format": "email",
+            "example": "psych@example.com"
+          },
+          "psychologistFullName": {
+            "type": "string",
+            "example": "Dr. Psych"
+          },
+          "ratingSummary": {
+            "type": "object",
+            "required": [
+              "averageRating",
+              "reviewCount"
+            ],
+            "properties": {
+              "averageRating": {
+                "type": "number",
+                "example": 4.8
+              },
+              "reviewCount": {
+                "type": "integer",
+                "example": 12
+              }
+            }
+          },
+          "latestReviews": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/BookingReview"
+            }
+          }
+        }
+      },
+      "BookingCreateResult": {
+        "type": "object",
+        "required": [
+          "booking",
+          "payment",
+          "paymentUrl",
+          "instruction"
+        ],
+        "properties": {
+          "booking": {
+            "$ref": "#/components/schemas/Booking"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/Payment"
+          },
+          "paymentUrl": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12"
+          },
+          "instruction": {
+            "type": "string",
+            "example": "Pay via Pakasir using the link above."
           }
         }
       },
@@ -15467,72 +18361,53 @@
           "delay",
           "distract",
           "decide",
-          "safetyNotice"
+          "raw"
         ],
         "properties": {
           "delay": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "Wait 10 minutes before acting on the urge."
-            ]
+            "type": "string",
+            "example": "Wait 10 minutes before acting on the urge."
           },
           "distract": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "Take a short walk."
-            ]
+            "type": "string",
+            "example": "Do a grounding activity for a few minutes."
           },
           "decide": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "Message a trusted person."
-            ]
-          },
-          "safetyNotice": {
             "type": "string",
-            "example": "Seek local emergency help if you may harm yourself or others."
+            "example": "Choose the safest next step and contact support if needed."
+          },
+          "raw": {
+            "type": "string",
+            "example": "delay: Wait 10 minutes before acting on the urge.\ndistract: Do a grounding activity for a few minutes."
           }
         }
       },
       "PaymentWebhookResult": {
         "type": "object",
         "required": [
-          "orderId",
+          "paymentId",
           "bookingId",
-          "paymentStatus",
-          "bookingStatus",
-          "processed"
+          "status",
+          "idempotent"
         ],
         "properties": {
-          "orderId": {
+          "paymentId": {
             "type": "string",
-            "example": "order_123"
+            "format": "uuid",
+            "example": "66666666-6666-4666-8666-666666666666"
           },
           "bookingId": {
             "type": "string",
             "format": "uuid",
             "example": "55555555-5555-4555-8555-555555555555"
           },
-          "paymentStatus": {
+          "status": {
             "type": "string",
-            "example": "paid"
+            "example": "completed"
           },
-          "bookingStatus": {
-            "type": "string",
-            "example": "paid"
-          },
-          "processed": {
+          "idempotent": {
             "type": "boolean",
-            "example": true
+            "example": false
           }
         }
       },

@@ -28,7 +28,7 @@ function memoryRepository(): AiRepository {
 
 async function authedApp(repository: AiRepository, provider: AiProvider) {
   const token = await issueAccessToken({ user: AUTH_USER, secret: TEST_ENV.JWT_ACCESS_SECRET, ttlSeconds: 60 });
-  const app = createApp(TEST_ENV, {}, { authRepository: { async createPatient() { throw new Error("not used"); }, async findByEmail() { return null; }, async findByUsername() { return null; }, async findByLoginIdentifier() { return null; }, async findById(id: string) { return id === AUTH_USER.id ? { ...AUTH_USER, passwordHash: "hash" } : null; } }, aiRepository: repository, aiProvider: provider });
+  const app = createApp(TEST_ENV, {}, { authRepository: { async createUser() { throw new Error("not used"); }, async createPatient() { throw new Error("not used"); }, async findByEmail() { return null; }, async findByUsername() { return null; }, async findByLoginIdentifier() { return null; }, async findById(id: string) { return id === AUTH_USER.id ? { ...AUTH_USER, passwordHash: "hash" } : null; } }, aiRepository: repository, aiProvider: provider });
   return { app, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } };
 }
 

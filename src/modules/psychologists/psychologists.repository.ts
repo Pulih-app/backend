@@ -1,11 +1,11 @@
-import { and, asc, desc, eq, or } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, or } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   psychologistCredentialFiles,
-  psychologistPracticePlaces,
   psychologistProfiles,
   psychologistSessionBundles,
   psychologistSessionSlots,
+  bookingReviews,
   users,
 } from "../../db/schema";
 import type {
@@ -15,9 +15,6 @@ import type {
   GeneratedSessionStatus,
   PsychologistType,
 } from "./psychologists.types";
-import type { PracticePlaceInput } from "./psychologists.schema";
-
-export type PracticePlaceRecord = { id: string; name: string; address: string; isActive: boolean };
 export type CredentialFileRecord = { id: string; profileId: string; documentType: CredentialDocumentType; objectKey: string; fileName: string; contentType: string; sizeBytes: number };
 export type PsychologistBundleRecord = {
   id: string;
@@ -44,6 +41,7 @@ export type PsychologistSessionRecord = {
   priceAmount: number;
 };
 export type PsychologistRatingSummary = { averageRating: number; reviewCount: number };
+export type PublicPsychologistReviewRecord = { id: string; bookingId: string; patientUserId: string; psychologistProfileId: string; rating: number; comment: string | null; createdAt: string; updatedAt: string };
 export type PsychologistDirectoryRecord = {
   id: string;
   userId: string;
@@ -51,17 +49,23 @@ export type PsychologistDirectoryRecord = {
   consultationChannel: ConsultationChannel;
   approvalStatus: ApprovalStatus;
   fullName: string;
-  licenseNumber: string | null;
+  dateOfBirth: string | null;
+  address: string | null;
+  photoUrl: string | null;
   bio: string | null;
-  practicePlaces: PracticePlaceRecord[];
   ratingSummary: PsychologistRatingSummary;
+  latestReviews: PublicPsychologistReviewRecord[];
   latestBundle: PsychologistBundleRecord | null;
 };
 
 export type PsychologistProfileRecord = PsychologistDirectoryRecord;
 
+export type PublicPsychologistSessionRecord = PsychologistSessionRecord & {
+  psychologist: Pick<PsychologistDirectoryRecord, "id" | "userId" | "type" | "consultationChannel" | "fullName" | "dateOfBirth" | "address" | "photoUrl" | "bio" | "ratingSummary" | "latestReviews">;
+};
+
 export type PsychologistsRepository = {
-  upsertProfile(input: Omit<PsychologistProfileRecord, "id" | "practicePlaces" | "approvalStatus" | "ratingSummary" | "latestBundle"> & { practicePlaces: PracticePlaceInput[] }): Promise<PsychologistProfileRecord>;
+  upsertProfile(input: Omit<PsychologistProfileRecord, "id" | "approvalStatus" | "ratingSummary" | "latestReviews" | "latestBundle">): Promise<PsychologistProfileRecord>;
   findByUserId(userId: string): Promise<PsychologistProfileRecord | null>;
   findApprovedById(psychologistId: string): Promise<PsychologistProfileRecord | null>;
   listApproved(): Promise<PsychologistProfileRecord[]>;
@@ -76,6 +80,7 @@ export type PsychologistsRepository = {
   deleteBundle(bundleId: string): Promise<boolean>;
   deleteSessionsByBundleId(bundleId: string): Promise<void>;
   listSessionsByPsychologistId(psychologistId: string): Promise<PsychologistSessionRecord[]>;
+  listApprovedAvailableSessions(): Promise<PublicPsychologistSessionRecord[]>;
   listSessionsByBundleIds(bundleIds: string[]): Promise<PsychologistSessionRecord[]>;
 };
 
@@ -92,10 +97,6 @@ function toIsoDate(value: Date) {
 function toIsoTime(value: Date | string) {
   const raw = typeof value === "string" ? value : value.toISOString().slice(11, 19);
   return raw.length === 5 ? `${raw}:00` : raw;
-}
-
-function mapPracticePlace(row: typeof psychologistPracticePlaces.$inferSelect): PracticePlaceRecord {
-  return { id: row.id, name: row.name, address: row.address, isActive: row.isActive };
 }
 
 function mapBundle(row: typeof psychologistSessionBundles.$inferSelect): PsychologistBundleRecord {
@@ -128,11 +129,38 @@ function mapSession(row: typeof psychologistSessionSlots.$inferSelect & { bundle
   };
 }
 
+async function loadRatingSummary(db: NodePgDatabase, profileId: string): Promise<PsychologistRatingSummary> {
+  const [summary] = await db.select({ averageRating: avg(bookingReviews.rating), reviewCount: count(bookingReviews.id) }).from(bookingReviews).where(eq(bookingReviews.psychologistProfileId, profileId));
+  return {
+    averageRating: summary?.averageRating ? Math.round(Number(summary.averageRating) * 10) / 10 : 0,
+    reviewCount: Number(summary?.reviewCount ?? 0),
+  };
+}
+
+function mapReview(row: typeof bookingReviews.$inferSelect): PublicPsychologistReviewRecord {
+  return {
+    id: row.id,
+    bookingId: row.bookingId,
+    patientUserId: row.patientUserId,
+    psychologistProfileId: row.psychologistProfileId,
+    rating: row.rating,
+    comment: row.comment,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+async function loadLatestReviews(db: NodePgDatabase, profileId: string, limit = 5): Promise<PublicPsychologistReviewRecord[]> {
+  const rows = await db.select().from(bookingReviews).where(eq(bookingReviews.psychologistProfileId, profileId)).orderBy(desc(bookingReviews.createdAt)).limit(limit);
+  return rows.map(mapReview);
+}
+
 async function loadProfile(db: NodePgDatabase, userId: string): Promise<PsychologistProfileRecord | null> {
   const [profile] = await db.select().from(psychologistProfiles).where(eq(psychologistProfiles.userId, userId)).limit(1);
   if (!profile) return null;
-  const places = await db.select().from(psychologistPracticePlaces).where(eq(psychologistPracticePlaces.profileId, profile.id)).orderBy(asc(psychologistPracticePlaces.createdAt));
   const bundles = await db.select().from(psychologistSessionBundles).where(eq(psychologistSessionBundles.profileId, profile.id)).orderBy(desc(psychologistSessionBundles.createdAt)).limit(1);
+  const ratingSummary = await loadRatingSummary(db, profile.id);
+  const latestReviews = await loadLatestReviews(db, profile.id);
   return {
     id: profile.id,
     userId: profile.userId,
@@ -140,10 +168,12 @@ async function loadProfile(db: NodePgDatabase, userId: string): Promise<Psycholo
     consultationChannel: profile.consultationChannel as ConsultationChannel,
     approvalStatus: profile.approvalStatus as ApprovalStatus,
     fullName: profile.fullName,
-    licenseNumber: profile.licenseNumber,
+    dateOfBirth: profile.dateOfBirth,
+    address: profile.address,
+    photoUrl: profile.photoUrl,
     bio: profile.bio,
-    practicePlaces: places.map(mapPracticePlace),
-    ratingSummary: { averageRating: 0, reviewCount: 0 },
+    ratingSummary,
+    latestReviews,
     latestBundle: bundles[0] ? mapBundle(bundles[0]) : null,
   };
 }
@@ -151,8 +181,9 @@ async function loadProfile(db: NodePgDatabase, userId: string): Promise<Psycholo
 async function loadProfileById(db: NodePgDatabase, profileId: string): Promise<PsychologistProfileRecord | null> {
   const [row] = await db.select().from(psychologistProfiles).where(eq(psychologistProfiles.id, profileId)).limit(1);
   if (!row) return null;
-  const places = await db.select().from(psychologistPracticePlaces).where(eq(psychologistPracticePlaces.profileId, row.id)).orderBy(asc(psychologistPracticePlaces.createdAt));
   const bundles = await db.select().from(psychologistSessionBundles).where(eq(psychologistSessionBundles.profileId, row.id)).orderBy(desc(psychologistSessionBundles.createdAt)).limit(1);
+  const ratingSummary = await loadRatingSummary(db, row.id);
+  const latestReviews = await loadLatestReviews(db, row.id);
   return {
     id: row.id,
     userId: row.userId,
@@ -160,10 +191,12 @@ async function loadProfileById(db: NodePgDatabase, profileId: string): Promise<P
     consultationChannel: row.consultationChannel as ConsultationChannel,
     approvalStatus: row.approvalStatus as ApprovalStatus,
     fullName: row.fullName,
-    licenseNumber: row.licenseNumber,
+    dateOfBirth: row.dateOfBirth,
+    address: row.address,
+    photoUrl: row.photoUrl,
     bio: row.bio,
-    practicePlaces: places.map(mapPracticePlace),
-    ratingSummary: { averageRating: 0, reviewCount: 0 },
+    ratingSummary,
+    latestReviews,
     latestBundle: bundles[0] ? mapBundle(bundles[0]) : null,
   };
 }
@@ -193,7 +226,9 @@ export function createPsychologistsRepository(db: NodePgDatabase): Psychologists
         type: input.type,
         consultationChannel: input.consultationChannel,
         fullName: input.fullName,
-        licenseNumber: input.licenseNumber,
+        dateOfBirth: input.dateOfBirth,
+        address: input.address,
+        photoUrl: input.photoUrl,
         bio: input.bio,
       }).onConflictDoUpdate({
         target: psychologistProfiles.userId,
@@ -201,22 +236,14 @@ export function createPsychologistsRepository(db: NodePgDatabase): Psychologists
           type: input.type,
           consultationChannel: input.consultationChannel,
           fullName: input.fullName,
-          licenseNumber: input.licenseNumber,
+          dateOfBirth: input.dateOfBirth,
+          address: input.address,
+          photoUrl: input.photoUrl,
           bio: input.bio,
           approvalStatus: "draft",
           updatedAt: new Date(),
         },
       }).returning();
-
-      await db.delete(psychologistPracticePlaces).where(eq(psychologistPracticePlaces.profileId, profile.id));
-      if (input.practicePlaces.length > 0) {
-        await db.insert(psychologistPracticePlaces).values(input.practicePlaces.map((place) => ({
-          profileId: profile.id,
-          name: place.name,
-          address: place.address,
-          isActive: place.isActive ?? true,
-        })));
-      }
 
       const reloaded = await loadProfile(db, input.userId);
       if (!reloaded) throw new Error("Updated psychologist profile was not found.");
@@ -352,6 +379,42 @@ export function createPsychologistsRepository(db: NodePgDatabase): Psychologists
         .where(eq(psychologistSessionSlots.profileId, psychologistId))
         .orderBy(asc(psychologistSessionSlots.sessionDate), asc(psychologistSessionSlots.startsAt));
       return rows.map(({ session, bundlePackageName, bundleDurationMinutes, bundlePriceAmount }) => mapSession({ ...session, bundlePackageName, bundleDurationMinutes, bundlePriceAmount: Number(bundlePriceAmount) }));
+    },
+    async listApprovedAvailableSessions() {
+      const rows = await db.select({
+        session: psychologistSessionSlots,
+        bundlePackageName: psychologistSessionBundles.packageName,
+        bundleDurationMinutes: psychologistSessionBundles.packageDurationMinutes,
+        bundlePriceAmount: psychologistSessionBundles.priceAmount,
+        profile: psychologistProfiles,
+      }).from(psychologistSessionSlots)
+        .innerJoin(psychologistSessionBundles, eq(psychologistSessionSlots.bundleId, psychologistSessionBundles.id))
+        .innerJoin(psychologistProfiles, eq(psychologistSessionSlots.profileId, psychologistProfiles.id))
+        .where(and(eq(psychologistProfiles.approvalStatus, "approved"), eq(psychologistSessionSlots.status, "available")))
+        .orderBy(asc(psychologistSessionSlots.sessionDate), asc(psychologistSessionSlots.startsAt));
+
+      const result: PublicPsychologistSessionRecord[] = [];
+      for (const { session, bundlePackageName, bundleDurationMinutes, bundlePriceAmount, profile } of rows) {
+        const publicProfile = await loadProfileById(db, profile.id);
+        if (!publicProfile || publicProfile.approvalStatus !== "approved") continue;
+        result.push({
+          ...mapSession({ ...session, bundlePackageName, bundleDurationMinutes, bundlePriceAmount: Number(bundlePriceAmount) }),
+          psychologist: {
+            id: publicProfile.id,
+            userId: publicProfile.userId,
+            type: publicProfile.type,
+            consultationChannel: publicProfile.consultationChannel,
+            fullName: publicProfile.fullName,
+            dateOfBirth: publicProfile.dateOfBirth,
+            address: publicProfile.address,
+            photoUrl: publicProfile.photoUrl,
+            bio: publicProfile.bio,
+            ratingSummary: publicProfile.ratingSummary,
+            latestReviews: publicProfile.latestReviews,
+          },
+        });
+      }
+      return result;
     },
     async listSessionsByBundleIds(bundleIds) {
       if (bundleIds.length === 0) return [];

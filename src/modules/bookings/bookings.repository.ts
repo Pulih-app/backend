@@ -1,6 +1,8 @@
-import { and, eq } from "drizzle-orm";
+import { and, avg, count, desc, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
+  bookingMessages,
+  bookingReviews,
   bookingStatusEvents,
   bookings,
   paymentEvents,
@@ -17,6 +19,7 @@ export type SessionSlotBookingRecord = {
   bundleId: string;
   profileId: string;
   psychologistUserId: string;
+  psychologistApprovalStatus: string;
   psychologistType: PsychologistType;
   consultationChannel: ConsultationChannel;
   sessionDate: string;
@@ -47,6 +50,7 @@ export type BookingRecord = {
   confirmedAt: string | null;
   rescheduledAt: string | null;
   rescheduleReason: string | null;
+  complaint: string;
   createdAt: string;
   updatedAt: string;
   psychologistType: PsychologistType;
@@ -68,10 +72,33 @@ export type PaymentRecord = {
   updatedAt: string;
 };
 
+export type BookingRatingSummary = { averageRating: number; reviewCount: number };
+
 export type BookingDetailRecord = BookingRecord & {
   patientEmail: string;
   psychologistEmail: string;
   psychologistFullName: string;
+  ratingSummary: BookingRatingSummary;
+  latestReviews: BookingReviewRecord[];
+};
+
+export type BookingMessageRecord = {
+  id: string;
+  bookingId: string;
+  senderUserId: string;
+  content: string;
+  createdAt: string;
+};
+
+export type BookingReviewRecord = {
+  id: string;
+  bookingId: string;
+  patientUserId: string;
+  psychologistProfileId: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type BookingsRepository = {
@@ -95,6 +122,7 @@ export type BookingsRepository = {
     confirmedAt?: Date | null;
     rescheduledAt?: Date | null;
     rescheduleReason?: string | null;
+    complaint: string;
     psychologistType: PsychologistType;
   }): Promise<BookingRecord>;
   createBookingStatusEvent(input: { bookingId: string; fromStatus: string | null; toStatus: string; reason?: string | null; actorUserId?: string | null }): Promise<void>;
@@ -109,7 +137,15 @@ export type BookingsRepository = {
   markBookingPaymentCompleted(input: { bookingId: string; actorUserId?: string | null }): Promise<void>;
   markBookingConfirmed(input: { bookingId: string; meetLink: string | null; confirmedAt: Date; actorUserId?: string | null }): Promise<void>;
   markBookingRescheduled(input: { bookingId: string; sessionSlotId: string; scheduledStartAt: Date; scheduledEndAt: Date; consultationChannel: ConsultationChannel; rescheduledAt: Date; rescheduleReason: string; actorUserId?: string | null }): Promise<void>;
+  markBookingCompleted(input: { bookingId: string; completedAt: Date; actorUserId?: string | null }): Promise<void>;
   markSessionSlotBooked(sessionSlotId: string): Promise<void>;
+  markSessionSlotCompleted(sessionSlotId: string): Promise<void>;
+  findPaymentById(paymentId: string): Promise<PaymentRecord | null>;
+  findPaymentByBookingId(bookingId: string): Promise<PaymentRecord | null>;
+  listMessagesByBookingId(bookingId: string): Promise<BookingMessageRecord[]>;
+  createMessage(input: { bookingId: string; senderUserId: string; content: string }): Promise<BookingMessageRecord>;
+  findReviewByBookingId(bookingId: string): Promise<BookingReviewRecord | null>;
+  createReview(input: { bookingId: string; patientUserId: string; psychologistProfileId: string; rating: number; comment: string | null }): Promise<BookingReviewRecord>;
   markSessionSlotRescheduled(sessionSlotId: string): Promise<void>;
 };
 
@@ -139,6 +175,7 @@ function mapSessionSlot(row: {
     bundleId: row.slot.bundleId,
     profileId: row.slot.profileId,
     psychologistUserId: row.profile.userId,
+    psychologistApprovalStatus: row.profile.approvalStatus,
     psychologistType: row.profile.type as PsychologistType,
     consultationChannel: row.profile.consultationChannel as ConsultationChannel,
     sessionDate: row.slot.sessionDate.toISOString(),
@@ -149,6 +186,29 @@ function mapSessionSlot(row: {
     packageName: row.bundle.packageName,
     packageDurationMinutes: row.bundle.packageDurationMinutes,
     priceAmount: toNumber(row.bundle.priceAmount),
+  };
+}
+
+function mapMessage(row: typeof bookingMessages.$inferSelect): BookingMessageRecord {
+  return {
+    id: row.id,
+    bookingId: row.bookingId,
+    senderUserId: row.senderUserId,
+    content: row.content,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function mapReview(row: typeof bookingReviews.$inferSelect): BookingReviewRecord {
+  return {
+    id: row.id,
+    bookingId: row.bookingId,
+    patientUserId: row.patientUserId,
+    psychologistProfileId: row.psychologistProfileId,
+    rating: row.rating,
+    comment: row.comment,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -177,6 +237,8 @@ function mapBooking(row: {
   psychologistFullName: string;
   psychologistType: PsychologistType;
   psychologistUserId: string;
+  ratingSummary: BookingRatingSummary;
+  latestReviews: BookingReviewRecord[];
 }): BookingDetailRecord {
   return {
     id: row.booking.id,
@@ -196,13 +258,29 @@ function mapBooking(row: {
     confirmedAt: toIso(row.booking.confirmedAt),
     rescheduledAt: toIso(row.booking.rescheduledAt),
     rescheduleReason: row.booking.rescheduleReason,
+    complaint: row.booking.complaint,
     createdAt: row.booking.createdAt.toISOString(),
     updatedAt: row.booking.updatedAt.toISOString(),
     psychologistType: row.psychologistType,
     patientEmail: row.patientEmail,
     psychologistEmail: row.psychologistEmail,
     psychologistFullName: row.psychologistFullName,
+    ratingSummary: row.ratingSummary,
+    latestReviews: row.latestReviews,
   };
+}
+
+async function loadRatingSummary(database: NodePgDatabase, profileId: string): Promise<BookingRatingSummary> {
+  const [summary] = await database.select({ averageRating: avg(bookingReviews.rating), reviewCount: count(bookingReviews.id) }).from(bookingReviews).where(eq(bookingReviews.psychologistProfileId, profileId));
+  return {
+    averageRating: summary?.averageRating ? Math.round(Number(summary.averageRating) * 10) / 10 : 0,
+    reviewCount: Number(summary?.reviewCount ?? 0),
+  };
+}
+
+async function loadLatestReviews(database: NodePgDatabase, profileId: string, limit = 5): Promise<BookingReviewRecord[]> {
+  const rows = await database.select().from(bookingReviews).where(eq(bookingReviews.psychologistProfileId, profileId)).orderBy(desc(bookingReviews.createdAt)).limit(limit);
+  return rows.map(mapReview);
 }
 
 async function loadBooking(database: NodePgDatabase, bookingId: string) {
@@ -216,6 +294,8 @@ async function loadBooking(database: NodePgDatabase, bookingId: string) {
   const patient = await loadUser(database, row.booking.patientUserId);
   const psychologist = await loadUser(database, row.psychologistProfile.userId);
   if (!patient || !psychologist) return null;
+  const ratingSummary = await loadRatingSummary(database, row.psychologistProfile.id);
+  const latestReviews = await loadLatestReviews(database, row.psychologistProfile.id);
   return mapBooking({
     booking: row.booking,
     patientEmail: patient.email,
@@ -223,6 +303,8 @@ async function loadBooking(database: NodePgDatabase, bookingId: string) {
     psychologistFullName: row.psychologistProfile.fullName,
     psychologistType: row.psychologistProfile.type as PsychologistType,
     psychologistUserId: row.psychologistProfile.userId,
+    ratingSummary,
+    latestReviews,
   });
 }
 
@@ -239,6 +321,8 @@ async function loadBookingList(database: NodePgDatabase, userId: string, role: "
     const patient = await loadUser(database, row.booking.patientUserId);
     const psychologist = await loadUser(database, row.psychologistProfile.userId);
     if (!patient || !psychologist) continue;
+    const ratingSummary = await loadRatingSummary(database, row.psychologistProfile.id);
+    const latestReviews = await loadLatestReviews(database, row.psychologistProfile.id);
     result.push(mapBooking({
       booking: row.booking,
       patientEmail: patient.email,
@@ -246,6 +330,8 @@ async function loadBookingList(database: NodePgDatabase, userId: string, role: "
       psychologistFullName: row.psychologistProfile.fullName,
       psychologistType: row.psychologistProfile.type as PsychologistType,
       psychologistUserId: row.psychologistProfile.userId,
+      ratingSummary,
+      latestReviews,
     }));
   }
   return result;
@@ -293,6 +379,7 @@ function createRepository(source: NodePgDatabase): BookingsRepository {
         confirmedAt: input.confirmedAt ?? null,
         rescheduledAt: input.rescheduledAt ?? null,
         rescheduleReason: input.rescheduleReason ?? null,
+        complaint: input.complaint,
       }).returning();
 
       return {
@@ -313,6 +400,7 @@ function createRepository(source: NodePgDatabase): BookingsRepository {
         confirmedAt: toIso(row.confirmedAt),
         rescheduledAt: toIso(row.rescheduledAt),
         rescheduleReason: row.rescheduleReason,
+        complaint: row.complaint,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
         psychologistType: input.psychologistType,
@@ -353,6 +441,14 @@ function createRepository(source: NodePgDatabase): BookingsRepository {
     },
     async findPaymentByOrderId(orderId) {
       const [row] = await source.select().from(payments).where(eq(payments.orderId, orderId)).limit(1);
+      return row ? mapPayment(row) : null;
+    },
+    async findPaymentById(paymentId) {
+      const [row] = await source.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
+      return row ? mapPayment(row) : null;
+    },
+    async findPaymentByBookingId(bookingId) {
+      const [row] = await source.select().from(payments).where(eq(payments.bookingId, bookingId)).limit(1);
       return row ? mapPayment(row) : null;
     },
     async hasPaymentEvent(input) {
@@ -440,11 +536,41 @@ function createRepository(source: NodePgDatabase): BookingsRepository {
       });
       await source.update(psychologistSessionSlots).set({ status: "rescheduled", heldUntil: null, updatedAt: new Date() }).where(eq(psychologistSessionSlots.id, booking.sessionSlotId));
     },
+    async markBookingCompleted(input) {
+      const booking = await loadBooking(source, input.bookingId);
+      if (!booking) return;
+      await source.update(bookings).set({ status: "completed", updatedAt: input.completedAt }).where(eq(bookings.id, input.bookingId));
+      await this.createBookingStatusEvent({
+        bookingId: input.bookingId,
+        fromStatus: booking.status,
+        toStatus: "completed",
+        actorUserId: input.actorUserId ?? null,
+      });
+    },
     async markSessionSlotBooked(sessionSlotId) {
       await source.update(psychologistSessionSlots).set({ status: "booked", heldUntil: null, updatedAt: new Date() }).where(eq(psychologistSessionSlots.id, sessionSlotId));
     },
+    async markSessionSlotCompleted(sessionSlotId) {
+      await source.update(psychologistSessionSlots).set({ status: "completed", heldUntil: null, updatedAt: new Date() }).where(eq(psychologistSessionSlots.id, sessionSlotId));
+    },
     async markSessionSlotRescheduled(sessionSlotId) {
       await source.update(psychologistSessionSlots).set({ status: "rescheduled", heldUntil: null, updatedAt: new Date() }).where(eq(psychologistSessionSlots.id, sessionSlotId));
+    },
+    async listMessagesByBookingId(bookingId) {
+      const rows = await source.select().from(bookingMessages).where(eq(bookingMessages.bookingId, bookingId)).orderBy(bookingMessages.createdAt);
+      return rows.map(mapMessage);
+    },
+    async createMessage(input) {
+      const [row] = await source.insert(bookingMessages).values(input).returning();
+      return mapMessage(row);
+    },
+    async findReviewByBookingId(bookingId) {
+      const [row] = await source.select().from(bookingReviews).where(eq(bookingReviews.bookingId, bookingId)).limit(1);
+      return row ? mapReview(row) : null;
+    },
+    async createReview(input) {
+      const [row] = await source.insert(bookingReviews).values(input).returning();
+      return mapReview(row);
     },
   };
 }

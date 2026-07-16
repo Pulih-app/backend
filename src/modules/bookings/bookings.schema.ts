@@ -2,6 +2,7 @@ import type { Schema, ValidationIssue } from "../../shared/http/validation";
 
 export type CreateBookingInput = {
   sessionSlotId: string;
+  complaint: string;
 };
 
 export type BookingParams = {
@@ -15,6 +16,15 @@ export type ConfirmBookingInput = {
 export type RescheduleBookingInput = {
   newSessionSlotId: string;
   reason: string;
+};
+
+export type BookingMessageInput = {
+  content: string;
+};
+
+export type BookingReviewInput = {
+  rating: number;
+  comment: string | null;
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -33,7 +43,7 @@ export const createBookingSchema: Schema<CreateBookingInput> = (input) => {
   const issues: ValidationIssue[] = [];
   const value = object.value;
   for (const key of Object.keys(value)) {
-    if (key !== "sessionSlotId") issues.push({ field: key, message: "Unknown field is not allowed." });
+    if (key !== "sessionSlotId" && key !== "complaint") issues.push({ field: key, message: "Unknown field is not allowed." });
   }
 
   const sessionSlotId = value.sessionSlotId;
@@ -41,8 +51,12 @@ export const createBookingSchema: Schema<CreateBookingInput> = (input) => {
     issues.push({ field: "sessionSlotId", message: "Must be a valid session slot id." });
   }
 
+  const complaint = typeof value.complaint === "string" ? value.complaint.trim() : "";
+  if (complaint.length === 0) issues.push({ field: "complaint", message: "Complaint is required." });
+  if (complaint.length > 500) issues.push({ field: "complaint", message: "Complaint must be at most 500 characters." });
+
   if (issues.length > 0) return { ok: false, issues } as const;
-  return { ok: true, value: { sessionSlotId: sessionSlotId as string } } as const;
+  return { ok: true, value: { sessionSlotId: sessionSlotId as string, complaint } } as const;
 };
 
 export const bookingParamsSchema: Schema<BookingParams> = (input) => {
@@ -74,6 +88,49 @@ export const confirmBookingSchema: Schema<ConfirmBookingInput> = (input) => {
 
   if (issues.length > 0) return { ok: false, issues } as const;
   return { ok: true, value: { meetLink: typeof meetLink === "string" ? meetLink.trim() : null } } as const;
+};
+
+export const bookingMessageSchema: Schema<BookingMessageInput> = (input) => {
+  const object = ensureObject(input);
+  if (!object.ok) return object;
+
+  const issues: ValidationIssue[] = [];
+  const value = object.value;
+  for (const key of Object.keys(value)) {
+    if (key !== "content") issues.push({ field: key, message: "Unknown field is not allowed." });
+  }
+
+  const content = typeof value.content === "string" ? value.content.trim() : "";
+  if (content.length === 0) issues.push({ field: "content", message: "Content is required." });
+  if (content.length > 2000) issues.push({ field: "content", message: "Content must be at most 2000 characters." });
+
+  if (issues.length > 0) return { ok: false, issues } as const;
+  return { ok: true, value: { content } } as const;
+};
+
+export const bookingReviewSchema: Schema<BookingReviewInput> = (input) => {
+  const object = ensureObject(input);
+  if (!object.ok) return object;
+
+  const issues: ValidationIssue[] = [];
+  const value = object.value;
+  for (const key of Object.keys(value)) {
+    if (key !== "rating" && key !== "comment") issues.push({ field: key, message: "Unknown field is not allowed." });
+  }
+
+  const rating = value.rating;
+  const comment = value.comment;
+  if (typeof rating !== "number" || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+    issues.push({ field: "rating", message: "Rating must be an integer between 1 and 5." });
+  }
+  if (comment !== undefined && comment !== null && typeof comment !== "string") {
+    issues.push({ field: "comment", message: "Comment must be a string or null." });
+  }
+  const normalizedComment = typeof comment === "string" && comment.trim().length > 0 ? comment.trim() : null;
+  if (normalizedComment && normalizedComment.length > 2000) issues.push({ field: "comment", message: "Comment must be at most 2000 characters." });
+
+  if (issues.length > 0) return { ok: false, issues } as const;
+  return { ok: true, value: { rating: rating as number, comment: normalizedComment } } as const;
 };
 
 export const rescheduleBookingSchema: Schema<RescheduleBookingInput> = (input) => {

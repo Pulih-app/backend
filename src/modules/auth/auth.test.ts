@@ -30,17 +30,20 @@ function createMemoryRepository(seed: AuthUserRecord[] = []): AuthRepository {
   const users = new Map(seed.map((user) => [user.id, user]));
 
   return {
-    async createPatient(input) {
+    async createUser(input) {
       const user: AuthUserRecord = {
         id: crypto.randomUUID(),
         email: input.email,
         username: input.username,
         passwordHash: input.passwordHash,
-        role: "patient",
+        role: input.role,
         status: "active",
       };
       users.set(user.id, user);
       return user;
+    },
+    async createPatient(input) {
+      return this.createUser({ ...input, role: "patient" });
     },
     async findByEmail(email) {
       return Array.from(users.values()).find((user) => user.email === email) ?? null;
@@ -187,6 +190,27 @@ describe("auth routes", () => {
       },
     });
     expect(body.data.session.access_token).toBeTruthy();
+  });
+
+  test("registers psychologist account and returns psychologist role token", async () => {
+    const app = createApp(baseEnv, {}, { authRepository: createMemoryRepository() });
+
+    const response = await app.request("http://localhost/api/v1/auth/register/psychologist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "psychologist@example.com", username: "psychologist1", password: "password123", confirm_password: "password123" }),
+    });
+
+    expect(response.status).toBe(201);
+    const body = await response.json();
+    const token = body.data.session.access_token as string;
+
+    const me = await app.request("http://localhost/api/v1/auth/me", {
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+    });
+    const meBody = await me.json();
+    expect(me.status).toBe(200);
+    expect(meBody.data.role).toBe("psychologist");
   });
 
   test("rejects duplicate email", async () => {
@@ -544,10 +568,12 @@ describe("psychologist routes", () => {
           consultationChannel: input.consultationChannel,
           approvalStatus: "draft",
           fullName: input.fullName,
-          licenseNumber: input.licenseNumber,
-          bio: input.bio,
-          practicePlaces: input.practicePlaces.map((place) => ({ id: crypto.randomUUID(), name: place.name, address: place.address, isActive: place.isActive ?? true })),
+            dateOfBirth: input.dateOfBirth,
+        address: input.address,
+        photoUrl: input.photoUrl,
+        bio: input.bio,
           ratingSummary: { averageRating: 0, reviewCount: 0 },
+          latestReviews: [],
           latestBundle: null,
         };
         profiles.set(input.userId, profile);
@@ -606,6 +632,9 @@ describe("psychologist routes", () => {
       async listSessionsByPsychologistId() {
         return [];
       },
+      async listApprovedAvailableSessions() {
+        return [];
+      },
       async listSessionsByBundleIds() {
         return [];
       },
@@ -634,7 +663,7 @@ describe("psychologist routes", () => {
     const register = await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
-      body: JSON.stringify({ type: "general", fullName: "Dr. General", practicePlaces: [] }),
+      body: JSON.stringify({ type: "general", fullName: "Dr. General", dateOfBirth: "1990-01-01", address: "Jl. Demo", photoUrl: "https://example.com/photo.jpg" }),
     });
     expect(register.status).toBe(201);
     const registerBody = await register.json();
@@ -660,12 +689,6 @@ describe("psychologist routes", () => {
       body: JSON.stringify({
         type: "clinical",
         fullName: "Dr. Clinical",
-        practicePlaces: [
-          { name: "A", address: "X" },
-          { name: "B", address: "Y" },
-          { name: "C", address: "Z" },
-          { name: "D", address: "W" },
-        ],
       }),
     });
 
@@ -688,7 +711,7 @@ describe("psychologist routes", () => {
     await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${loginBody.data.session.access_token}` },
-      body: JSON.stringify({ type: "general", fullName: "Dr. General", practicePlaces: [] }),
+      body: JSON.stringify({ type: "general", fullName: "Dr. General", dateOfBirth: "1990-01-01", address: "Jl. Demo", photoUrl: "https://example.com/photo.jpg" }),
     });
 
     const form = new FormData();
@@ -740,7 +763,7 @@ describe("psychologist routes", () => {
     await app.request("http://localhost/api/v1/psychologists/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.session.access_token}` },
-      body: JSON.stringify({ type: "general", fullName: "Dr. General", practicePlaces: [] }),
+      body: JSON.stringify({ type: "general", fullName: "Dr. General", dateOfBirth: "1990-01-01", address: "Jl. Demo", photoUrl: "https://example.com/photo.jpg" }),
     });
 
     const form = new FormData();

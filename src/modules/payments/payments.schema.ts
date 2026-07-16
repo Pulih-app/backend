@@ -1,5 +1,7 @@
 import type { Schema, ValidationIssue } from "../../shared/http/validation";
 
+export type PaymentParams = { paymentId: string };
+
 export type PakasirWebhookInput = {
   project: string;
   orderId: string;
@@ -9,12 +11,22 @@ export type PakasirWebhookInput = {
   completedAt: string | null;
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function ensureObject(input: unknown) {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     return { ok: false, issues: [{ field: "body", message: "Request body must be an object." }] } as const;
   }
   return { ok: true, value: input as Record<string, unknown> } as const;
 }
+
+export const paymentParamsSchema: Schema<PaymentParams> = (input) => {
+  const object = ensureObject(input);
+  if (!object.ok) return object;
+  const paymentId = object.value.paymentId;
+  if (typeof paymentId !== "string" || !UUID_PATTERN.test(paymentId)) return { ok: false, issues: [{ field: "paymentId", message: "Must be a valid payment id." }] };
+  return { ok: true, value: { paymentId } };
+};
 
 export const pakasirWebhookSchema: Schema<PakasirWebhookInput> = (input) => {
   const object = ensureObject(input);

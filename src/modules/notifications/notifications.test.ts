@@ -27,16 +27,19 @@ function seedBooking(): BookingDetailRecord {
     packageNameSnapshot: "Paket 1 Jam",
     packageDurationMinutesSnapshot: 60,
     paymentExpiresAt: "2026-02-01T08:30:00.000Z",
-    meetLink: "https://meet.example/session",
+    meetLink: "https://meet.google.com/abc-defg-hij",
     confirmedAt: "2026-02-01T07:30:00.000Z",
     rescheduledAt: null,
     rescheduleReason: null,
+    complaint: "Sulit tidur dan mudah cemas.",
     createdAt: "2026-02-01T07:00:00.000Z",
     updatedAt: "2026-02-01T07:00:00.000Z",
     psychologistType: "clinical",
     patientEmail: "patient@example.com",
     psychologistEmail: "psych@example.com",
     psychologistFullName: "Dr. Psych",
+    ratingSummary: { averageRating: 0, reviewCount: 0 },
+    latestReviews: [],
   };
 }
 

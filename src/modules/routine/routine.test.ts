@@ -214,6 +214,7 @@ describe("routine routes", () => {
     const repository = createMemoryRepository();
     const app = createApp(TEST_ENV, {}, {
       authRepository: {
+        async createUser() { throw new Error("not used"); },
         async createPatient() { throw new Error("not used"); },
         async findByEmail() { return null; },
         async findByUsername() { return null; },
@@ -246,6 +247,7 @@ describe("routine routes", () => {
     const repository = createMemoryRepository();
     const app = createApp(TEST_ENV, {}, {
       authRepository: {
+        async createUser() { throw new Error("not used"); },
         async createPatient() { throw new Error("not used"); },
         async findByEmail() { return null; },
         async findByUsername() { return null; },
@@ -269,6 +271,7 @@ describe("routine routes", () => {
     const repository = createMemoryRepository();
     const app = createApp(TEST_ENV, {}, {
       authRepository: {
+        async createUser() { throw new Error("not used"); },
         async createPatient() { throw new Error("not used"); },
         async findByEmail() { return null; },
         async findByUsername() { return null; },
@@ -292,6 +295,7 @@ describe("routine routes", () => {
     const repository = createMemoryRepository();
     const app = createApp(TEST_ENV, {}, {
       authRepository: {
+        async createUser() { throw new Error("not used"); },
         async createPatient() { throw new Error("not used"); },
         async findByEmail() { return null; },
         async findByUsername() { return null; },
@@ -317,6 +321,7 @@ describe("routine routes", () => {
     const repository = createMemoryRepository();
     const app = createApp(TEST_ENV, {}, {
       authRepository: {
+        async createUser() { throw new Error("not used"); },
         async createPatient() { throw new Error("not used"); },
         async findByEmail() { return null; },
         async findByUsername() { return null; },
@@ -340,6 +345,7 @@ describe("routine routes", () => {
     const repository = createMemoryRepository();
     const app = createApp(TEST_ENV, {}, {
       authRepository: {
+        async createUser() { throw new Error("not used"); },
         async createPatient() { throw new Error("not used"); },
         async findByEmail() { return null; },
         async findByUsername() { return null; },
@@ -366,6 +372,7 @@ describe("routine routes", () => {
     const repository = createMemoryRepository();
     const app = createApp(TEST_ENV, {}, {
       authRepository: {
+        async createUser() { throw new Error("not used"); },
         async createPatient() { throw new Error("not used"); },
         async findByEmail() { return null; },
         async findByUsername() { return null; },
@@ -393,6 +400,7 @@ describe("routine routes", () => {
     const repository = createMemoryRepository();
     const app = createApp(TEST_ENV, {}, {
       authRepository: {
+        async createUser() { throw new Error("not used"); },
         async createPatient() { throw new Error("not used"); },
         async findByEmail() { return null; },
         async findByUsername() { return null; },

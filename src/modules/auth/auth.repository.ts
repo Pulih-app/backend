@@ -8,6 +8,7 @@ export type AuthUserRecord = AuthUser & {
 };
 
 export type AuthRepository = {
+  createUser(input: { email: string; username: string; passwordHash: string; role: UserRole }): Promise<AuthUserRecord>;
   createPatient(input: { email: string; username: string; passwordHash: string }): Promise<AuthUserRecord>;
   findByEmail(email: string): Promise<AuthUserRecord | null>;
   findByUsername(username: string): Promise<AuthUserRecord | null>;
@@ -28,15 +29,18 @@ function mapUser(row: typeof users.$inferSelect): AuthUserRecord {
 
 export function createAuthRepository(db: NodePgDatabase): AuthRepository {
   return {
-    async createPatient(input) {
+    async createUser(input) {
       const [row] = await db.insert(users).values({
         email: input.email,
         username: input.username,
         passwordHash: input.passwordHash,
-        role: "patient",
+        role: input.role,
       }).returning();
 
       return mapUser(row);
+    },
+    async createPatient(input) {
+      return this.createUser({ ...input, role: "patient" });
     },
     async findByEmail(email) {
       const [row] = await db.select().from(users).where(eq(users.email, email)).limit(1);

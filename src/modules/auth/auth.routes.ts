@@ -37,6 +37,13 @@ export function createAuthRoutes(options: AuthRoutesOptions) {
     return context.json(createSuccessResponse({ message: "Registration successful", data: result }), 201);
   });
 
+  routes.post("/auth/register/psychologist", async (context) => {
+    const payload = await validateJsonBody(context, registerSchema);
+    const result = await withAuthService(options, (service) => service.registerPsychologist(payload));
+
+    return context.json(createSuccessResponse({ message: "Psychologist registration successful", data: result }), 201);
+  });
+
   routes.post("/auth/login", async (context) => {
     const payload = await validateJsonBody(context, loginSchema);
     const result = await withAuthService(options, (service) => service.login(payload));

@@ -145,7 +145,7 @@ function buildTree(flat: CommunityCommentRecord[]): CommunityCommentNode[] {
 async function authedApp(repository: ContentRepository) {
   const token = await issueAccessToken({ user: AUTH_USER, secret: TEST_ENV.JWT_ACCESS_SECRET, ttlSeconds: 60 });
   const app = createApp(TEST_ENV, {}, {
-    authRepository: { async createPatient() { throw new Error("not used"); }, async findByEmail() { return null; }, async findByUsername() { return null; }, async findByLoginIdentifier() { return null; }, async findById(id: string) { return id === AUTH_USER.id ? { ...AUTH_USER, passwordHash: "hash" } : null; } },
+    authRepository: { async createUser() { throw new Error("not used"); }, async createPatient() { throw new Error("not used"); }, async findByEmail() { return null; }, async findByUsername() { return null; }, async findByLoginIdentifier() { return null; }, async findById(id: string) { return id === AUTH_USER.id ? { ...AUTH_USER, passwordHash: "hash" } : null; } },
     contentRepository: repository,
   });
   return { app, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } };
@@ -286,7 +286,7 @@ describe("content routes", () => {
       };
       const token = await issueAccessToken({ user: { ...AUTH_USER, id: "99999999-9999-4999-8999-999999999999", email: "unknown@test.com" }, secret: TEST_ENV.JWT_ACCESS_SECRET, ttlSeconds: 60 });
       const app = createApp(TEST_ENV, {}, {
-        authRepository: { async createPatient() { throw new Error("not used"); }, async findByEmail() { return null; }, async findByUsername() { return null; }, async findByLoginIdentifier() { return null; }, async findById(id: string) { return id === "99999999-9999-4999-8999-999999999999" ? { id, email: "unknown@test.com", username: null, role: "patient" as const, status: "active", passwordHash: "hash" } : null; } },
+        authRepository: { async createUser() { throw new Error("not used"); }, async createPatient() { throw new Error("not used"); }, async findByEmail() { return null; }, async findByUsername() { return null; }, async findByLoginIdentifier() { return null; }, async findById(id: string) { return id === "99999999-9999-4999-8999-999999999999" ? { id, email: "unknown@test.com", username: null, role: "patient" as const, status: "active", passwordHash: "hash" } : null; } },
         contentRepository: repository,
       });
       const res = await app.request("/api/v1/education", { headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } });

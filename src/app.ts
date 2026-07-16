@@ -182,6 +182,7 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
       databaseUrl: runtimeEnv.DATABASE_URL,
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
+    authRepository: options.authRepository,
     bookingsRepository: options.bookingsRepository,
     notificationsService: options.notificationsService,
   }));
