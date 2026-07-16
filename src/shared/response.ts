@@ -1,24 +1,10 @@
-export type ResponseMeta = Record<string, unknown> | null;
+export const RESPONSE_MESSAGES = {
+  requestProcessedSuccessfully: "Request processed successfully",
+  requestFailed: "Request failed",
+  serviceIsLive: "Service is live",
+} as const;
 
-export interface SuccessEnvelope<T> {
-  success: true;
-  message: string;
-  data: T;
-  meta: ResponseMeta;
-}
-
-export interface ErrorEnvelope {
-  success: false;
-  message: string;
-  data: null;
-  error: {
-    code: string;
-    details: string[];
-    request_id: string;
-  };
-}
-
-export interface PaginationMeta {
+export type PaginationEnvelope = {
   pagination: {
     page: number;
     limit: number;
@@ -27,59 +13,50 @@ export interface PaginationMeta {
     hasNextPage: boolean;
     hasPrevPage: boolean;
   };
-}
+};
 
-export const RESPONSE_MESSAGES = {
-  requestProcessedSuccessfully: "Request processed successfully",
-  requestFailed: "Request failed",
-} as const;
-
-export function createSuccessResponse<T>(options: {
+export function createSuccessResponse<T>(input: {
   data: T;
   message?: string;
-  meta?: ResponseMeta;
-}): SuccessEnvelope<T> {
+  meta?: Record<string, unknown> | null;
+}) {
   return {
     success: true,
-    message: options.message ?? RESPONSE_MESSAGES.requestProcessedSuccessfully,
-    data: options.data,
-    meta: options.meta ?? null,
+    message: input.message ?? RESPONSE_MESSAGES.requestProcessedSuccessfully,
+    data: input.data,
+    meta: input.meta ?? null,
   };
 }
 
-export function createErrorResponse(options: {
+export function createErrorResponse(input: {
   code: string;
   requestId: string;
+  details: string[];
   message?: string;
-  details?: string[];
-}): ErrorEnvelope {
+}) {
   return {
     success: false,
-    message: options.message ?? RESPONSE_MESSAGES.requestFailed,
+    message: input.message ?? RESPONSE_MESSAGES.requestFailed,
     data: null,
     error: {
-      code: options.code,
-      details: options.details ?? [],
-      request_id: options.requestId,
+      code: input.code,
+      details: input.details,
+      request_id: input.requestId,
     },
   };
 }
 
-export function createPaginationMeta(options: {
-  page: number;
-  limit: number;
-  total: number;
-}): PaginationMeta {
-  const totalPages = options.limit > 0 ? Math.ceil(options.total / options.limit) : 0;
+export function createPaginationMeta(input: { page: number; limit: number; total: number }): PaginationEnvelope {
+  const totalPages = Math.max(1, Math.ceil(input.total / input.limit));
 
   return {
     pagination: {
-      page: options.page,
-      limit: options.limit,
-      total: options.total,
+      page: input.page,
+      limit: input.limit,
+      total: input.total,
       totalPages,
-      hasNextPage: options.page < totalPages,
-      hasPrevPage: options.page > 1 && totalPages > 0,
+      hasNextPage: input.page < totalPages,
+      hasPrevPage: input.page > 1,
     },
   };
 }

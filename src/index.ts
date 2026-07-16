@@ -1,21 +1,16 @@
-import { app } from "./app";
-import { loadConfig } from "./shared/config";
+import { createApp } from "./app";
+
+const app = createApp();
 
 export default app;
-export { app };
 
 if (import.meta.main) {
-  try {
-    const config = loadConfig();
+  const port = Number(process.env.PORT ?? 3000);
 
-    Bun.serve({
-      fetch: app.fetch,
-      port: config.app.port,
-    });
+  Bun.serve({
+    port,
+    fetch: app.fetch,
+  });
 
-    console.log(`Pulih API listening on http://localhost:${config.app.port}`);
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : "Invalid environment configuration");
-    process.exit(1);
-  }
+  console.log(`Pulih API running on http://localhost:${port}`);
 }

@@ -1,75 +1,107 @@
-export type AppEnv = "local" | "test" | "staging" | "production";
-export type NodeEnv = "development" | "test" | "production";
-
-export interface AppConfig {
-  appName: string;
-  appEnv: AppEnv;
-  nodeEnv: NodeEnv;
-  port: number;
-  apiPrefix: string;
-  appUrl: string;
-  pwaUrl: string;
-}
-
-export interface AuthConfig {
-  jwtAccessSecret: string;
-  jwtAccessTtlSeconds: number;
-  passwordHashCost: number;
-}
-
-export interface SecurityConfig {
-  corsAllowedOrigins: string[];
-}
-
-export interface RuntimeConfig {
-  app: AppConfig;
-  auth: AuthConfig;
-  security: SecurityConfig;
-  database: {
-    databaseUrl: string;
-    directDatabaseUrl: string | null;
-  };
-  observability: {
-    requestIdHeader: string;
-  };
-}
-
 export class ConfigError extends Error {
   readonly issues: string[];
 
   constructor(issues: string[]) {
-    super(`Invalid environment configuration: ${issues.join(", ")}`);
+    super("CONFIG_VALIDATION_ERROR");
     this.name = "ConfigError";
     this.issues = issues;
   }
 }
 
-const allowedAppEnv: AppEnv[] = ["local", "test", "staging", "production"];
-const allowedNodeEnv: NodeEnv[] = ["development", "test", "production"];
+export type AppConfig = {
+  app: {
+    appName: string;
+    appEnv: string;
+    nodeEnv: string;
+    port: number;
+    apiPrefix: string;
+    appUrl: string;
+    pwaUrl: string;
+  };
+  database: {
+    databaseUrl: string;
+    directDatabaseUrl: string;
+  };
+  security: {
+    jwtAccessSecret: string;
+    jwtAccessTtlSeconds: number;
+    passwordHashCost: number;
+    corsAllowedOrigins: string[];
+    requestIdHeader: string;
+  };
+};
 
-export function loadConfig(env: Record<string, string | undefined> = process.env): RuntimeConfig {
+function requireValue(issues: string[], key: string, value: string | undefined) {
+  if (!value || value.trim().length === 0) {
+    issues.push(`${key} is required`);
+    return undefined;
+  }
+
+  return value.trim();
+}
+
+function parseNumber(issues: string[], key: string, value: string | undefined, minimum: number, maximum: number) {
+  const raw = requireValue(issues, key, value);
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
+    issues.push(`${key} must be an integer between ${minimum} and ${maximum}`);
+    return undefined;
+  }
+
+  return parsed;
+}
+
+function parseUrl(issues: string[], key: string, value: string | undefined) {
+  const raw = requireValue(issues, key, value);
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  try {
+    return new URL(raw).toString();
+  } catch {
+    issues.push(`${key} must be a valid URL`);
+    return undefined;
+  }
+}
+
+export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   const issues: string[] = [];
 
-  const appName = requiredString(env, "APP_NAME", issues);
-  const appEnv = requiredEnum(env, "APP_ENV", allowedAppEnv, issues);
-  const nodeEnv = requiredEnum(env, "NODE_ENV", allowedNodeEnv, issues);
-  const port = requiredPort(env, "PORT", issues);
-  const apiPrefix = requiredString(env, "API_PREFIX", issues);
-  const appUrl = requiredAbsoluteUrl(env, "APP_URL", issues);
-  const pwaUrl = requiredAbsoluteUrl(env, "PWA_URL", issues);
+  const appName = requireValue(issues, "APP_NAME", env.APP_NAME);
+  const appEnv = requireValue(issues, "APP_ENV", env.APP_ENV);
+  const nodeEnv = requireValue(issues, "NODE_ENV", env.NODE_ENV);
+  const port = parseNumber(issues, "PORT", env.PORT, 1, 65535);
+  const apiPrefix = requireValue(issues, "API_PREFIX", env.API_PREFIX);
+  const appUrl = parseUrl(issues, "APP_URL", env.APP_URL);
+  const pwaUrl = parseUrl(issues, "PWA_URL", env.PWA_URL);
 
-  const databaseUrl = requiredDatabaseUrl(env, "DATABASE_URL", issues);
-  const directDatabaseUrl = optionalDatabaseUrl(env, "DIRECT_DATABASE_URL", issues);
+  const databaseUrl = parseUrl(issues, "DATABASE_URL", env.DATABASE_URL);
+  const directDatabaseUrl = parseUrl(issues, "DIRECT_DATABASE_URL", env.DIRECT_DATABASE_URL);
 
-  const jwtAccessSecret = requiredSecret(env, "JWT_ACCESS_SECRET", 16, issues);
-  const jwtAccessTtlSeconds = requiredPositiveInteger(env, "JWT_ACCESS_TTL_SECONDS", issues);
-  const passwordHashCost = requiredIntegerRange(env, "PASSWORD_HASH_COST", 4, 31, issues);
+  const jwtAccessSecret = requireValue(issues, "JWT_ACCESS_SECRET", env.JWT_ACCESS_SECRET);
+  const jwtAccessTtlSeconds = parseNumber(issues, "JWT_ACCESS_TTL_SECONDS", env.JWT_ACCESS_TTL_SECONDS, 300, 86400);
+  const passwordHashCost = parseNumber(issues, "PASSWORD_HASH_COST", env.PASSWORD_HASH_COST, 4, 15);
+  const corsAllowedOrigins = requireValue(issues, "CORS_ALLOWED_ORIGINS", env.CORS_ALLOWED_ORIGINS)
+    ?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const requestIdHeader = requireValue(issues, "REQUEST_ID_HEADER", env.REQUEST_ID_HEADER);
 
-  const corsAllowedOrigins = requiredCsvAbsoluteUrls(env, "CORS_ALLOWED_ORIGINS", issues);
-  const requestIdHeader = requiredString(env, "REQUEST_ID_HEADER", issues);
+  if (appEnv && !["local", "development", "staging", "production"].includes(appEnv)) {
+    issues.push("APP_ENV must be one of local, development, staging, production");
+  }
 
-  if (apiPrefix !== "" && !apiPrefix.startsWith("/")) {
-    issues.push("API_PREFIX must start with '/'");
+  if (apiPrefix && !apiPrefix.startsWith("/")) {
+    issues.push("API_PREFIX must start with /");
+  }
+
+  if (!corsAllowedOrigins || corsAllowedOrigins.length === 0) {
+    issues.push("CORS_ALLOWED_ORIGINS must contain at least one origin");
   }
 
   if (issues.length > 0) {
@@ -78,218 +110,24 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 
   return {
     app: {
-      appName,
-      appEnv,
-      nodeEnv,
-      port,
-      apiPrefix,
-      appUrl,
-      pwaUrl,
-    },
-    auth: {
-      jwtAccessSecret,
-      jwtAccessTtlSeconds,
-      passwordHashCost,
-    },
-    security: {
-      corsAllowedOrigins,
+      appName: appName as string,
+      appEnv: appEnv as string,
+      nodeEnv: nodeEnv as string,
+      port: port as number,
+      apiPrefix: apiPrefix as string,
+      appUrl: appUrl as string,
+      pwaUrl: pwaUrl as string,
     },
     database: {
-      databaseUrl,
-      directDatabaseUrl,
+      databaseUrl: databaseUrl as string,
+      directDatabaseUrl: directDatabaseUrl as string,
     },
-    observability: {
-      requestIdHeader,
+    security: {
+      jwtAccessSecret: jwtAccessSecret as string,
+      jwtAccessTtlSeconds: jwtAccessTtlSeconds as number,
+      passwordHashCost: passwordHashCost as number,
+      corsAllowedOrigins: corsAllowedOrigins as string[],
+      requestIdHeader: requestIdHeader as string,
     },
   };
-}
-
-function requiredString(
-  env: Record<string, string | undefined>,
-  key: string,
-  issues: string[],
-): string {
-  const value = env[key]?.trim();
-  if (!value) {
-    issues.push(`${key} is required`);
-    return "";
-  }
-
-  return value;
-}
-
-function requiredEnum<T extends string>(
-  env: Record<string, string | undefined>,
-  key: string,
-  allowed: readonly T[],
-  issues: string[],
-): T {
-  const value = requiredString(env, key, issues);
-  if (value === "") {
-    return "" as T;
-  }
-
-  if (!allowed.includes(value as T)) {
-    issues.push(`${key} must be one of: ${allowed.join(", ")}`);
-    return "" as T;
-  }
-
-  return value as T;
-}
-
-function requiredPort(
-  env: Record<string, string | undefined>,
-  key: string,
-  issues: string[],
-): number {
-  return requiredIntegerRange(env, key, 1, 65535, issues);
-}
-
-function requiredPositiveInteger(
-  env: Record<string, string | undefined>,
-  key: string,
-  issues: string[],
-): number {
-  return requiredIntegerRange(env, key, 1, Number.MAX_SAFE_INTEGER, issues);
-}
-
-function requiredIntegerRange(
-  env: Record<string, string | undefined>,
-  key: string,
-  min: number,
-  max: number,
-  issues: string[],
-): number {
-  const value = requiredString(env, key, issues);
-  if (value === "") {
-    return 0;
-  }
-
-  if (!/^-?\d+$/.test(value)) {
-    issues.push(`${key} must be an integer`);
-    return 0;
-  }
-
-  const parsed = Number.parseInt(value, 10);
-
-  if (parsed < min || parsed > max) {
-    issues.push(`${key} must be between ${min} and ${max}`);
-    return 0;
-  }
-
-  return parsed;
-}
-
-function requiredAbsoluteUrl(
-  env: Record<string, string | undefined>,
-  key: string,
-  issues: string[],
-): string {
-  const value = requiredString(env, key, issues);
-  if (value === "") {
-    return "";
-  }
-
-  try {
-    const url = new URL(value);
-    if (!url.protocol.startsWith("http")) {
-      throw new Error("invalid protocol");
-    }
-    return url.toString().replace(/\/$/, "");
-  } catch {
-    issues.push(`${key} must be a valid absolute URL`);
-    return "";
-  }
-}
-
-function requiredCsvAbsoluteUrls(
-  env: Record<string, string | undefined>,
-  key: string,
-  issues: string[],
-): string[] {
-  const value = requiredString(env, key, issues);
-  if (value === "") {
-    return [];
-  }
-
-  const urls = value
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-  if (urls.length === 0) {
-    issues.push(`${key} must contain at least one origin`);
-    return [];
-  }
-
-  const parsed: string[] = [];
-  for (const item of urls) {
-    try {
-      const url = new URL(item);
-      if (!url.protocol.startsWith("http")) {
-        throw new Error("invalid protocol");
-      }
-      parsed.push(url.toString().replace(/\/$/, ""));
-    } catch {
-      issues.push(`${key} must contain valid absolute URLs`);
-      return [];
-    }
-  }
-
-  return parsed;
-}
-
-function requiredSecret(
-  env: Record<string, string | undefined>,
-  key: string,
-  minLength: number,
-  issues: string[],
-): string {
-  const value = requiredString(env, key, issues);
-  if (value === "") {
-    return "";
-  }
-
-  if (value.length < minLength) {
-    issues.push(`${key} must be at least ${minLength} characters`);
-    return "";
-  }
-
-  return value;
-}
-
-function requiredDatabaseUrl(
-  env: Record<string, string | undefined>,
-  key: string,
-  issues: string[],
-): string {
-  const value = requiredString(env, key, issues);
-  if (value === "") {
-    return "";
-  }
-
-  if (!value.startsWith("postgresql://")) {
-    issues.push(`${key} must start with postgresql://`);
-    return "";
-  }
-
-  return value;
-}
-
-function optionalDatabaseUrl(
-  env: Record<string, string | undefined>,
-  key: string,
-  issues: string[],
-): string | null {
-  const raw = env[key]?.trim();
-  if (!raw) {
-    return null;
-  }
-
-  if (!raw.startsWith("postgresql://")) {
-    issues.push(`${key} must start with postgresql://`);
-    return null;
-  }
-
-  return raw;
 }
