@@ -10,6 +10,7 @@ import type { CredentialStorage, R2Like } from "./modules/psychologists/credenti
 import type { PsychologistsRepository } from "./modules/psychologists/psychologists.repository";
 import { createBookingsRoutes } from "./modules/bookings/bookings.routes";
 import type { BookingsRepository } from "./modules/bookings/bookings.repository";
+import { createPaymentsRoutes } from "./modules/payments/payments.routes";
 import { createHealthRoutes } from "./routes/health.routes";
 import { validationDemoRoutes } from "./routes/validation-demo.routes";
 import { loadConfig } from "./shared/config";
@@ -36,6 +37,8 @@ const DEFAULT_ENV = {
   PASSWORD_HASH_COST: "10",
   CORS_ALLOWED_ORIGINS: "http://localhost:3001,http://localhost:4173",
   REQUEST_ID_HEADER: "x-request-id",
+  PAKASIR_API_KEY: "local-pakasir-api-key",
+  PAKASIR_PROVIDER_TIMEOUT_MS: "10000",
 } as const;
 
 export type AppEnv = Record<string, string | undefined>;
@@ -136,6 +139,15 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
     authRepository: options.authRepository,
+    bookingsRepository: options.bookingsRepository,
+  }));
+  app.route("/api/v1", createPaymentsRoutes({
+    config,
+    databaseSource: {
+      hyperdrive: bindings.HYPERDRIVE,
+      databaseUrl: runtimeEnv.DATABASE_URL,
+      directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
+    },
     bookingsRepository: options.bookingsRepository,
   }));
   app.route("/api/v1", validationDemoRoutes);

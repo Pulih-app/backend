@@ -107,6 +107,21 @@ function createMemoryBookingsRepository(seed: {
     async findBookingById(bookingId) { return bookings.get(bookingId) ?? null; },
     async listBookingsByPatientUserId(userId) { return Array.from(bookings.values()).filter((booking) => booking.patientUserId === userId); },
     async listBookingsByPsychologistUserId(userId) { return Array.from(bookings.values()).filter((booking) => booking.psychologistUserId === userId); },
+    async findPaymentByOrderId(orderId) { return Array.from(payments.values()).find((payment) => payment.orderId === orderId) ?? null; },
+    async hasPaymentEvent() { return false; },
+    async createPaymentEvent() { return undefined; },
+    async markPaymentCompleted(input) {
+      const payment = payments.get(input.paymentId);
+      if (payment) payments.set(input.paymentId, { ...payment, status: "completed", paymentMethod: input.paymentMethod, completedAt: input.completedAt.toISOString() });
+    },
+    async markBookingPaymentCompleted(input) {
+      const booking = bookings.get(input.bookingId);
+      if (booking) bookings.set(input.bookingId, { ...booking, status: "payment_completed" });
+    },
+    async markSessionSlotBooked(sessionSlotId) {
+      const session = sessions.get(sessionSlotId);
+      if (session) sessions.set(sessionSlotId, { ...session, status: "booked", heldUntil: null });
+    },
   };
 
   return repository;

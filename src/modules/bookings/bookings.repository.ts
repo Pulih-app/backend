@@ -3,6 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   bookingStatusEvents,
   bookings,
+  paymentEvents,
   payments,
   psychologistProfiles,
   psychologistSessionBundles,
@@ -101,6 +102,12 @@ export type BookingsRepository = {
   findBookingById(bookingId: string): Promise<BookingDetailRecord | null>;
   listBookingsByPatientUserId(userId: string): Promise<BookingDetailRecord[]>;
   listBookingsByPsychologistUserId(userId: string): Promise<BookingDetailRecord[]>;
+  findPaymentByOrderId(orderId: string): Promise<PaymentRecord | null>;
+  hasPaymentEvent(input: { paymentId: string; eventType: string; providerStatus: string; orderId: string; amount: number }): Promise<boolean>;
+  createPaymentEvent(input: { paymentId: string; provider: string; eventType: string; providerStatus: string; orderId: string; amount: number; rawPayloadSafe: Record<string, unknown>; processedAt?: Date | null }): Promise<void>;
+  markPaymentCompleted(input: { paymentId: string; paymentMethod: string | null; completedAt: Date }): Promise<void>;
+  markBookingPaymentCompleted(input: { bookingId: string; actorUserId?: string | null }): Promise<void>;
+  markSessionSlotBooked(sessionSlotId: string): Promise<void>;
 };
 
 function toNumber(value: unknown) {
@@ -139,6 +146,24 @@ function mapSessionSlot(row: {
     packageName: row.bundle.packageName,
     packageDurationMinutes: row.bundle.packageDurationMinutes,
     priceAmount: toNumber(row.bundle.priceAmount),
+  };
+}
+
+function mapPayment(row: typeof payments.$inferSelect): PaymentRecord {
+  return {
+    id: row.id,
+    bookingId: row.bookingId,
+    provider: row.provider,
+    orderId: row.orderId,
+    amount: toNumber(row.amount),
+    status: row.status,
+    paymentMethod: row.paymentMethod,
+    paymentUrl: row.paymentUrl,
+    completedAt: toIso(row.completedAt),
+    expiresAt: row.expiresAt.toISOString(),
+    providerMetadata: row.providerMetadata as Record<string, unknown>,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -312,21 +337,7 @@ function createRepository(source: NodePgDatabase): BookingsRepository {
         providerMetadata: input.providerMetadata,
       }).returning();
 
-      return {
-        id: row.id,
-        bookingId: row.bookingId,
-        provider: row.provider,
-        orderId: row.orderId,
-        amount: toNumber(row.amount),
-        status: row.status,
-        paymentMethod: row.paymentMethod,
-        paymentUrl: row.paymentUrl,
-        completedAt: toIso(row.completedAt),
-        expiresAt: row.expiresAt.toISOString(),
-        providerMetadata: row.providerMetadata as Record<string, unknown>,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      };
+      return mapPayment(row);
     },
     async findBookingById(bookingId) {
       return loadBooking(source, bookingId);
@@ -336,6 +347,54 @@ function createRepository(source: NodePgDatabase): BookingsRepository {
     },
     async listBookingsByPsychologistUserId(userId) {
       return loadBookingList(source, userId, "psychologist");
+    },
+    async findPaymentByOrderId(orderId) {
+      const [row] = await source.select().from(payments).where(eq(payments.orderId, orderId)).limit(1);
+      return row ? mapPayment(row) : null;
+    },
+    async hasPaymentEvent(input) {
+      const [row] = await source.select().from(paymentEvents).where(and(
+        eq(paymentEvents.paymentId, input.paymentId),
+        eq(paymentEvents.eventType, input.eventType),
+        eq(paymentEvents.providerStatus, input.providerStatus),
+        eq(paymentEvents.orderId, input.orderId),
+        eq(paymentEvents.amount, String(input.amount)),
+      )).limit(1);
+      return Boolean(row);
+    },
+    async createPaymentEvent(input) {
+      await source.insert(paymentEvents).values({
+        paymentId: input.paymentId,
+        provider: input.provider,
+        eventType: input.eventType,
+        providerStatus: input.providerStatus,
+        orderId: input.orderId,
+        amount: String(input.amount),
+        rawPayloadSafe: input.rawPayloadSafe,
+        processedAt: input.processedAt ?? null,
+      });
+    },
+    async markPaymentCompleted(input) {
+      await source.update(payments).set({
+        status: "completed",
+        paymentMethod: input.paymentMethod,
+        completedAt: input.completedAt,
+        updatedAt: new Date(),
+      }).where(eq(payments.id, input.paymentId));
+    },
+    async markBookingPaymentCompleted(input) {
+      const booking = await loadBooking(source, input.bookingId);
+      if (!booking || booking.status === "payment_completed") return;
+      await source.update(bookings).set({ status: "payment_completed", updatedAt: new Date() }).where(eq(bookings.id, input.bookingId));
+      await this.createBookingStatusEvent({
+        bookingId: input.bookingId,
+        fromStatus: booking.status,
+        toStatus: "payment_completed",
+        actorUserId: input.actorUserId ?? null,
+      });
+    },
+    async markSessionSlotBooked(sessionSlotId) {
+      await source.update(psychologistSessionSlots).set({ status: "booked", heldUntil: null, updatedAt: new Date() }).where(eq(psychologistSessionSlots.id, sessionSlotId));
     },
   };
 }

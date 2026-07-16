@@ -33,6 +33,8 @@ export type AppConfig = {
     pakasirProjectSlug: string;
     pakasirBaseUrl: string;
     pakasirPaymentBaseUrl: string;
+    pakasirApiKey: string;
+    pakasirProviderTimeoutMs: number;
   };
 };
 
@@ -99,6 +101,10 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   const pakasirProjectSlug = env.PAKASIR_PROJECT_SLUG?.trim() || "pulih";
   const pakasirBaseUrl = env.PAKASIR_BASE_URL?.trim() || "https://app.pakasir.com";
   const pakasirPaymentBaseUrl = env.PAKASIR_PAYMENT_BASE_URL?.trim() || "https://app.pakasir.com";
+  const pakasirApiKey = env.PAKASIR_API_KEY?.trim() || "local-pakasir-api-key";
+  const pakasirProviderTimeoutMs = env.PAKASIR_PROVIDER_TIMEOUT_MS
+    ? parseNumber(issues, "PAKASIR_PROVIDER_TIMEOUT_MS", env.PAKASIR_PROVIDER_TIMEOUT_MS, 500, 30000)
+    : 10000;
 
   if (appEnv && !["local", "development", "staging", "production"].includes(appEnv)) {
     issues.push("APP_ENV must be one of local, development, staging, production");
@@ -141,6 +147,8 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
       pakasirProjectSlug,
       pakasirBaseUrl,
       pakasirPaymentBaseUrl,
+      pakasirApiKey,
+      pakasirProviderTimeoutMs: pakasirProviderTimeoutMs as number,
     },
   };
 }
