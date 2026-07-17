@@ -1,8 +1,8 @@
-import { createApp } from "./app";
+import { createApp, DEFAULT_ENV } from "./app";
 import { loadConfig } from "./shared/config";
 import { createS3CredentialStorage } from "./modules/psychologists/credential-storage-s3";
 
-const env = process.env as Record<string, string | undefined>;
+const env = { ...DEFAULT_ENV, ...process.env } as Record<string, string | undefined>;
 const config = loadConfig(env);
 const credentialStorage = config.credentialStorage
   ? createS3CredentialStorage(config.credentialStorage)

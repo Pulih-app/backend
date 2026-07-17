@@ -34,7 +34,7 @@ import {
 } from "./shared/response";
 import { requestBaseline } from "./shared/middleware/request-baseline";
 
-const DEFAULT_ENV = {
+export const DEFAULT_ENV = {
   APP_NAME: "pulih-api",
   APP_ENV: "local",
   NODE_ENV: "development",
