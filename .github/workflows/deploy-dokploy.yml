@@ -68,10 +68,22 @@ jobs:
           set -euo pipefail
 
           echo "Fetching current env from Dokploy..."
-          current_env=$(curl -sS \
+          response=$(curl -sS -w "\n%{http_code}" \
             "${DOKPLOY_URL}/api/compose.one?composeId=${DOKPLOY_COMPOSE_ID}" \
             -H "accept: application/json" \
-            -H "x-api-key: ${DOKPLOY_API_TOKEN}" | jq -r '.env // ""')
+            -H "x-api-key: ${DOKPLOY_API_TOKEN}")
+
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+
+          if [ "$http_code" != "200" ]; then
+            echo "ERROR: Dokploy API returned HTTP ${http_code}"
+            echo "Response body:"
+            echo "$body"
+            exit 1
+          fi
+
+          current_env=$(echo "$body" | jq -r '.env // ""')
 
           if [ -z "$current_env" ]; then
             echo "WARNING: Empty env from Dokploy, skipping IMAGE_TAG update."
