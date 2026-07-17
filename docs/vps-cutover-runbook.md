@@ -716,6 +716,7 @@ Never capture in logs:
 After successful cutover and observation window:
 
 - [x] Disable Cloudflare Worker auto-deploy (`main-deploy.yml`) — archived as `main-deploy.yml.archived`
+- [x] Archive GitHub Actions deployment workflows (`deploy-vps.yml`, `deploy-dokploy.yml`) — kept as `*.yml.archived` references
 - [ ] Remove or rotate Cloudflare Worker secrets
 - [x] Update `README.md` deployment section to VPS path
 - [x] Archive `wrangler.toml` — removed

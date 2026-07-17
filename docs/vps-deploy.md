@@ -2,12 +2,14 @@
 
 VPS runtime for Pulih API using Docker Compose with immutable image tags.
 
-## Automated CI/CD
+## CI/CD status
 
-Two GitHub Actions workflows automate build and deploy:
+GitHub Actions deployment workflows are intentionally archived. Active Actions should not deploy production.
 
-- **CI** (`.github/workflows/ci.yml`): runs on push/PR to `development` and `main`. Quality gates (install, typecheck, test, OpenAPI docs check), Docker image build, smoke test on built image. On push to `main`, pushes image to GHCR as `ghcr.io/pulih-app/backend:sha-<sha>` and `:latest`.
-- **Deploy VPS** (`.github/workflows/deploy-vps.yml`): manual trigger (`workflow_dispatch`) with `production` environment approval. SSHes to VPS, pulls the specified image tag, restarts services, runs forward migrations, and performs smoke checks.
+- **CI** (`.github/workflows/ci.yml`): runs on push/PR to `development` and `main`. Quality gates (install, typecheck, test, OpenAPI docs check), Docker image build, smoke test on built image.
+- **Archived Deploy VPS** (`.github/workflows/deploy-vps.yml.archived`): previous manual VPS deploy workflow. Kept as reference only; not active in GitHub Actions.
+- **Archived Dokploy deploy** (`.github/workflows/deploy-dokploy.yml.archived`): previous manual Dokploy deploy workflow. Kept as reference only; not active in GitHub Actions.
+- **Archived Cloudflare deploy** (`.github/workflows/main-deploy.yml.archived`): previous `main` branch Cloudflare Worker deploy workflow. Kept as reference only; not active in GitHub Actions.
 
 ### GitHub Secrets Required
 
@@ -102,16 +104,9 @@ echo "<ghcr-token>" | docker login ghcr.io -u <github-username> --password-stdin
 
 ## Deploy
 
-### Automated (recommended)
-
-Trigger the **Deploy VPS** workflow from GitHub Actions UI:
-
-1. Go to Actions → deploy-vps → Run workflow.
-2. Set `image_tag` to `sha-<commit-sha>` or leave as `latest`.
-3. Set `run_migrations` checkbox (default: true).
-4. Requires production environment approval.
-
 ### Manual
+
+Deployment is manual while GitHub Actions deploy workflows stay archived.
 
 Pull new image and restart:
 

@@ -410,6 +410,7 @@ Relevant files:
 Expectations:
 
 - Build from committed source and `bun.lock`.
+- Active GitHub Actions are CI-only; deployment workflows are archived (`*.yml.archived`) and kept as reference.
 - Provide secrets via deployment env or server-side `.env.vps`.
 - Run migrations explicitly before serving prod traffic.
 - Use `/health/live` and `/health/ready`.
