@@ -28,16 +28,24 @@ function mapAiResponse(input: unknown, fallbackModel: string): AiProviderRespons
   return { content: content.trim(), model: typeof response.model === "string" ? response.model : fallbackModel };
 }
 
-function mapProviderError(error: unknown): never {
+function mapProviderError(error: unknown, timeoutMs: number): never {
   if (error instanceof AppError) throw error;
   if (error instanceof DOMException && error.name === "AbortError") {
-    throw new AppError(AppErrorCode.ServiceUnavailable, "AI provider request timed out.");
+    throw new AppError(AppErrorCode.ServiceUnavailable, "AI provider request timed out.", [`provider_timeout_ms:${timeoutMs}`]);
   }
   throw new AppError(AppErrorCode.ServiceUnavailable, "AI provider is unavailable.");
 }
 
 function mapProviderStatus(status: number): never {
-  if (status === 408 || status === 409 || status === 425 || status === 429 || status >= 500) {
+  if (status === 401 || status === 403) {
+    throw new AppError(AppErrorCode.DownstreamError, "AI provider authentication failed.", [`provider_status:${status}`]);
+  }
+
+  if (status === 429) {
+    throw new AppError(AppErrorCode.RateLimited, "AI provider rate limit reached.", [`provider_status:${status}`]);
+  }
+
+  if (status === 408 || status === 409 || status === 425 || status >= 500) {
     throw new AppError(AppErrorCode.ServiceUnavailable, "AI provider is temporarily unavailable.", [`provider_status:${status}`]);
   }
 
@@ -81,7 +89,7 @@ export function createAiProvider(options: AiProviderOptions): AiProvider {
         if (!response.ok) mapProviderStatus(response.status);
         return mapAiResponse(await response.json(), model);
       } catch (error) {
-        mapProviderError(error);
+        mapProviderError(error, options.timeoutMs);
       } finally {
         timeout.done();
       }

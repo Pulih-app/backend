@@ -67,7 +67,7 @@ describe("loadConfig", () => {
   test("uses OpenRouter-compatible default model when OpenRouter base URL is configured", () => {
     const config = loadConfig({ ...validEnv, AI_BASE_URL: "https://openrouter.ai/api/v1" });
 
-    expect(config.ai?.model).toBe("openai/gpt-4o-mini");
+    expect(config.ai?.model).toBe("google/gemini-2.5-flash-lite");
   });
 
   test("normalizes explicit GPT model for OpenRouter", () => {
@@ -78,5 +78,15 @@ describe("loadConfig", () => {
     });
 
     expect(config.ai?.model).toBe("openai/gpt-4o-mini");
+  });
+
+  test("loads AI defaults when config omitted", () => {
+    const config = loadConfig(validEnv);
+
+    expect(config.ai?.baseUrl).toBe("https://openrouter.ai/api/v1");
+    expect(config.ai?.apiKey).toBe("local-ai-api-key");
+    expect(config.ai?.timeoutMs).toBe(10000);
+    expect(config.ai?.maxTokens).toBe(800);
+    expect(config.ai?.model).toBe("google/gemini-2.5-flash-lite");
   });
 });

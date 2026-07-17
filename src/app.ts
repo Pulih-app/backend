@@ -51,9 +51,9 @@ export const DEFAULT_ENV = {
   REQUEST_ID_HEADER: "x-request-id",
   PAKASIR_API_KEY: "local-pakasir-api-key",
   PAKASIR_PROVIDER_TIMEOUT_MS: "10000",
-  AI_BASE_URL: "https://ai.sumopod.com/v1",
+  AI_BASE_URL: "https://openrouter.ai/api/v1",
   AI_API_KEY: "local-ai-api-key",
-  AI_MODEL: "gpt-4o-mini",
+  AI_MODEL: "google/gemini-2.5-flash-lite",
   AI_TIMEOUT_MS: "10000",
   AI_MAX_TOKENS: "800",
 } as const;

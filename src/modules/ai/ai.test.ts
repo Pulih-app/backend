@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createApp } from "../../app";
 import { issueAccessToken } from "../auth/token";
-import { AppErrorCode } from "../../shared/errors";
+import { AppError, AppErrorCode } from "../../shared/errors";
 import { createAiProvider, type AiProvider } from "./ai-provider";
 import type { AiRepository, AiChatRecord, AiPersonaPreferencesRecord } from "./ai.repository";
 import { buildCoachMessages, CRISIS_ESCALATION_COPY, DEFAULT_PERSONA } from "./ai-safety";
@@ -52,7 +52,8 @@ describe("AI provider", () => {
     });
 
     await expect(provider.complete({ messages: [{ role: "user", content: "hello" }] })).rejects.toMatchObject({
-      code: AppErrorCode.ServiceUnavailable,
+      code: AppErrorCode.RateLimited,
+      message: "AI provider rate limit reached.",
       details: ["provider_status:429"],
     });
   });
@@ -231,5 +232,39 @@ describe("AI routes", () => {
     expect(response.status).toBe(200);
     expect(typeof body.data.summary).toBe("string");
     expect(body.data.summary.length).toBeGreaterThan(0);
+  });
+
+  test("ask coach surfaces provider auth failure", async () => {
+    const repository = memoryRepository();
+    const provider: AiProvider = {
+      async complete() {
+        throw new AppError(AppErrorCode.DownstreamError, "AI provider authentication failed.", ["provider_status:401"]);
+      },
+    };
+    const { app, headers } = await authedApp(repository, provider);
+    const response = await app.request("/api/v1/ai/ask-coach", { method: "POST", headers, body: JSON.stringify({ message: "Hello" }) });
+    const body = await response.json() as any;
+    expect(response.status).toBe(502);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe("DOWNSTREAM_ERROR");
+    expect(body.message).toContain("authentication failed");
+    expect(body.error.details[0]).toContain("provider_status:401");
+  });
+
+  test("relapse solution surfaces timeout", async () => {
+    const repository = memoryRepository();
+    const provider: AiProvider = {
+      async complete() {
+        throw new AppError(AppErrorCode.ServiceUnavailable, "AI provider request timed out.", ["provider_timeout_ms:1000"]);
+      },
+    };
+    const { app, headers } = await authedApp(repository, provider);
+    const response = await app.request("/api/v1/ai/relapse-solution", { method: "POST", headers, body: JSON.stringify({ mood: "stressed", relapse_trigger: ["work pressure"] }) });
+    const body = await response.json() as any;
+    expect(response.status).toBe(503);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe("SERVICE_UNAVAILABLE");
+    expect(body.message).toContain("timed out");
+    expect(body.error.details[0]).toContain("provider_timeout_ms:1000");
   });
 });

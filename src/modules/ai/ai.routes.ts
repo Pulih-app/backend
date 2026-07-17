@@ -14,7 +14,7 @@ import { askCoachSchema, onboardingAnalysisSchema, personaPreferencesSchema, rel
 export type AiRoutesOptions = { config: AppConfig; databaseSource?: DatabaseSource; authRepository?: AuthRepository; authService?: AuthService; aiRepository?: AiRepository; aiProvider?: AiProvider };
 
 function defaultProvider(config: AppConfig) {
-  const ai = config.ai ?? { baseUrl: "https://ai.sumopod.com/v1", apiKey: "local-ai-api-key", model: "gpt-4o-mini", timeoutMs: 10000, maxTokens: 800 };
+  const ai = config.ai ?? { baseUrl: "https://openrouter.ai/api/v1", apiKey: "local-ai-api-key", model: "google/gemini-2.5-flash-lite", timeoutMs: 10000, maxTokens: 800 };
   return createAiProvider({
     baseUrl: ai.baseUrl,
     apiKey: ai.apiKey,

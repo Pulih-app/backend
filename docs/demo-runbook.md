@@ -19,9 +19,9 @@ Set local `.env` or worker secrets for:
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 - `RESEND_FROM_NAME`
-- `AI_BASE_URL`
+- `AI_BASE_URL` (default: `https://openrouter.ai/api/v1`)
 - `AI_API_KEY`
-- `AI_MODEL`
+- `AI_MODEL` (default: `google/gemini-2.5-flash-lite`)
 
 ## 2. Manual DB approval step
 

@@ -62,9 +62,9 @@ PAKASIR_PROVIDER_TIMEOUT_MS=10000
 RESEND_API_KEY=<resend-api-key>
 RESEND_FROM_EMAIL=no-reply@salmanabdurrahman.web.id
 RESEND_FROM_NAME=Pulih
-AI_BASE_URL=<ai-base-url>
+AI_BASE_URL=https://openrouter.ai/api/v1
 AI_API_KEY=<ai-api-key>
-AI_MODEL=<ai-model>
+AI_MODEL=google/gemini-2.5-flash-lite
 AI_TIMEOUT_MS=10000
 AI_MAX_TOKENS=800
 
