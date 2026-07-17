@@ -7,6 +7,11 @@ on:
         description: "Docker image tag to deploy (e.g., sha-abc1234). Default: sha-<commit>."
         required: false
         default: ""
+      run_migrations:
+        description: "Run database migrations via SSH after deploy?"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-dokploy
@@ -54,6 +59,40 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Update IMAGE_TAG in Dokploy
+        env:
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+        run: |
+          set -euo pipefail
+
+          echo "Fetching current env from Dokploy..."
+          current_env=$(curl -sS \
+            "${DOKPLOY_URL}/api/compose.one?composeId=${DOKPLOY_COMPOSE_ID}" \
+            -H "accept: application/json" \
+            -H "x-api-key: ${DOKPLOY_API_TOKEN}" | jq -r '.env // ""')
+
+          if [ -z "$current_env" ]; then
+            echo "WARNING: Empty env from Dokploy, skipping IMAGE_TAG update."
+            exit 0
+          fi
+
+          echo "Updating IMAGE_TAG to ${IMAGE_TAG}..."
+          updated_env=$(echo "$current_env" | sed "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/")
+
+          curl --fail-with-body -sSL \
+            -X POST "${DOKPLOY_URL}/api/compose.update" \
+            -H "accept: application/json" \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${DOKPLOY_API_TOKEN}" \
+            -d "$(jq -n \
+              --arg composeId "$DOKPLOY_COMPOSE_ID" \
+              --arg env "$updated_env" \
+              '{composeId: $composeId, env: $env}')"
+
+          echo "IMAGE_TAG updated in Dokploy."
+
       - name: Trigger Dokploy deploy
         env:
           DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
@@ -73,15 +112,49 @@ jobs:
             -H "x-api-key: ${DOKPLOY_API_TOKEN}" \
             -d "${deploy_body}"
 
+          echo "Deploy triggered. Waiting for container to be ready..."
+          sleep 15
+
+      - name: Run database migrations (SSH)
+        if: github.event.inputs.run_migrations == 'true'
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s << 'REMOTE_SCRIPT'
+          set -euo pipefail
+
+          echo "Finding API container..."
+          container=$(docker ps --filter "name=pulih" --filter "status=running" --format '{{.Names}}' | head -1)
+
+          if [ -z "$container" ]; then
+            echo "ERROR: No running pulih container found."
+            docker ps --format '{{.Names}}'
+            exit 1
+          fi
+
+          echo "Running migrations in container: $container"
+          docker exec -i "$container" bun run scripts/migrate.ts
+          echo "Migrations complete."
+          REMOTE_SCRIPT
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+
       - name: Smoke tests
         env:
           API_URL: ${{ vars.API_URL }}
         run: |
           base_url="${API_URL}"
-          curl -fsS --retry 6 --retry-delay 10 "${base_url}/health/live"
-          curl -fsS --retry 6 --retry-delay 10 "${base_url}/health/ready"
+
+          echo "=== Health /live ==="
+          curl -fsS --retry 10 --retry-delay 6 --retry-max-time 120 "${base_url}/health/live"
+
+          echo "=== Health /ready ==="
+          curl -fsS --retry 10 --retry-delay 6 --retry-max-time 120 "${base_url}/health/ready"
+
+          echo "=== Auth guard (expect 401) ==="
           status=$(curl -sS -o /dev/null -w '%{http_code}' "${base_url}/api/v1/auth/me")
           case "$status" in
             401|403) echo "Auth guard ok: ${status}" ;;
             *) echo "FAIL: expected 401/403, got ${status}"; exit 1 ;;
           esac
+
+          echo "=== All smoke checks passed ==="
