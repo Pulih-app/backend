@@ -83,6 +83,17 @@ describe("docs", () => {
     expect(body.servers[0].url).toBe("https://pulih.salmanabdurrahman.my.id");
     expect(body.paths["/health/live"].get["x-codeSamples"][0].source).toBe("curl -X GET https://pulih.salmanabdurrahman.my.id/health/live");
   });
+
+  test("uses production OpenAPI default when production app url is localhost", async () => {
+    const app = createApp({ ...baseEnv, APP_ENV: "production", APP_URL: "http://localhost:3001" });
+
+    const response = await app.request("http://localhost/openapi.json");
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.servers[0].url).toBe("https://pulih.salmanabdurrahman.my.id");
+    expect(body.paths["/api/v1/auth/register"].post["x-codeSamples"][0].source).toBe("curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/register");
+  });
 });
 
 describe("validation helper", () => {

@@ -98,9 +98,16 @@ function toYamlDocument(serverUrl?: string) {
   return `${scalarYaml(getOpenApiJson({ serverUrl })).replace(/[ \t]+$/gm, "")}\n`;
 }
 
+function resolveOpenApiServerUrl(config?: AppConfig) {
+  const appUrl = config?.app.appUrl;
+  const appEnv = config?.app.appEnv.toLowerCase();
+  if ((appEnv === "production" || appEnv === "prod") && appUrl?.startsWith("http://localhost")) return undefined;
+  return appUrl;
+}
+
 export function createDocsRoutes(config?: AppConfig) {
   const routes = new Hono();
-  const serverUrl = config?.app.appUrl;
+  const serverUrl = resolveOpenApiServerUrl(config);
 
   routes.get("/openapi.yaml", (context) => context.text(toYamlDocument(serverUrl), 200, { "Content-Type": "application/yaml; charset=utf-8" }));
   routes.get("/openapi.json", (context) => context.json(getOpenApiJson({ serverUrl })));

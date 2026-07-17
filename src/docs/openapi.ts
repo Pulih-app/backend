@@ -1,6 +1,6 @@
 import { routeInventory, type RouteInventoryItem } from "../routes/api-route-inventory";
 
-const defaultApiServerUrl = "http://localhost:3000";
+const defaultApiServerUrl = "https://pulih.salmanabdurrahman.my.id";
 const json = "application/json";
 
 type Schema = Record<string, unknown>;
@@ -981,7 +981,7 @@ export const pulihOpenApi = {
     summary: "Recovery support, psychologist booking, payments, content, achievements, and safe AI coach API.",
     description: "Complete OpenAPI reference for Pulih MVP. Includes module-level docs, request payload schemas, response envelopes, examples for success and common error status codes, auth requirements, route inventory parity, and mental-health safety notes.",
   },
-  servers: [{ url: defaultApiServerUrl, description: "Local development server" }],
+  servers: [{ url: defaultApiServerUrl, description: "Production API server" }],
   tags: [
     { name: "platform", description: "Health probes, validation demo, OpenAPI artifacts, and Scalar docs." },
     { name: "auth", description: "Email/password registration, login, logout, current principal, and onboarding." },

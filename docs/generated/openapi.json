@@ -8,8 +8,8 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3000",
-      "description": "Local development server"
+      "url": "https://pulih.salmanabdurrahman.my.id",
+      "description": "Production API server"
     }
   ],
   "tags": [
@@ -172,7 +172,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/health/live"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/health/live"
           }
         ]
       }
@@ -309,7 +309,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/health/ready"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/health/ready"
           }
         ]
       }
@@ -465,7 +465,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/validation-demo"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/validation-demo"
           }
         ],
         "requestBody": {
@@ -606,7 +606,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/openapi.yaml"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/openapi.yaml"
           }
         ]
       }
@@ -711,7 +711,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/openapi.json"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/openapi.json"
           }
         ]
       }
@@ -810,7 +810,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/docs/api"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/docs/api"
           }
         ]
       }
@@ -909,7 +909,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/docs/api/"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/docs/api/"
           }
         ]
       }
@@ -1132,7 +1132,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/auth/register"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/register"
           }
         ],
         "requestBody": {
@@ -1410,7 +1410,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/auth/register/psychologist"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/register/psychologist"
           }
         ],
         "requestBody": {
@@ -1688,7 +1688,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/auth/login"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/login"
           }
         ],
         "requestBody": {
@@ -1858,7 +1858,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/auth/logout"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/logout"
           }
         ]
       }
@@ -1990,7 +1990,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/auth/me"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/auth/me"
           }
         ],
         "security": [
@@ -2164,7 +2164,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/auth/onboarding"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/onboarding"
           }
         ],
         "security": [
@@ -2402,7 +2402,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/users/me"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/users/me"
           }
         ],
         "security": [
@@ -2569,7 +2569,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X PUT http://localhost:3000/api/v1/users/settings"
+            "source": "curl -X PUT https://pulih.salmanabdurrahman.my.id/api/v1/users/settings"
           }
         ],
         "security": [
@@ -2865,7 +2865,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/psychologists/register"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/register"
           }
         ],
         "security": [
@@ -3214,7 +3214,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/psychologists/me"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me"
           }
         ],
         "security": [
@@ -3480,7 +3480,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X PUT http://localhost:3000/api/v1/psychologists/me"
+            "source": "curl -X PUT https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me"
           }
         ],
         "security": [
@@ -3770,7 +3770,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/psychologists/me/credential-file"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/credential-file"
           }
         ],
         "security": [
@@ -4051,7 +4051,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/psychologists/me/submit-for-review"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/submit-for-review"
           }
         ],
         "security": [
@@ -4241,7 +4241,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/psychologists/me/credential-file/{fileId}/review-url"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/credential-file/{fileId}/review-url"
           }
         ],
         "parameters": [
@@ -4521,7 +4521,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/psychologists/me/bundles"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/bundles"
           }
         ],
         "security": [
@@ -4846,7 +4846,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X PUT http://localhost:3000/api/v1/psychologists/me/bundles/{bundleId}"
+            "source": "curl -X PUT https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/bundles/{bundleId}"
           }
         ],
         "parameters": [
@@ -5172,7 +5172,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X DELETE http://localhost:3000/api/v1/psychologists/me/bundles/{bundleId}"
+            "source": "curl -X DELETE https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/bundles/{bundleId}"
           }
         ],
         "parameters": [
@@ -5376,7 +5376,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/psychologists"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologists"
           }
         ]
       }
@@ -5557,7 +5557,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/psychologists/{psychologistId}"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/{psychologistId}"
           }
         ],
         "parameters": [
@@ -5740,7 +5740,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/psychologists/{psychologistId}/sessions"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/{psychologistId}/sessions"
           }
         ],
         "parameters": [
@@ -5950,7 +5950,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/psychologist-sessions"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologist-sessions"
           }
         ]
       }
@@ -6243,7 +6243,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/bookings"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings"
           }
         ],
         "security": [
@@ -6563,7 +6563,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/bookings"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/bookings"
           }
         ],
         "security": [
@@ -6843,7 +6843,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/bookings/{bookingId}"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}"
           }
         ],
         "parameters": [
@@ -7136,7 +7136,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/bookings/{bookingId}/confirm"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/confirm"
           }
         ],
         "parameters": [
@@ -7465,7 +7465,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/bookings/{bookingId}/complete"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/complete"
           }
         ],
         "parameters": [
@@ -7728,7 +7728,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/bookings/{bookingId}/messages"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/messages"
           }
         ],
         "parameters": [
@@ -7984,7 +7984,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/bookings/{bookingId}/messages"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/messages"
           }
         ],
         "parameters": [
@@ -8275,7 +8275,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/bookings/{bookingId}/review"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/review"
           }
         ],
         "parameters": [
@@ -8608,7 +8608,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/bookings/{bookingId}/reschedule"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/reschedule"
           }
         ],
         "parameters": [
@@ -8935,7 +8935,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/payments/{paymentId}/status"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/payments/{paymentId}/status"
           }
         ],
         "parameters": [
@@ -9220,7 +9220,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/payments/pakasir/webhook"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/payments/pakasir/webhook"
           }
         ],
         "requestBody": {
@@ -9520,7 +9520,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/routine/checkin"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/routine/checkin"
           }
         ],
         "security": [
@@ -9779,7 +9779,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/routine/relapses"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/routine/relapses"
           }
         ],
         "security": [
@@ -9999,7 +9999,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/routine/relapses"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/routine/relapses"
           }
         ],
         "security": [
@@ -10195,7 +10195,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/routine/statistics"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/routine/statistics"
           }
         ],
         "security": [
@@ -10339,7 +10339,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/routine/statistics/activity-summary"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/routine/statistics/activity-summary"
           }
         ],
         "security": [
@@ -10560,7 +10560,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/routine/relapses/statistics"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/routine/relapses/statistics"
           }
         ],
         "security": [
@@ -10810,7 +10810,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/journals"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/journals"
           }
         ],
         "security": [
@@ -11053,7 +11053,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/journals"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/journals"
           }
         ],
         "security": [
@@ -11287,7 +11287,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/community"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/community"
           }
         ],
         "security": [
@@ -11484,7 +11484,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/community"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/community"
           }
         ],
         "security": [
@@ -11790,7 +11790,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/community/{postId}/comments"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/community/{postId}/comments"
           }
         ],
         "parameters": [
@@ -12049,7 +12049,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/community/{postId}/comments"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/community/{postId}/comments"
           }
         ],
         "parameters": [
@@ -12334,7 +12334,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/community/{postId}/like"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/community/{postId}/like"
           }
         ],
         "parameters": [
@@ -12595,7 +12595,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/community/{postId}/comments/{commentId}/replies"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/community/{postId}/comments/{commentId}/replies"
           }
         ],
         "parameters": [
@@ -12821,7 +12821,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/education"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/education"
           }
         ],
         "security": [
@@ -12990,7 +12990,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/content/daily"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/content/daily"
           }
         ],
         "security": [
@@ -13158,7 +13158,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/achievements/catalog"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/achievements/catalog"
           }
         ],
         "security": [
@@ -13326,7 +13326,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/achievements/progress"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/achievements/progress"
           }
         ],
         "security": [
@@ -13494,7 +13494,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/achievements/unlocked"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/achievements/unlocked"
           }
         ],
         "security": [
@@ -13736,7 +13736,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/ai/ask-coach"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/ai/ask-coach"
           }
         ],
         "security": [
@@ -14009,7 +14009,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/ai/relapse-solution"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/ai/relapse-solution"
           }
         ],
         "security": [
@@ -14303,7 +14303,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/ai/relapse-prevention-plan"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/ai/relapse-prevention-plan"
           }
         ],
         "security": [
@@ -14605,7 +14605,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/ai/chat-history"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/ai/chat-history"
           }
         ],
         "security": [
@@ -14846,7 +14846,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/ai/summary"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/ai/summary"
           }
         ],
         "security": [
@@ -15091,7 +15091,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X POST http://localhost:3000/api/v1/ai/onboarding-analysis"
+            "source": "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/ai/onboarding-analysis"
           }
         ],
         "security": [
@@ -15369,7 +15369,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X GET http://localhost:3000/api/v1/ai/persona-preferences"
+            "source": "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/ai/persona-preferences"
           }
         ],
         "security": [
@@ -15609,7 +15609,7 @@
           {
             "lang": "Shell",
             "label": "cURL",
-            "source": "curl -X PUT http://localhost:3000/api/v1/ai/persona-preferences"
+            "source": "curl -X PUT https://pulih.salmanabdurrahman.my.id/api/v1/ai/persona-preferences"
           }
         ],
         "security": [
