@@ -3,7 +3,7 @@ import type { CredentialStorage } from "./credential-storage";
 import type { CredentialDocumentType } from "./psychologists.types";
 import { buildPackageName, channelForType, REQUIRED_DOCUMENTS_BY_TYPE, type GeneratedSessionStatus } from "./psychologists.types";
 import type { PsychologistProfileInput, SessionBundleInput } from "./psychologists.schema";
-import type { PsychologistsRepository, PsychologistSessionRecord } from "./psychologists.repository";
+import type { PsychologistsRepository, PsychologistAvailabilityDateRecord, PsychologistSessionRecord } from "./psychologists.repository";
 
 const ALLOWED_CONTENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const FILE_EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
@@ -72,6 +72,37 @@ function buildSessions(input: SessionBundleInput): Array<{ sessionDate: string; 
 
 function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string) {
   return new Date(aStart).getTime() < new Date(bEnd).getTime() && new Date(aEnd).getTime() > new Date(bStart).getTime();
+}
+
+function createEmptyAvailabilityDate(date: string): PsychologistAvailabilityDateRecord {
+  return { date, totalSlots: 0, availableSlots: 0, heldSlots: 0, bookedSlots: 0, completedSlots: 0, cancelledSlots: 0, expiredSlots: 0, rescheduledSlots: 0, slots: [] };
+}
+
+function buildAvailabilityCalendar(sessions: PsychologistSessionRecord[]) {
+  const calendar = new Map<string, PsychologistAvailabilityDateRecord>();
+  for (const session of sessions) {
+    const current = calendar.get(session.sessionDate) ?? createEmptyAvailabilityDate(session.sessionDate);
+    current.totalSlots += 1;
+    if (session.status === "available") current.availableSlots += 1;
+    if (session.status === "held") current.heldSlots += 1;
+    if (session.status === "booked") current.bookedSlots += 1;
+    if (session.status === "completed") current.completedSlots += 1;
+    if (session.status === "cancelled") current.cancelledSlots += 1;
+    if (session.status === "expired") current.expiredSlots += 1;
+    if (session.status === "rescheduled") current.rescheduledSlots += 1;
+    current.slots.push({
+      id: session.id,
+      startsAt: session.startsAt,
+      endsAt: session.endsAt,
+      status: session.status,
+      packageName: session.packageName,
+      packageDurationMinutes: session.packageDurationMinutes,
+      priceAmount: session.priceAmount,
+    });
+    current.slots.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+    calendar.set(session.sessionDate, current);
+  }
+  return Array.from(calendar.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function validateBundleInput(input: SessionBundleInput) {
@@ -158,7 +189,8 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
     async getPublicProfile(psychologistId: string) {
       const profile = await repository.findApprovedById(psychologistId);
       if (!profile) throw new AppError(AppErrorCode.NotFound, "Psychologist profile was not found.");
-      return profile;
+      const sessions = await repository.listSessionsByPsychologistId(profile.id);
+      return { ...profile, availability: buildAvailabilityCalendar(sessions) };
     },
     async listPublicSessions(psychologistId: string) {
       const profile = await repository.findApprovedById(psychologistId);

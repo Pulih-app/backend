@@ -5262,7 +5262,18 @@
                           "completedSlots": 0,
                           "cancelledSlots": 0,
                           "expiredSlots": 0,
-                          "rescheduledSlots": 0
+                          "rescheduledSlots": 0,
+                          "slots": [
+                            {
+                              "id": "44444444-4444-4444-8444-444444444444",
+                              "startsAt": "2026-06-03T09:00:00.000Z",
+                              "endsAt": "2026-06-03T12:00:00.000Z",
+                              "status": "available",
+                              "packageName": "Paket 3 Jam",
+                              "packageDurationMinutes": 180,
+                              "priceAmount": 150000
+                            }
+                          ]
                         }
                       ],
                       "meta": null
@@ -6260,7 +6271,7 @@
           "psychologists"
         ],
         "summary": "Read approved psychologist detail",
-        "description": "Returns public profile for approved psychologist. Draft/rejected profiles are hidden.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Returns public profile for approved psychologist with calendar availability. Draft/rejected profiles are hidden.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "get_api_v1_psychologists_psychologistId",
         "responses": {
           "200": {
@@ -6284,7 +6295,25 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/PublicPsychologist"
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/PublicPsychologist"
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "availability"
+                          ],
+                          "properties": {
+                            "availability": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/PsychologistAvailabilityDate"
+                              }
+                            }
+                          }
+                        }
+                      ]
                     },
                     "meta": {
                       "oneOf": [
@@ -6335,7 +6364,31 @@
                             "updatedAt": "2026-07-16T01:10:00.000Z"
                           }
                         ],
-                        "latestBundle": null
+                        "latestBundle": null,
+                        "availability": [
+                          {
+                            "date": "2026-06-03",
+                            "totalSlots": 3,
+                            "availableSlots": 1,
+                            "heldSlots": 0,
+                            "bookedSlots": 2,
+                            "completedSlots": 0,
+                            "cancelledSlots": 0,
+                            "expiredSlots": 0,
+                            "rescheduledSlots": 0,
+                            "slots": [
+                              {
+                                "id": "44444444-4444-4444-8444-444444444444",
+                                "startsAt": "2026-06-03T09:00:00.000Z",
+                                "endsAt": "2026-06-03T12:00:00.000Z",
+                                "status": "available",
+                                "packageName": "Paket 3 Jam",
+                                "packageDurationMinutes": 180,
+                                "priceAmount": 150000
+                              }
+                            ]
+                          }
+                        ]
                       },
                       "meta": null
                     }
@@ -18003,7 +18056,8 @@
           "completedSlots",
           "cancelledSlots",
           "expiredSlots",
-          "rescheduledSlots"
+          "rescheduledSlots",
+          "slots"
         ],
         "properties": {
           "date": {
@@ -18050,6 +18104,63 @@
             "type": "integer",
             "minimum": 0,
             "example": 0
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "startsAt",
+                "endsAt",
+                "status",
+                "packageName",
+                "packageDurationMinutes",
+                "priceAmount"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "example": "44444444-4444-4444-8444-444444444444"
+                },
+                "startsAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-06-03T09:00:00.000Z"
+                },
+                "endsAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-06-03T12:00:00.000Z"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "available",
+                    "held",
+                    "booked",
+                    "completed",
+                    "cancelled",
+                    "expired",
+                    "rescheduled"
+                  ],
+                  "example": "available"
+                },
+                "packageName": {
+                  "type": "string",
+                  "example": "Paket 3 Jam"
+                },
+                "packageDurationMinutes": {
+                  "type": "integer",
+                  "example": 180
+                },
+                "priceAmount": {
+                  "type": "integer",
+                  "example": 150000
+                }
+              }
+            }
           }
         }
       },

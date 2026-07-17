@@ -232,6 +232,29 @@ describe("psychologist directory and bundles", () => {
     const sessionsBody = await sessions.json();
     expect(sessionsBody.data).toHaveLength(2);
 
+    const detailWithAvailability = await app.request(`http://localhost/api/v1/psychologists/${userId}`, { headers: { Origin: "http://localhost:3001" } });
+    expect(detailWithAvailability.status).toBe(200);
+    const detailWithAvailabilityBody = await detailWithAvailability.json();
+    expect(detailWithAvailabilityBody.data.availability).toHaveLength(2);
+    expect(detailWithAvailabilityBody.data.availability[0]).toMatchObject({
+      date: "2026-02-01",
+      totalSlots: 1,
+      availableSlots: 1,
+      heldSlots: 0,
+      bookedSlots: 0,
+      completedSlots: 0,
+      cancelledSlots: 0,
+      expiredSlots: 0,
+      rescheduledSlots: 0,
+      slots: [{ startsAt: "2026-02-01T08:00:00.000Z", endsAt: "2026-02-01T11:00:00.000Z", status: "available", packageName: "Paket 3 Jam", packageDurationMinutes: 180, priceAmount: 150000 }],
+    });
+    expect(detailWithAvailabilityBody.data.availability[1]).toMatchObject({
+      date: "2026-02-02",
+      totalSlots: 1,
+      availableSlots: 1,
+      slots: [{ startsAt: "2026-02-02T08:00:00.000Z", endsAt: "2026-02-02T11:00:00.000Z", status: "available" }],
+    });
+
     const allSessions = await app.request("http://localhost/api/v1/psychologist-sessions", { headers: { Origin: "http://localhost:3001" } });
     expect(allSessions.status).toBe(200);
     const allSessionsBody = await allSessions.json();

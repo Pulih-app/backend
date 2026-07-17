@@ -42,6 +42,29 @@ export type PsychologistSessionRecord = {
 };
 export type PsychologistRatingSummary = { averageRating: number; reviewCount: number };
 export type PublicPsychologistReviewRecord = { id: string; bookingId: string; patientUserId: string; psychologistProfileId: string; rating: number; comment: string | null; createdAt: string; updatedAt: string };
+export type PsychologistAvailabilityTimeRecord = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: GeneratedSessionStatus;
+  packageName: string;
+  packageDurationMinutes: number;
+  priceAmount: number;
+};
+
+export type PsychologistAvailabilityDateRecord = {
+  date: string;
+  totalSlots: number;
+  availableSlots: number;
+  heldSlots: number;
+  bookedSlots: number;
+  completedSlots: number;
+  cancelledSlots: number;
+  expiredSlots: number;
+  rescheduledSlots: number;
+  slots: PsychologistAvailabilityTimeRecord[];
+};
+
 export type PsychologistDirectoryRecord = {
   id: string;
   userId: string;
@@ -59,6 +82,7 @@ export type PsychologistDirectoryRecord = {
 };
 
 export type PsychologistProfileRecord = PsychologistDirectoryRecord;
+export type PsychologistProfileDetailRecord = PsychologistProfileRecord & { availability: PsychologistAvailabilityDateRecord[] };
 
 export type PublicPsychologistSessionRecord = PsychologistSessionRecord & {
   psychologist: Pick<PsychologistDirectoryRecord, "id" | "userId" | "type" | "consultationChannel" | "fullName" | "dateOfBirth" | "address" | "photoUrl" | "bio" | "ratingSummary" | "latestReviews">;
