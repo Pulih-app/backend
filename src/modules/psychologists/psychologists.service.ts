@@ -1,6 +1,6 @@
 import { AppError, AppErrorCode } from "../../shared/errors";
 import type { CredentialStorage } from "./credential-storage";
-import type { CredentialDocumentType } from "./psychologists.types";
+import type { CredentialDocumentType, PsychologistType } from "./psychologists.types";
 import { buildPackageName, channelForType, REQUIRED_DOCUMENTS_BY_TYPE, type GeneratedSessionStatus } from "./psychologists.types";
 import type { PsychologistProfileInput, SessionBundleInput } from "./psychologists.schema";
 import type { PsychologistsRepository, PsychologistAvailabilityDateRecord, PsychologistSessionRecord } from "./psychologists.repository";
@@ -153,6 +153,15 @@ function hasExpectedMagicBytes(contentType: string, bytes: Uint8Array) {
   return false;
 }
 
+async function approveProfileWhenRequiredCredentialsUploaded(repository: PsychologistsRepository, profileId: string, profileType: PsychologistType) {
+  const files = await repository.listCredentialFiles(profileId);
+  const provided = new Set(files.map((file) => file.documentType));
+  const hasAllRequiredDocuments = REQUIRED_DOCUMENTS_BY_TYPE[profileType].every((documentType) => provided.has(documentType));
+  if (hasAllRequiredDocuments) {
+    await repository.updateApprovalStatus(profileId, "approved");
+  }
+}
+
 export async function validateCredentialFile(file: File) {
   if (!ALLOWED_CONTENT_TYPES.has(file.type)) {
     throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["file: Credential file must be PDF, JPG, JPEG, or PNG."]);
@@ -222,6 +231,7 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
         contentType: file.type,
         sizeBytes: file.size,
       });
+      await approveProfileWhenRequiredCredentialsUploaded(repository, profile.id, profile.type);
       const { objectKey: _objectKey, ...publicRecord } = record;
       return publicRecord;
     },
@@ -235,8 +245,8 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
       if (missing.length > 0) {
         throw new AppError(AppErrorCode.Conflict, "Required credential files are missing.", missing.map((documentType) => `credentialFiles: ${documentType} is required.`));
       }
-      await repository.updateApprovalStatus(profile.id, "pending_review");
-      return { ...profile, approvalStatus: "pending_review" as const };
+      await repository.updateApprovalStatus(profile.id, "approved");
+      return { ...profile, approvalStatus: "approved" as const };
     },
     async getCredentialReviewUrl(userId: string, fileId: string) {
       const file = await repository.findCredentialFileByOwner(userId, fileId);

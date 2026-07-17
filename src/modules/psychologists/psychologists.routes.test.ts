@@ -367,4 +367,54 @@ describe("psychologist directory and bundles", () => {
     });
     expect(deleteForbidden.status).toBe(403);
   });
+
+  test("approves psychologist automatically after all required credentials are uploaded", async () => {
+    const authRepository = createMemoryAuthRepository([]);
+    const psychologistsRepository = createMemoryPsychologistsRepository();
+    const storedKeys: string[] = [];
+    const app = createApp(baseEnv, {}, {
+      authRepository,
+      psychologistsRepository,
+      credentialStorage: {
+        async put(input) { storedKeys.push(input.key); },
+        async getSignedUrl(key) { return `https://storage.example.test/${key}`; },
+      },
+    });
+
+    const register = await app.request("http://localhost/api/v1/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "credentials@example.com", username: "credentials", password: "password123", confirm_password: "password123" }),
+    });
+    const registerBody = await register.json();
+    const token = registerBody.data.session.access_token as string;
+
+    await app.request("http://localhost/api/v1/psychologists/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: "general", fullName: "Dr. Complete", dateOfBirth: "1990-01-01", address: "Jl. Demo", photoUrl: "https://example.com/photo.jpg" }),
+    });
+
+    const upload = async (documentType: CredentialDocumentType) => {
+      const form = new FormData();
+      form.set("documentType", documentType);
+      form.set("file", new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d])], `${documentType}.pdf`, { type: "application/pdf" }));
+      return app.request("http://localhost/api/v1/psychologists/me/credential-file", {
+        method: "POST",
+        headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+        body: form,
+      });
+    };
+
+    expect((await upload("sipp")).status).toBe(201);
+    let profile = await app.request("http://localhost/api/v1/psychologists/me", { headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${token}` } });
+    expect((await profile.json()).data.approvalStatus).toBe("draft");
+
+    expect((await upload("ijazah")).status).toBe(201);
+    expect((await upload("str")).status).toBe(201);
+
+    profile = await app.request("http://localhost/api/v1/psychologists/me", { headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${token}` } });
+    expect((await profile.json()).data.approvalStatus).toBe("approved");
+    expect(storedKeys).toHaveLength(3);
+  });
 });
