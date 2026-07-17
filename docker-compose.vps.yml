@@ -25,23 +25,20 @@ services:
         reservations:
           memory: 128M
 
-  # Optional Caddy reverse proxy — enable if VPS has no existing reverse proxy.
-  # caddy:
-  #   image: caddy:2-alpine
-  #   restart: unless-stopped
-  #   cap_add:
-  #     - NET_ADMIN
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
-  #     - caddy_data:/data
-  #     - caddy_config:/config
-  #   depends_on:
-  #     api:
-  #       condition: service_healthy
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
 
-# volumes:
-#   caddy_data:
-#   caddy_config:
+volumes:
+  caddy_data:
+  caddy_config:

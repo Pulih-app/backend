@@ -1,0 +1,3 @@
+pulih-api.salmanabdurrahman.my.id {
+    reverse_proxy api:3002
+}
