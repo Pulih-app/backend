@@ -105,6 +105,7 @@ export function createPaymentsService(options: PaymentsServiceOptions) {
               status: input.status,
               payment_method: input.paymentMethod,
               completed_at: input.completedAt,
+              is_sandbox: input.isSandbox,
             },
           });
         }

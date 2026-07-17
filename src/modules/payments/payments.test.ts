@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { BookingsRepository, BookingDetailRecord, PaymentRecord } from "../bookings/bookings.repository";
 import { createPakasirClient, type PakasirTransactionDetail } from "./pakasir";
+import { pakasirWebhookSchema } from "./payments.schema";
 import { createPaymentsService } from "./payments.service";
 
 const config = {
@@ -114,6 +115,26 @@ describe("Pakasir client", () => {
       paymentMethod: "qris",
       completedAt: "2026-02-01T08:00:00+07:00",
     } satisfies PakasirTransactionDetail);
+  });
+});
+
+describe("payment webhook schema", () => {
+  test("accepts Pakasir sandbox webhook payload with high-precision timestamp", () => {
+    const result = pakasirWebhookSchema({
+      amount: 150000,
+      order_id: "PLH-20260717T081352-8A4882CD",
+      project: "pulih",
+      status: "completed",
+      payment_method: "qris",
+      completed_at: "2026-07-17T08:14:29.250559848Z",
+      is_sandbox: true,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.completedAt).toBe("2026-07-17T08:14:29.250Z");
+      expect(result.value.isSandbox).toBe(true);
+    }
   });
 });
 

@@ -9,6 +9,7 @@ export type PakasirWebhookInput = {
   status: string;
   paymentMethod: string | null;
   completedAt: string | null;
+  isSandbox?: boolean | null;
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -28,13 +29,17 @@ export const paymentParamsSchema: Schema<PaymentParams> = (input) => {
   return { ok: true, value: { paymentId } };
 };
 
+function normalizeProviderTimestamp(value: string) {
+  return value.replace(/\.(\d{3})\d+(Z|[+-]\d{2}:\d{2})$/, ".$1$2");
+}
+
 export const pakasirWebhookSchema: Schema<PakasirWebhookInput> = (input) => {
   const object = ensureObject(input);
   if (!object.ok) return object;
 
   const issues: ValidationIssue[] = [];
   const value = object.value;
-  const allowed = new Set(["project", "order_id", "amount", "status", "payment_method", "completed_at"]);
+  const allowed = new Set(["project", "order_id", "amount", "status", "payment_method", "completed_at", "is_sandbox"]);
   for (const key of Object.keys(value)) {
     if (!allowed.has(key)) issues.push({ field: key, message: "Unknown field is not allowed." });
   }
@@ -45,14 +50,19 @@ export const pakasirWebhookSchema: Schema<PakasirWebhookInput> = (input) => {
   const status = value.status;
   const paymentMethod = value.payment_method;
   const completedAt = value.completed_at;
+  const isSandbox = value.is_sandbox;
+  const normalizedCompletedAt = typeof completedAt === "string" ? normalizeProviderTimestamp(completedAt.trim()) : null;
 
   if (typeof project !== "string" || project.trim().length === 0) issues.push({ field: "project", message: "Project is required." });
   if (typeof orderId !== "string" || orderId.trim().length === 0) issues.push({ field: "order_id", message: "Order id is required." });
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) issues.push({ field: "amount", message: "Amount must be a positive number." });
   if (typeof status !== "string" || status.trim().length === 0) issues.push({ field: "status", message: "Status is required." });
   if (paymentMethod !== undefined && paymentMethod !== null && typeof paymentMethod !== "string") issues.push({ field: "payment_method", message: "Payment method must be a string." });
-  if (completedAt !== undefined && completedAt !== null && (typeof completedAt !== "string" || Number.isNaN(Date.parse(completedAt)))) {
+  if (completedAt !== undefined && completedAt !== null && (!normalizedCompletedAt || Number.isNaN(Date.parse(normalizedCompletedAt)))) {
     issues.push({ field: "completed_at", message: "Completed at must be a valid date." });
+  }
+  if (isSandbox !== undefined && isSandbox !== null && typeof isSandbox !== "boolean") {
+    issues.push({ field: "is_sandbox", message: "Sandbox flag must be a boolean." });
   }
 
   if (issues.length > 0) return { ok: false, issues };
@@ -64,7 +74,8 @@ export const pakasirWebhookSchema: Schema<PakasirWebhookInput> = (input) => {
       amount: Math.round(amount as number),
       status: (status as string).trim(),
       paymentMethod: typeof paymentMethod === "string" ? paymentMethod : null,
-      completedAt: typeof completedAt === "string" ? completedAt : null,
+      completedAt: normalizedCompletedAt,
+      isSandbox: typeof isSandbox === "boolean" ? isSandbox : null,
     },
   };
 };

@@ -9267,7 +9267,14 @@
                       "null"
                     ],
                     "example": "2026-07-16T16:00:00.000Z",
-                    "format": "date-time"
+                    "format": "date-time",
+                    "description": "Pakasir may send high-precision timestamps; API normalizes them to millisecond precision."
+                  },
+                  "is_sandbox": {
+                    "type": "boolean",
+                    "nullable": true,
+                    "example": true,
+                    "description": "Optional sandbox flag accepted from Pakasir sandbox webhooks."
                   }
                 }
               },
