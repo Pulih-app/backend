@@ -1,9 +1,9 @@
 services:
   api:
-    image: ghcr.io/pulih-app/backend:${IMAGE_TAG:?IMAGE_TAG is required. Use immutable sha-<commit-sha> for production deploys.}
+    image: pulih-api:latest
     restart: unless-stopped
     env_file:
-      - .env.vps
+      - .env
     environment:
       APP_ENV: ${APP_ENV:-production}
       NODE_ENV: ${NODE_ENV:-production}
