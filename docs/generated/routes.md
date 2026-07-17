@@ -26,6 +26,7 @@ Source of truth: `src/routes/api-route-inventory.ts`. OpenAPI operations are gen
 | `POST` | `/api/v1/psychologists/me/submit-for-review` | `bearer` | Yes | `/api/v1/psychologists/me/submit-for-review` |
 | `GET` | `/api/v1/psychologists/me/credential-file/:fileId/review-url` | `bearer` | Yes | `/api/v1/psychologists/me/credential-file/{fileId}/review-url` |
 | `POST` | `/api/v1/psychologists/me/bundles` | `bearer` | Yes | `/api/v1/psychologists/me/bundles` |
+| `POST` | `/api/v1/psychologists/me/availability-windows` | `bearer` | Yes | `/api/v1/psychologists/me/availability-windows` |
 | `PUT` | `/api/v1/psychologists/me/bundles/:bundleId` | `bearer` | Yes | `/api/v1/psychologists/me/bundles/{bundleId}` |
 | `DELETE` | `/api/v1/psychologists/me/bundles/:bundleId` | `bearer` | Yes | `/api/v1/psychologists/me/bundles/{bundleId}` |
 | `GET` | `/api/v1/psychologists/me/availability` | `bearer` | Yes | `/api/v1/psychologists/me/availability` |

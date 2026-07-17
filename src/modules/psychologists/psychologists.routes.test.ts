@@ -273,6 +273,53 @@ describe("psychologist directory and bundles", () => {
     });
   });
 
+  test("creates availability window with multiple session packages", async () => {
+    const authRepository = createMemoryAuthRepository([]);
+    const psychologistsRepository = createMemoryPsychologistsRepository();
+    const app = createApp(baseEnv, {}, { authRepository, psychologistsRepository });
+
+    const register = await app.request("http://localhost/api/v1/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "window@example.com", username: "window", password: "password123", confirm_password: "password123" }),
+    });
+    const registerBody = await register.json();
+    const token = registerBody.data.session.access_token as string;
+    const userId = registerBody.data.user.id as string;
+
+    await app.request("http://localhost/api/v1/psychologists/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: "general", fullName: "Dr. Window", dateOfBirth: "1990-01-01", address: "Jl. Demo", photoUrl: "https://example.com/photo.jpg" }),
+    });
+    await psychologistsRepository.updateApprovalStatus(userId, "approved");
+
+    const create = await app.request("http://localhost/api/v1/psychologists/me/availability-windows", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        dateStart: "2026-02-01",
+        dateEnd: "2026-02-01",
+        dailyStartTime: "09:00",
+        dailyEndTime: "12:00",
+        packages: [
+          { durationMinutes: 60, priceAmount: 150000 },
+          { durationMinutes: 30, priceAmount: 100000 },
+        ],
+      }),
+    });
+
+    expect(create.status).toBe(201);
+    const createBody = await create.json();
+    expect(createBody.data.bundles).toHaveLength(2);
+    expect(createBody.data.bundles.map((bundle: { packageName: string }) => bundle.packageName)).toEqual(["Paket 1 Jam", "Paket 30 Menit"]);
+    expect(createBody.data.sessions).toHaveLength(9);
+
+    const sessions = await app.request(`http://localhost/api/v1/psychologists/${userId}/sessions`, { headers: { Origin: "http://localhost:3001" } });
+    const sessionsBody = await sessions.json();
+    expect(sessionsBody.data).toHaveLength(9);
+  });
+
   test("rejects invalid bundle times, overlap, and ownership mismatch", async () => {
     const authRepository = createMemoryAuthRepository([]);
     const psychologistsRepository = createMemoryPsychologistsRepository();

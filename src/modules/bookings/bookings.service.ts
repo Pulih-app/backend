@@ -44,6 +44,9 @@ export function createBookingsService(repository: BookingsRepository, config: Ap
         if (!session) throw new AppError(AppErrorCode.NotFound, "Generated session was not found.");
         if (session.psychologistApprovalStatus !== "approved") throw new AppError(AppErrorCode.Forbidden, "Psychologist profile is not approved for booking.");
         if (session.status !== "available") throw new AppError(AppErrorCode.Conflict, "Generated session is not available.");
+        if (await tx.hasLockedOverlappingSession({ profileId: session.profileId, startsAt: new Date(session.startsAt), endsAt: new Date(session.endsAt), excludeSessionSlotId: session.id })) {
+          throw new AppError(AppErrorCode.Conflict, "Generated session overlaps with an unavailable session.");
+        }
 
         const paymentExpiresAt = addHours(now, 1);
         const claimed = await tx.claimSessionSlot(input.sessionSlotId, paymentExpiresAt);

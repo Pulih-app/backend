@@ -2,7 +2,7 @@ import { AppError, AppErrorCode } from "../../shared/errors";
 import type { CredentialStorage } from "./credential-storage";
 import type { CredentialDocumentType, PsychologistType } from "./psychologists.types";
 import { buildPackageName, channelForType, REQUIRED_DOCUMENTS_BY_TYPE, type GeneratedSessionStatus } from "./psychologists.types";
-import type { PsychologistProfileInput, SessionBundleInput } from "./psychologists.schema";
+import type { AvailabilityWindowInput, PsychologistProfileInput, SessionBundleInput } from "./psychologists.schema";
 import type { PsychologistsRepository, PsychologistAvailabilityDateRecord, PsychologistSessionRecord } from "./psychologists.repository";
 
 const ALLOWED_CONTENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
@@ -70,6 +70,30 @@ function buildSessions(input: SessionBundleInput): Array<{ sessionDate: string; 
   return sessions;
 }
 
+function buildAvailabilityWindowSessions(input: AvailabilityWindowInput, durationMinutesValue: number): Array<{ sessionDate: string; startsAt: string; endsAt: string; status: GeneratedSessionStatus; heldUntil: string | null }> {
+  const startDate = parseDateOnly(input.dateStart);
+  const endDate = parseDateOnly(input.dateEnd);
+  const windowStartTime = toTimeString(input.dailyStartTime);
+  const windowEndTime = toTimeString(input.dailyEndTime);
+  const sessions = [];
+  for (let current = new Date(startDate); current <= endDate; current = addDays(current, 1)) {
+    const date = toDateString(current);
+    const windowStart = combineDateAndTime(date, windowStartTime);
+    const windowEnd = combineDateAndTime(date, windowEndTime);
+    for (let startsAt = new Date(windowStart); startsAt.getTime() + durationMinutesValue * 60_000 <= windowEnd.getTime(); startsAt = new Date(startsAt.getTime() + durationMinutesValue * 60_000)) {
+      const endsAt = new Date(startsAt.getTime() + durationMinutesValue * 60_000);
+      sessions.push({
+        sessionDate: date,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        status: "available" as const,
+        heldUntil: null,
+      });
+    }
+  }
+  return sessions;
+}
+
 function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string) {
   return new Date(aStart).getTime() < new Date(bEnd).getTime() && new Date(aEnd).getTime() > new Date(bStart).getTime();
 }
@@ -105,18 +129,24 @@ function buildAvailabilityCalendar(sessions: PsychologistSessionRecord[]) {
   return Array.from(calendar.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function validateBundleInput(input: SessionBundleInput) {
+function validatePackageInput(input: { durationMinutes: number; priceAmount: number }, fieldPrefix = "") {
   const price = Math.round(input.priceAmount);
   if (price < MIN_PRICE || price > MAX_PRICE) {
-    throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["priceAmount: Must be between 100000 and 300000."]);
+    throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", [`${fieldPrefix}priceAmount: Must be between 100000 and 300000.`]);
   }
+  if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0) {
+    throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", [`${fieldPrefix}durationMinutes: Must be greater than 0.`]);
+  }
+  return { priceAmount: price, packageDurationMinutes: input.durationMinutes };
+}
 
+function validateBundleInput(input: SessionBundleInput) {
   const minutes = durationMinutes(input.dailyStartTime, input.dailyEndTime);
   if (!Number.isFinite(minutes) || minutes <= 0) {
     throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["dailyStartTime: Daily end time must be after daily start time."]);
   }
 
-  return { priceAmount: price, packageDurationMinutes: Math.round(minutes) };
+  return validatePackageInput({ durationMinutes: Math.round(minutes), priceAmount: input.priceAmount });
 }
 
 async function ensureNoOverlap(repository: PsychologistsRepository, profileId: string, bundleId: string | null, generatedSessions: ReturnType<typeof buildSessions>) {
@@ -285,6 +315,50 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
         sessions: generatedSessions,
       });
       return { bundle, sessions: generatedSessions };
+    },
+    async createAvailabilityWindow(userId: string, input: AvailabilityWindowInput) {
+      const profile = await repository.findByUserId(userId);
+      if (!profile) throw new AppError(AppErrorCode.NotFound, "Psychologist profile was not found.");
+      if (profile.approvalStatus !== "approved") throw new AppError(AppErrorCode.Forbidden, "Only approved psychologists can create availability windows.");
+
+      const windowMinutes = durationMinutes(input.dailyStartTime, input.dailyEndTime);
+      if (!Number.isFinite(windowMinutes) || windowMinutes <= 0) {
+        throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["dailyStartTime: Daily end time must be after daily start time."]);
+      }
+
+      const prepared = input.packages.map((packageInput, index) => {
+        const validated = validatePackageInput(packageInput, `packages.${index}.`);
+        if (validated.packageDurationMinutes > windowMinutes) {
+          throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", [`packages.${index}.durationMinutes: Must fit inside availability time range.`]);
+        }
+        return {
+          ...validated,
+          packageName: buildPackageName(validated.packageDurationMinutes),
+          sessions: buildAvailabilityWindowSessions(input, validated.packageDurationMinutes),
+        };
+      });
+
+      await ensureNoOverlap(repository, profile.id, null, prepared.flatMap((item) => item.sessions));
+
+      const bundles = [];
+      const sessions = [];
+      for (const item of prepared) {
+        const bundle = await repository.createBundleWithSessions({
+          profileId: profile.id,
+          packageName: item.packageName,
+          packageDurationMinutes: item.packageDurationMinutes,
+          priceAmount: item.priceAmount,
+          dateStart: input.dateStart,
+          dateEnd: input.dateEnd,
+          dailyStartTime: input.dailyStartTime,
+          dailyEndTime: input.dailyEndTime,
+          sessions: item.sessions,
+        });
+        bundles.push(bundle);
+        sessions.push(...item.sessions.map((session) => ({ ...session, bundleId: bundle.id, profileId: profile.id, packageName: bundle.packageName, packageDurationMinutes: bundle.packageDurationMinutes, priceAmount: bundle.priceAmount })));
+      }
+
+      return { bundles, sessions };
     },
     async updateBundle(userId: string, bundleId: string, input: SessionBundleInput) {
       const profile = await repository.findByUserId(userId);

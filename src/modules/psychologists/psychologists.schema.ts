@@ -19,6 +19,14 @@ export type SessionBundleInput = {
   dailyEndTime: string;
   priceAmount: number;
 };
+export type AvailabilityWindowPackageInput = { durationMinutes: number; priceAmount: number };
+export type AvailabilityWindowInput = {
+  dateStart: string;
+  dateEnd: string;
+  dailyStartTime: string;
+  dailyEndTime: string;
+  packages: AvailabilityWindowPackageInput[];
+};
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -102,6 +110,15 @@ function parseMoney(value: unknown, field: string, issues: ValidationIssue[]) {
   return value;
 }
 
+function parsePositiveInteger(value: unknown, field: string, issues: ValidationIssue[]) {
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    issues.push({ field, message: "Must be an integer." });
+    return 0;
+  }
+  if (value <= 0) issues.push({ field, message: "Must be greater than 0." });
+  return value;
+}
+
 function parseProfile(input: unknown) {
   const object = ensureObject(input);
   if (!object.ok) return object;
@@ -151,8 +168,53 @@ function parseBundle(input: unknown) {
   return { ok: true, value: parsed } as const;
 }
 
+function parseAvailabilityWindow(input: unknown) {
+  const object = ensureObject(input);
+  if (!object.ok) return object;
+  const value = object.value;
+  const issues: ValidationIssue[] = [];
+  rejectUnknownFields(value, ["dateStart", "dateEnd", "dailyStartTime", "dailyEndTime", "packages"], issues);
+
+  const packages: AvailabilityWindowPackageInput[] = [];
+  if (!Array.isArray(value.packages) || value.packages.length === 0) {
+    issues.push({ field: "packages", message: "Must be a non-empty array." });
+  } else {
+    value.packages.forEach((item, index) => {
+      if (typeof item !== "object" || item === null || Array.isArray(item)) {
+        issues.push({ field: `packages.${index}`, message: "Must be an object." });
+        return;
+      }
+      const packageValue = item as Record<string, unknown>;
+      rejectUnknownFields(packageValue, ["durationMinutes", "priceAmount"], issues);
+      packages.push({
+        durationMinutes: parsePositiveInteger(packageValue.durationMinutes, `packages.${index}.durationMinutes`, issues),
+        priceAmount: parseMoney(packageValue.priceAmount, `packages.${index}.priceAmount`, issues),
+      });
+    });
+  }
+
+  const parsed: AvailabilityWindowInput = {
+    dateStart: parseDate(value.dateStart, "dateStart", issues),
+    dateEnd: parseDate(value.dateEnd, "dateEnd", issues),
+    dailyStartTime: parseTime(value.dailyStartTime, "dailyStartTime", issues),
+    dailyEndTime: parseTime(value.dailyEndTime, "dailyEndTime", issues),
+    packages,
+  };
+
+  if (parsed.dateStart && parsed.dateEnd && parsed.dateStart > parsed.dateEnd) {
+    issues.push({ field: "dateStart", message: "Must be on or before dateEnd." });
+  }
+  if (parsed.dailyStartTime && parsed.dailyEndTime && parsed.dailyStartTime >= parsed.dailyEndTime) {
+    issues.push({ field: "dailyStartTime", message: "Must be earlier than dailyEndTime." });
+  }
+
+  if (issues.length > 0) return { ok: false, issues } as const;
+  return { ok: true, value: parsed } as const;
+}
+
 export const psychologistProfileSchema: Schema<PsychologistProfileInput> = parseProfile;
 export const sessionBundleSchema: Schema<SessionBundleInput> = parseBundle;
+export const availabilityWindowSchema: Schema<AvailabilityWindowInput> = parseAvailabilityWindow;
 export const credentialFileParamsSchema: Schema<CredentialFileParams> = (input) => {
   const object = ensureObject(input);
   if (!object.ok) return object;

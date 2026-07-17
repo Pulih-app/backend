@@ -19,6 +19,7 @@ function createRepository(seed: { payment: PaymentRecord; booking: BookingDetail
   const repository: BookingsRepository = {
     async transaction(callback) { return callback(repository); },
     async findSessionSlotForBooking() { return null; },
+    async hasLockedOverlappingSession() { return false; },
     async claimSessionSlot() { return null; },
     async createBooking() { throw new Error("not used"); },
     async createBookingStatusEvent() { return undefined; },

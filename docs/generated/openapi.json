@@ -4589,6 +4589,279 @@
         }
       }
     },
+    "/api/v1/psychologists/me/availability-windows": {
+      "post": {
+        "tags": [
+          "psychologists"
+        ],
+        "summary": "Create availability window",
+        "description": "Creates one availability window using local dates/times and one or more package definitions. Uses existing session bundle storage for MVP compatibility and generates slots per package duration.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "operationId": "post_api_v1_psychologists_me_availability_windows",
+        "responses": {
+          "201": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AvailabilityWindowResult"
+                    },
+                    "meta": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "201 success",
+                    "value": {
+                      "success": true,
+                      "message": "Availability window created successfully",
+                      "data": {
+                        "bundles": [
+                          {
+                            "id": "33333333-3333-4333-8333-333333333333",
+                            "profileId": "22222222-2222-4222-8222-222222222222",
+                            "packageName": "Paket 1 Jam",
+                            "packageDurationMinutes": 60,
+                            "priceAmount": 150000,
+                            "dateStart": "2026-06-01",
+                            "dateEnd": "2026-06-07",
+                            "dailyStartTime": "09:00:00",
+                            "dailyEndTime": "12:00:00"
+                          }
+                        ],
+                        "sessions": [
+                          {
+                            "id": "44444444-4444-4444-8444-444444444444",
+                            "bundleId": "33333333-3333-4333-8333-333333333333",
+                            "profileId": "22222222-2222-4222-8222-222222222222",
+                            "sessionDate": "2026-06-03",
+                            "startsAt": "2026-06-03T09:00:00.000Z",
+                            "endsAt": "2026-06-03T10:00:00.000Z",
+                            "status": "available",
+                            "heldUntil": null,
+                            "packageName": "Paket 1 Jam",
+                            "packageDurationMinutes": 60,
+                            "priceAmount": 150000
+                          }
+                        ]
+                      },
+                      "meta": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Bad request",
+                    "value": {
+                      "success": false,
+                      "message": "Request body is malformed.",
+                      "data": null,
+                      "error": {
+                        "code": "BAD_REQUEST",
+                        "details": [
+                          "Request body must be valid JSON."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Validation error",
+                    "value": {
+                      "success": false,
+                      "message": "Request validation failed.",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          "field: Must be valid."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Internal error",
+                    "value": {
+                      "success": false,
+                      "message": "Unexpected internal error.",
+                      "data": null,
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "details": [
+                          "An unexpected error occurred."
+                        ],
+                        "request_id": "req_01JZV7PULIHDEMO0000000000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "cURL",
+            "source": "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/availability-windows"
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "dateStart",
+                  "dateEnd",
+                  "dailyStartTime",
+                  "dailyEndTime",
+                  "packages"
+                ],
+                "properties": {
+                  "dateStart": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-06-01"
+                  },
+                  "dateEnd": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-06-07"
+                  },
+                  "dailyStartTime": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$",
+                    "example": "09:00"
+                  },
+                  "dailyEndTime": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$",
+                    "example": "12:00"
+                  },
+                  "packages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "durationMinutes",
+                        "priceAmount"
+                      ],
+                      "properties": {
+                        "durationMinutes": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "example": 60
+                        },
+                        "priceAmount": {
+                          "type": "number",
+                          "minimum": 100000,
+                          "maximum": 300000,
+                          "example": 150000
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "multi_package": {
+                  "summary": "multi_package",
+                  "value": {
+                    "dateStart": "2026-06-01",
+                    "dateEnd": "2026-06-07",
+                    "dailyStartTime": "09:00",
+                    "dailyEndTime": "12:00",
+                    "packages": [
+                      {
+                        "durationMinutes": 60,
+                        "priceAmount": 150000
+                      },
+                      {
+                        "durationMinutes": 30,
+                        "priceAmount": 100000
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/psychologists/me/bundles/{bundleId}": {
       "put": {
         "tags": [
@@ -6887,7 +7160,7 @@
           "bookings"
         ],
         "summary": "Create booking",
-        "description": "Creates pending-payment booking, claims session slot, creates Pakasir payment URL, and sets 1-hour expiry.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Creates pending-payment booking, claims session slot, blocks overlapping locked slots for the same psychologist, creates Pakasir payment URL, and sets 1-hour expiry.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_bookings",
         "responses": {
           "201": {
@@ -17763,6 +18036,27 @@
         "properties": {
           "bundle": {
             "$ref": "#/components/schemas/SessionBundle"
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PsychologistSession"
+            }
+          }
+        }
+      },
+      "AvailabilityWindowResult": {
+        "type": "object",
+        "required": [
+          "bundles",
+          "sessions"
+        ],
+        "properties": {
+          "bundles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionBundle"
+            }
           },
           "sessions": {
             "type": "array",

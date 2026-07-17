@@ -30,6 +30,7 @@ export const routeInventory: RouteInventoryItem[] = [
   { method: "POST", path: "/api/v1/psychologists/me/submit-for-review", auth: "bearer", mvp: true },
   { method: "GET", path: "/api/v1/psychologists/me/credential-file/:fileId/review-url", auth: "bearer", mvp: true },
   { method: "POST", path: "/api/v1/psychologists/me/bundles", auth: "bearer", mvp: true },
+  { method: "POST", path: "/api/v1/psychologists/me/availability-windows", auth: "bearer", mvp: true },
   { method: "PUT", path: "/api/v1/psychologists/me/bundles/:bundleId", auth: "bearer", mvp: true },
   { method: "DELETE", path: "/api/v1/psychologists/me/bundles/:bundleId", auth: "bearer", mvp: true },
   { method: "GET", path: "/api/v1/psychologists/me/availability", auth: "bearer", mvp: true },

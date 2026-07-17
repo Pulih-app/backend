@@ -14,6 +14,7 @@ import {
   psychologistProfileSchema,
   psychologistPublicParamsSchema,
   sessionBundleSchema,
+  availabilityWindowSchema,
   validateDocumentType,
 } from "./psychologists.schema";
 import { createPsychologistsRepository, type PsychologistsRepository } from "./psychologists.repository";
@@ -113,6 +114,13 @@ export function createPsychologistsRoutes(options: PsychologistsRoutesOptions) {
     const payload = await validateJsonBody(context, sessionBundleSchema);
     const result = await service.createBundle(context.get("auth").user.id, payload);
     return context.json(createSuccessResponse({ message: "Session bundle created successfully", data: result }), 201);
+  }));
+
+  routes.post("/psychologists/me/availability-windows", async (context) => withService(options, async (service, authService) => {
+    await requireAuth(context, options, authService);
+    const payload = await validateJsonBody(context, availabilityWindowSchema);
+    const result = await service.createAvailabilityWindow(context.get("auth").user.id, payload);
+    return context.json(createSuccessResponse({ message: "Availability window created successfully", data: result }), 201);
   }));
 
   routes.put("/psychologists/me/bundles/:bundleId", async (context) => withService(options, async (service, authService) => {

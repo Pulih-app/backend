@@ -240,6 +240,9 @@ function createMemoryBookingsRepository(seed: {
   const repository: BookingsRepository = {
     async transaction(callback) { return callback(repository); },
     async findSessionSlotForBooking(sessionSlotId) { return sessions.get(sessionSlotId) ?? null; },
+    async hasLockedOverlappingSession(input) {
+      return Array.from(sessions.values()).some((session) => session.profileId === input.profileId && session.id !== input.excludeSessionSlotId && ["held", "booked", "completed"].includes(session.status) && new Date(session.startsAt) < input.endsAt && new Date(session.endsAt) > input.startsAt);
+    },
     async claimSessionSlot(sessionSlotId, heldUntil) {
       const session = sessions.get(sessionSlotId);
       if (!session || session.status !== "available") return null;

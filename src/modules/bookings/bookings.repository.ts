@@ -1,4 +1,4 @@
-import { and, avg, count, desc, eq } from "drizzle-orm";
+import { and, avg, count, desc, eq, gt, inArray, lt, ne } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   bookingMessages,
@@ -116,6 +116,7 @@ export type BookingReviewRecord = {
 export type BookingsRepository = {
   transaction<T>(callback: (repository: BookingsRepository) => Promise<T>): Promise<T>;
   findSessionSlotForBooking(sessionSlotId: string): Promise<SessionSlotBookingRecord | null>;
+  hasLockedOverlappingSession(input: { profileId: string; startsAt: Date; endsAt: Date; excludeSessionSlotId?: string }): Promise<boolean>;
   claimSessionSlot(sessionSlotId: string, heldUntil: Date): Promise<SessionSlotBookingRecord | null>;
   createBooking(input: {
     patientUserId: string;
@@ -378,6 +379,17 @@ function createRepository(source: NodePgDatabase): BookingsRepository {
         .where(eq(psychologistSessionSlots.id, sessionSlotId))
         .limit(1);
       return row ? mapSessionSlot(row) : null;
+    },
+    async hasLockedOverlappingSession(input) {
+      const conditions = [
+        eq(psychologistSessionSlots.profileId, input.profileId),
+        inArray(psychologistSessionSlots.status, ["held", "booked", "completed"]),
+        lt(psychologistSessionSlots.startsAt, input.endsAt),
+        gt(psychologistSessionSlots.endsAt, input.startsAt),
+      ];
+      if (input.excludeSessionSlotId) conditions.push(ne(psychologistSessionSlots.id, input.excludeSessionSlotId));
+      const [row] = await source.select({ value: count() }).from(psychologistSessionSlots).where(and(...conditions));
+      return Number(row?.value ?? 0) > 0;
     },
     async claimSessionSlot(sessionSlotId, heldUntil) {
       const [row] = await source.update(psychologistSessionSlots).set({

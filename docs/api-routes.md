@@ -42,6 +42,7 @@ Source of truth: `src/app.ts` and route modules under `src/modules/*`.
 | POST   | `/api/v1/psychologists/me/submit-for-review`                  | Bearer | Yes |
 | GET    | `/api/v1/psychologists/me/credential-file/:fileId/review-url` | Bearer | Yes |
 | POST   | `/api/v1/psychologists/me/bundles`                            | Bearer | Yes |
+| POST   | `/api/v1/psychologists/me/availability-windows`               | Bearer | Yes |
 | PUT    | `/api/v1/psychologists/me/bundles/:bundleId`                  | Bearer | Yes |
 | DELETE | `/api/v1/psychologists/me/bundles/:bundleId`                  | Bearer | Yes |
 | GET    | `/api/v1/psychologists`                                       | Public | Yes |

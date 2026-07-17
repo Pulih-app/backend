@@ -62,6 +62,9 @@ function createMemoryBookingsRepository(seed: {
   const repository: BookingsRepository = {
     async transaction<T>(callback: (repository: BookingsRepository) => Promise<T>) { return callback(repository); },
     async findSessionSlotForBooking(sessionSlotId) { return sessions.get(sessionSlotId) ?? null; },
+    async hasLockedOverlappingSession(input) {
+      return Array.from(sessions.values()).some((session) => session.profileId === input.profileId && session.id !== input.excludeSessionSlotId && ["held", "booked", "completed"].includes(session.status) && new Date(session.startsAt) < input.endsAt && new Date(session.endsAt) > input.startsAt);
+    },
     async claimSessionSlot(sessionSlotId, heldUntil) {
       const session = sessions.get(sessionSlotId);
       if (!session || session.status !== "available") return null;
@@ -235,6 +238,22 @@ describe("booking routes", () => {
         packageName: "Paket 3 Jam",
         packageDurationMinutes: 180,
         priceAmount: 150000,
+      }, {
+        id: "99999999-9999-4999-8999-999999999999",
+        bundleId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        profileId: "33333333-3333-4333-8333-333333333333",
+        psychologistUserId: "psych-1",
+        psychologistApprovalStatus: "approved",
+        psychologistType: "clinical",
+        consultationChannel: "chat_and_meet",
+        sessionDate: "2026-02-01T00:00:00.000Z",
+        startsAt: "2026-02-01T09:00:00.000Z",
+        endsAt: "2026-02-01T10:00:00.000Z",
+        status: "available",
+        heldUntil: null,
+        packageName: "Paket 1 Jam",
+        packageDurationMinutes: 60,
+        priceAmount: 150000,
       }],
     });
     const app = createApp(baseEnv, {}, { authRepository, bookingsRepository });
@@ -290,6 +309,13 @@ describe("booking routes", () => {
       body: JSON.stringify({ sessionSlotId: "11111111-1111-4111-8111-111111111111", complaint: "Sulit tidur dan mudah cemas." }),
     });
     expect(duplicate.status).toBe(409);
+
+    const overlap = await app.request("http://localhost/api/v1/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ sessionSlotId: "99999999-9999-4999-8999-999999999999", complaint: "Jam overlap." }),
+    });
+    expect(overlap.status).toBe(409);
   });
 
   test("returns empty booking list for patient with no bookings", async () => {
