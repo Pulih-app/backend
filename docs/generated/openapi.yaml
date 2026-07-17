@@ -3681,6 +3681,641 @@ paths:
         -
           bearerAuth:
 []
+  "/api/v1/psychologists/me/availability":
+    get:
+      tags:
+        - "psychologists"
+      summary: "List my availability dates"
+      description: |
+          Psychologist dashboard endpoint. Returns dates that have generated availability slots with status counts.
+
+          Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
+      operationId: "get_api_v1_psychologists_me_availability"
+      responses:
+        "200":
+          description: "Success response"
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "success"
+                  - "message"
+                  - "data"
+                  - "meta"
+                properties:
+                  success:
+                    type: "boolean"
+                    const: true
+                  message:
+                    type: "string"
+                  data:
+                    type: "array"
+                    items:
+                      "$ref": "#/components/schemas/PsychologistAvailabilityDate"
+                  meta:
+                    oneOf:
+                      -
+                        "$ref": "#/components/schemas/PaginationMeta"
+                      -
+                        type: "object"
+                        additionalProperties: true
+                      -
+                        type: "null"
+              examples:
+                success:
+                  summary: "200 success"
+                  value:
+                    success: true
+                    message: "Availability dates retrieved successfully"
+                    data:
+                      -
+                        date: "2026-06-03"
+                        totalSlots: 3
+                        availableSlots: 1
+                        heldSlots: 0
+                        bookedSlots: 2
+                        completedSlots: 0
+                        cancelledSlots: 0
+                        expiredSlots: 0
+                        rescheduledSlots: 0
+                    meta: null
+        "400":
+          description: "Bad request"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Bad request"
+                  value:
+                    success: false
+                    message: "Request body is malformed."
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      details:
+                        - "Request body must be valid JSON."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "422":
+          description: "Validation error"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Validation error"
+                  value:
+                    success: false
+                    message: "Request validation failed."
+                    data: null
+                    error:
+                      code: "VALIDATION_ERROR"
+                      details:
+                        - "field: Must be valid."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "500":
+          description: "Internal error"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Internal error"
+                  value:
+                    success: false
+                    message: "Unexpected internal error."
+                    data: null
+                    error:
+                      code: "INTERNAL_ERROR"
+                      details:
+                        - "An unexpected error occurred."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+      x-codeSamples:
+        -
+          lang: "Shell"
+          label: "cURL"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/availability"
+      security:
+        -
+          bearerAuth:
+[]
+  "/api/v1/psychologists/me/bookings/today":
+    get:
+      tags:
+        - "psychologists"
+      summary: "List today's psychologist bookings"
+      description: |
+          Psychologist dashboard endpoint. Returns bookings assigned to current psychologist where scheduled start date is today in Asia/Jakarta.
+
+          Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
+      operationId: "get_api_v1_psychologists_me_bookings_today"
+      responses:
+        "200":
+          description: "Success response"
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "success"
+                  - "message"
+                  - "data"
+                  - "meta"
+                properties:
+                  success:
+                    type: "boolean"
+                    const: true
+                  message:
+                    type: "string"
+                  data:
+                    type: "array"
+                    items:
+                      "$ref": "#/components/schemas/Booking"
+                  meta:
+                    oneOf:
+                      -
+                        "$ref": "#/components/schemas/PaginationMeta"
+                      -
+                        type: "object"
+                        additionalProperties: true
+                      -
+                        type: "null"
+              examples:
+                success:
+                  summary: "200 success"
+                  value:
+                    success: true
+                    message: "Today bookings retrieved successfully"
+                    data:
+                      -
+                        id: "55555555-5555-4555-8555-555555555555"
+                        patientUserId: "11111111-1111-4111-8111-111111111111"
+                        psychologistProfileId: "22222222-2222-4222-8222-222222222222"
+                        psychologistUserId: "11111111-1111-4111-8111-111111111111"
+                        sessionSlotId: "44444444-4444-4444-8444-444444444444"
+                        consultationChannel: "chat_and_meet"
+                        status: "pending_payment"
+                        scheduledStartAt: "2026-06-03T08:00:00.000Z"
+                        scheduledEndAt: "2026-06-03T11:00:00.000Z"
+                        priceAmount: 150000
+                        packageNameSnapshot: "Paket 3 Jam"
+                        packageDurationMinutesSnapshot: 180
+                        paymentExpiresAt: "2026-06-03T09:00:00.000Z"
+                        complaint: "Sulit tidur dan mudah cemas."
+                        meetLink: null
+                        confirmedAt: null
+                        rescheduledAt: null
+                        rescheduleReason: null
+                        createdAt: "2026-06-03T08:00:00.000Z"
+                        updatedAt: "2026-06-03T08:00:00.000Z"
+                        psychologistType: "clinical"
+                        patientEmail: "patient@example.com"
+                        psychologistEmail: "psych@example.com"
+                        psychologistFullName: "Dr. Psych"
+                        ratingSummary:
+                          averageRating: 4.8
+                          reviewCount: 12
+                        latestReviews:
+                          -
+                            id: "review_001"
+                            bookingId: "55555555-5555-4555-8555-555555555555"
+                            patientUserId: "11111111-1111-4111-8111-111111111111"
+                            psychologistProfileId: "22222222-2222-4222-8222-222222222222"
+                            rating: 5
+                            comment: "Helpful"
+                            createdAt: "2026-07-16T01:10:00.000Z"
+                            updatedAt: "2026-07-16T01:10:00.000Z"
+                    meta: null
+        "400":
+          description: "Bad request"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Bad request"
+                  value:
+                    success: false
+                    message: "Request body is malformed."
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      details:
+                        - "Request body must be valid JSON."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "422":
+          description: "Validation error"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Validation error"
+                  value:
+                    success: false
+                    message: "Request validation failed."
+                    data: null
+                    error:
+                      code: "VALIDATION_ERROR"
+                      details:
+                        - "field: Must be valid."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "500":
+          description: "Internal error"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Internal error"
+                  value:
+                    success: false
+                    message: "Unexpected internal error."
+                    data: null
+                    error:
+                      code: "INTERNAL_ERROR"
+                      details:
+                        - "An unexpected error occurred."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+      x-codeSamples:
+        -
+          lang: "Shell"
+          label: "cURL"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/bookings/today"
+      security:
+        -
+          bearerAuth:
+[]
+  "/api/v1/psychologists/me/bookings/{bookingId}/approve":
+    post:
+      tags:
+        - "psychologists"
+      summary: "Approve booking"
+      description: |
+          Psychologist dashboard endpoint for confirming a paid booking. Clinical sessions require Google Meet link; general sessions ignore meetLink.
+
+          Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
+      operationId: "post_api_v1_psychologists_me_bookings_bookingId_approve"
+      responses:
+        "201":
+          description: "Success response"
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "success"
+                  - "message"
+                  - "data"
+                  - "meta"
+                properties:
+                  success:
+                    type: "boolean"
+                    const: true
+                  message:
+                    type: "string"
+                  data:
+                    "$ref": "#/components/schemas/Booking"
+                  meta:
+                    oneOf:
+                      -
+                        "$ref": "#/components/schemas/PaginationMeta"
+                      -
+                        type: "object"
+                        additionalProperties: true
+                      -
+                        type: "null"
+              examples:
+                success:
+                  summary: "201 success"
+                  value:
+                    success: true
+                    message: "Booking approved successfully"
+                    data:
+                      id: "55555555-5555-4555-8555-555555555555"
+                      patientUserId: "11111111-1111-4111-8111-111111111111"
+                      psychologistProfileId: "22222222-2222-4222-8222-222222222222"
+                      psychologistUserId: "11111111-1111-4111-8111-111111111111"
+                      sessionSlotId: "44444444-4444-4444-8444-444444444444"
+                      consultationChannel: "chat_and_meet"
+                      status: "pending_payment"
+                      scheduledStartAt: "2026-06-03T08:00:00.000Z"
+                      scheduledEndAt: "2026-06-03T11:00:00.000Z"
+                      priceAmount: 150000
+                      packageNameSnapshot: "Paket 3 Jam"
+                      packageDurationMinutesSnapshot: 180
+                      paymentExpiresAt: "2026-06-03T09:00:00.000Z"
+                      complaint: "Sulit tidur dan mudah cemas."
+                      meetLink: null
+                      confirmedAt: null
+                      rescheduledAt: null
+                      rescheduleReason: null
+                      createdAt: "2026-06-03T08:00:00.000Z"
+                      updatedAt: "2026-06-03T08:00:00.000Z"
+                      psychologistType: "clinical"
+                      patientEmail: "patient@example.com"
+                      psychologistEmail: "psych@example.com"
+                      psychologistFullName: "Dr. Psych"
+                      ratingSummary:
+                        averageRating: 4.8
+                        reviewCount: 12
+                      latestReviews:
+                        -
+                          id: "review_001"
+                          bookingId: "55555555-5555-4555-8555-555555555555"
+                          patientUserId: "11111111-1111-4111-8111-111111111111"
+                          psychologistProfileId: "22222222-2222-4222-8222-222222222222"
+                          rating: 5
+                          comment: "Helpful"
+                          createdAt: "2026-07-16T01:10:00.000Z"
+                          updatedAt: "2026-07-16T01:10:00.000Z"
+                    meta: null
+        "400":
+          description: "Bad request"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Bad request"
+                  value:
+                    success: false
+                    message: "Request body is malformed."
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      details:
+                        - "Request body must be valid JSON."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "422":
+          description: "Validation error"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Validation error"
+                  value:
+                    success: false
+                    message: "Request validation failed."
+                    data: null
+                    error:
+                      code: "VALIDATION_ERROR"
+                      details:
+                        - "field: Must be valid."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "500":
+          description: "Internal error"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Internal error"
+                  value:
+                    success: false
+                    message: "Unexpected internal error."
+                    data: null
+                    error:
+                      code: "INTERNAL_ERROR"
+                      details:
+                        - "An unexpected error occurred."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+      x-codeSamples:
+        -
+          lang: "Shell"
+          label: "cURL"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/bookings/{bookingId}/approve"
+      parameters:
+        -
+          name: "bookingId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+            example: "bookingId_uuid"
+          description: "Route parameter: bookingId."
+      security:
+        -
+          bearerAuth:
+[]
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              type: "object"
+              additionalProperties: false
+              properties:
+                meetLink:
+                  type:
+                    - "string"
+                    - "null"
+                  example: "https://meet.google.com/abc-defg-hij"
+                  format: "uri"
+                  description: "Required only for clinical psychologist meet sessions."
+            examples:
+              clinical:
+                summary: "clinical"
+                value:
+                  meetLink: "https://meet.google.com/abc-defg-hij"
+              general:
+                summary: "general"
+                value:
+                  meetLink: null
+  "/api/v1/psychologists/me/bookings/{bookingId}/reschedule":
+    post:
+      tags:
+        - "psychologists"
+      summary: "Reschedule booking from psychologist dashboard"
+      description: |
+          Psychologist dashboard endpoint. Moves booking to a new available generated slot with reason. MVP applies immediately without patient approval.
+
+          Common contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.
+      operationId: "post_api_v1_psychologists_me_bookings_bookingId_reschedule"
+      responses:
+        "200":
+          description: "Success response"
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "success"
+                  - "message"
+                  - "data"
+                  - "meta"
+                properties:
+                  success:
+                    type: "boolean"
+                    const: true
+                  message:
+                    type: "string"
+                  data:
+                    "$ref": "#/components/schemas/Booking"
+                  meta:
+                    oneOf:
+                      -
+                        "$ref": "#/components/schemas/PaginationMeta"
+                      -
+                        type: "object"
+                        additionalProperties: true
+                      -
+                        type: "null"
+              examples:
+                success:
+                  summary: "200 success"
+                  value:
+                    success: true
+                    message: "Booking rescheduled successfully"
+                    data:
+                      id: "55555555-5555-4555-8555-555555555555"
+                      patientUserId: "11111111-1111-4111-8111-111111111111"
+                      psychologistProfileId: "22222222-2222-4222-8222-222222222222"
+                      psychologistUserId: "11111111-1111-4111-8111-111111111111"
+                      sessionSlotId: "44444444-4444-4444-8444-444444444444"
+                      consultationChannel: "chat_and_meet"
+                      status: "pending_payment"
+                      scheduledStartAt: "2026-06-03T08:00:00.000Z"
+                      scheduledEndAt: "2026-06-03T11:00:00.000Z"
+                      priceAmount: 150000
+                      packageNameSnapshot: "Paket 3 Jam"
+                      packageDurationMinutesSnapshot: 180
+                      paymentExpiresAt: "2026-06-03T09:00:00.000Z"
+                      complaint: "Sulit tidur dan mudah cemas."
+                      meetLink: null
+                      confirmedAt: null
+                      rescheduledAt: null
+                      rescheduleReason: null
+                      createdAt: "2026-06-03T08:00:00.000Z"
+                      updatedAt: "2026-06-03T08:00:00.000Z"
+                      psychologistType: "clinical"
+                      patientEmail: "patient@example.com"
+                      psychologistEmail: "psych@example.com"
+                      psychologistFullName: "Dr. Psych"
+                      ratingSummary:
+                        averageRating: 4.8
+                        reviewCount: 12
+                      latestReviews:
+                        -
+                          id: "review_001"
+                          bookingId: "55555555-5555-4555-8555-555555555555"
+                          patientUserId: "11111111-1111-4111-8111-111111111111"
+                          psychologistProfileId: "22222222-2222-4222-8222-222222222222"
+                          rating: 5
+                          comment: "Helpful"
+                          createdAt: "2026-07-16T01:10:00.000Z"
+                          updatedAt: "2026-07-16T01:10:00.000Z"
+                    meta: null
+        "400":
+          description: "Bad request"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Bad request"
+                  value:
+                    success: false
+                    message: "Request body is malformed."
+                    data: null
+                    error:
+                      code: "BAD_REQUEST"
+                      details:
+                        - "Request body must be valid JSON."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "422":
+          description: "Validation error"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Validation error"
+                  value:
+                    success: false
+                    message: "Request validation failed."
+                    data: null
+                    error:
+                      code: "VALIDATION_ERROR"
+                      details:
+                        - "field: Must be valid."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+        "500":
+          description: "Internal error"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorEnvelope"
+              examples:
+                default:
+                  summary: "Internal error"
+                  value:
+                    success: false
+                    message: "Unexpected internal error."
+                    data: null
+                    error:
+                      code: "INTERNAL_ERROR"
+                      details:
+                        - "An unexpected error occurred."
+                      request_id: "req_01JZV7PULIHDEMO0000000000"
+      x-codeSamples:
+        -
+          lang: "Shell"
+          label: "cURL"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/bookings/{bookingId}/reschedule"
+      parameters:
+        -
+          name: "bookingId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+            example: "bookingId_uuid"
+          description: "Route parameter: bookingId."
+      security:
+        -
+          bearerAuth:
+[]
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              type: "object"
+              additionalProperties: false
+              required:
+                - "newSessionSlotId"
+                - "reason"
+              properties:
+                newSessionSlotId:
+                  type: "string"
+                  format: "uuid"
+                  example: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+                reason:
+                  type: "string"
+                  maxLength: 2000
+                  example: "Doctor requested a new time"
+            examples:
+              new_slot:
+                summary: "new_slot"
+                value:
+                  newSessionSlotId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+                  reason: "Doctor requested a new time"
   "/api/v1/psychologists":
     get:
       tags:
@@ -12187,6 +12822,55 @@ components:
           type: "string"
           format: "date-time"
           example: "2026-07-16T16:00:00.000Z"
+    PsychologistAvailabilityDate:
+      type: "object"
+      required:
+        - "date"
+        - "totalSlots"
+        - "availableSlots"
+        - "heldSlots"
+        - "bookedSlots"
+        - "completedSlots"
+        - "cancelledSlots"
+        - "expiredSlots"
+        - "rescheduledSlots"
+      properties:
+        date:
+          type: "string"
+          format: "date"
+          example: "2026-06-03"
+        totalSlots:
+          type: "integer"
+          minimum: 0
+          example: 3
+        availableSlots:
+          type: "integer"
+          minimum: 0
+          example: 1
+        heldSlots:
+          type: "integer"
+          minimum: 0
+          example: 0
+        bookedSlots:
+          type: "integer"
+          minimum: 0
+          example: 2
+        completedSlots:
+          type: "integer"
+          minimum: 0
+          example: 0
+        cancelledSlots:
+          type: "integer"
+          minimum: 0
+          example: 0
+        expiredSlots:
+          type: "integer"
+          minimum: 0
+          example: 0
+        rescheduledSlots:
+          type: "integer"
+          minimum: 0
+          example: 0
     Booking:
       type: "object"
       required:

@@ -74,6 +74,18 @@ export type PaymentRecord = {
 
 export type BookingRatingSummary = { averageRating: number; reviewCount: number };
 
+export type PsychologistAvailabilityDateRecord = {
+  date: string;
+  totalSlots: number;
+  availableSlots: number;
+  heldSlots: number;
+  bookedSlots: number;
+  completedSlots: number;
+  cancelledSlots: number;
+  expiredSlots: number;
+  rescheduledSlots: number;
+};
+
 export type BookingDetailRecord = BookingRecord & {
   patientEmail: string;
   psychologistEmail: string;
@@ -130,6 +142,7 @@ export type BookingsRepository = {
   findBookingById(bookingId: string): Promise<BookingDetailRecord | null>;
   listBookingsByPatientUserId(userId: string): Promise<BookingDetailRecord[]>;
   listBookingsByPsychologistUserId(userId: string): Promise<BookingDetailRecord[]>;
+  listAvailabilityDatesByPsychologistUserId(userId: string): Promise<PsychologistAvailabilityDateRecord[]>;
   findPaymentByOrderId(orderId: string): Promise<PaymentRecord | null>;
   hasPaymentEvent(input: { paymentId: string; eventType: string; providerStatus: string; orderId: string; amount: number }): Promise<boolean>;
   createPaymentEvent(input: { paymentId: string; provider: string; eventType: string; providerStatus: string; orderId: string; amount: number; rawPayloadSafe: Record<string, unknown>; processedAt?: Date | null }): Promise<void>;
@@ -228,6 +241,31 @@ function mapPayment(row: typeof payments.$inferSelect): PaymentRecord {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+function createEmptyAvailabilityDate(date: string): PsychologistAvailabilityDateRecord {
+  return {
+    date,
+    totalSlots: 0,
+    availableSlots: 0,
+    heldSlots: 0,
+    bookedSlots: 0,
+    completedSlots: 0,
+    cancelledSlots: 0,
+    expiredSlots: 0,
+    rescheduledSlots: 0,
+  };
+}
+
+function addAvailabilityStatus(summary: PsychologistAvailabilityDateRecord, status: string) {
+  summary.totalSlots += 1;
+  if (status === "available") summary.availableSlots += 1;
+  if (status === "held") summary.heldSlots += 1;
+  if (status === "booked") summary.bookedSlots += 1;
+  if (status === "completed") summary.completedSlots += 1;
+  if (status === "cancelled") summary.cancelledSlots += 1;
+  if (status === "expired") summary.expiredSlots += 1;
+  if (status === "rescheduled") summary.rescheduledSlots += 1;
 }
 
 function mapBooking(row: {
@@ -427,6 +465,23 @@ function createRepository(source: NodePgDatabase): BookingsRepository {
     },
     async listBookingsByPsychologistUserId(userId) {
       return loadBookingList(source, userId, "psychologist");
+    },
+    async listAvailabilityDatesByPsychologistUserId(userId) {
+      const rows = await source
+        .select({ slot: psychologistSessionSlots })
+        .from(psychologistSessionSlots)
+        .innerJoin(psychologistProfiles, eq(psychologistSessionSlots.profileId, psychologistProfiles.id))
+        .where(eq(psychologistProfiles.userId, userId))
+        .orderBy(psychologistSessionSlots.sessionDate, psychologistSessionSlots.startsAt);
+
+      const summaries = new Map<string, PsychologistAvailabilityDateRecord>();
+      for (const row of rows) {
+        const date = row.slot.sessionDate.toISOString().slice(0, 10);
+        const summary = summaries.get(date) ?? createEmptyAvailabilityDate(date);
+        addAvailabilityStatus(summary, row.slot.status);
+        summaries.set(date, summary);
+      }
+      return Array.from(summaries.values());
     },
     async findPaymentByOrderId(orderId) {
       const [row] = await source.select().from(payments).where(eq(payments.orderId, orderId)).limit(1);

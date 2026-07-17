@@ -59,6 +59,34 @@ export function createBookingsRoutes(options: BookingsRoutesOptions) {
     return context.json(createSuccessResponse({ message: "Bookings retrieved successfully", data }));
   }));
 
+  routes.get("/psychologists/me/availability", async (context) => withService(options, async (service, authService) => {
+    const auth = await requireAuth(context, options, authService);
+    const data = await service.listPsychologistAvailabilityDates(auth.id, auth.role);
+    return context.json(createSuccessResponse({ message: "Availability dates retrieved successfully", data }));
+  }));
+
+  routes.get("/psychologists/me/bookings/today", async (context) => withService(options, async (service, authService) => {
+    const auth = await requireAuth(context, options, authService);
+    const data = await service.listPsychologistBookingsToday(auth.id, auth.role);
+    return context.json(createSuccessResponse({ message: "Today bookings retrieved successfully", data }));
+  }));
+
+  routes.post("/psychologists/me/bookings/:bookingId/approve", async (context) => withService(options, async (service, authService) => {
+    const auth = await requireAuth(context, options, authService);
+    const params = validateParams(context, bookingParamsSchema);
+    const payload = await validateJsonBody(context, confirmBookingSchema);
+    const data = await service.confirmBooking(auth.id, auth.role, params.bookingId, payload);
+    return context.json(createSuccessResponse({ message: "Booking approved successfully", data }));
+  }));
+
+  routes.post("/psychologists/me/bookings/:bookingId/reschedule", async (context) => withService(options, async (service, authService) => {
+    const auth = await requireAuth(context, options, authService);
+    const params = validateParams(context, bookingParamsSchema);
+    const payload = await validateJsonBody(context, rescheduleBookingSchema);
+    const data = await service.rescheduleBooking(auth.id, auth.role, params.bookingId, payload);
+    return context.json(createSuccessResponse({ message: "Booking rescheduled successfully", data }));
+  }));
+
   routes.get("/bookings/:bookingId", async (context) => withService(options, async (service, authService) => {
     const auth = await requireAuth(context, options, authService);
     const params = validateParams(context, bookingParamsSchema);

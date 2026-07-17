@@ -11,6 +11,15 @@ function addHours(now: Date, hours: number) {
 
 const CHAT_ALLOWED_STATUSES = new Set(["payment_completed", "confirmed", "rescheduled", "completed"]);
 
+function localDateInJakarta(value: Date | string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(value instanceof Date ? value : new Date(value));
+}
+
 function hideMeetLink<T extends { status: string; consultationChannel: string; meetLink: string | null }>(booking: T) {
   return {
     ...booking,
@@ -99,6 +108,18 @@ export function createBookingsService(repository: BookingsRepository, config: Ap
       if (role === "patient") return repository.listBookingsByPatientUserId(userId).then((items) => items.map(hideMeetLink));
       if (role === "psychologist") return repository.listBookingsByPsychologistUserId(userId).then((items) => items.map(hideMeetLink));
       throw new AppError(AppErrorCode.Forbidden, "You are not allowed to access bookings.");
+    },
+    async listPsychologistAvailabilityDates(userId: string, role: string) {
+      if (role !== "psychologist") throw new AppError(AppErrorCode.Forbidden, "Only psychologists can access availability dates.");
+      return repository.listAvailabilityDatesByPsychologistUserId(userId);
+    },
+    async listPsychologistBookingsToday(userId: string, role: string) {
+      if (role !== "psychologist") throw new AppError(AppErrorCode.Forbidden, "Only psychologists can access today's bookings.");
+      const today = localDateInJakarta(new Date());
+      const bookings = await repository.listBookingsByPsychologistUserId(userId);
+      return bookings
+        .filter((booking) => localDateInJakarta(booking.scheduledStartAt) === today)
+        .map(hideMeetLink);
     },
     async getBooking(userId: string, role: string, bookingId: string) {
       const booking = await repository.findBookingById(bookingId);

@@ -26,6 +26,7 @@ function createRepository(seed: { payment: PaymentRecord; booking: BookingDetail
     async findBookingById(id) { return id === booking.id ? booking : null; },
     async listBookingsByPatientUserId() { return []; },
     async listBookingsByPsychologistUserId() { return []; },
+    async listAvailabilityDatesByPsychologistUserId() { return []; },
     async findPaymentByOrderId(orderId) { return orderId === payment.orderId ? payment : null; },
     async findPaymentById(paymentId) { return paymentId === payment.id ? payment : null; },
     async findPaymentByBookingId(bookingId) { return bookingId === booking.id ? payment : null; },

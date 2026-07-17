@@ -28,6 +28,10 @@ Source of truth: `src/routes/api-route-inventory.ts`. OpenAPI operations are gen
 | `POST` | `/api/v1/psychologists/me/bundles` | `bearer` | Yes | `/api/v1/psychologists/me/bundles` |
 | `PUT` | `/api/v1/psychologists/me/bundles/:bundleId` | `bearer` | Yes | `/api/v1/psychologists/me/bundles/{bundleId}` |
 | `DELETE` | `/api/v1/psychologists/me/bundles/:bundleId` | `bearer` | Yes | `/api/v1/psychologists/me/bundles/{bundleId}` |
+| `GET` | `/api/v1/psychologists/me/availability` | `bearer` | Yes | `/api/v1/psychologists/me/availability` |
+| `GET` | `/api/v1/psychologists/me/bookings/today` | `bearer` | Yes | `/api/v1/psychologists/me/bookings/today` |
+| `POST` | `/api/v1/psychologists/me/bookings/:bookingId/approve` | `bearer` | Yes | `/api/v1/psychologists/me/bookings/{bookingId}/approve` |
+| `POST` | `/api/v1/psychologists/me/bookings/:bookingId/reschedule` | `bearer` | Yes | `/api/v1/psychologists/me/bookings/{bookingId}/reschedule` |
 | `GET` | `/api/v1/psychologists` | `public` | Yes | `/api/v1/psychologists` |
 | `GET` | `/api/v1/psychologists/:psychologistId` | `public` | Yes | `/api/v1/psychologists/{psychologistId}` |
 | `GET` | `/api/v1/psychologists/:psychologistId/sessions` | `public` | Yes | `/api/v1/psychologists/{psychologistId}/sessions` |
