@@ -40,7 +40,7 @@ export const DEFAULT_ENV = {
   NODE_ENV: "development",
   PORT: "3002",
   API_PREFIX: "/api/v1",
-  APP_URL: "http://localhost:3002",
+  APP_URL: "https://pulih-api.salmanabdurrahman.my.id",
   PWA_URL: "http://localhost:3001",
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable",
   DIRECT_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable",

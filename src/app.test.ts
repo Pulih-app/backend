@@ -91,8 +91,8 @@ describe("docs", () => {
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.servers[0].url).toBe("https://pulih.salmanabdurrahman.my.id");
-    expect(body.paths["/api/v1/auth/register"].post["x-codeSamples"][0].source).toBe("curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/register");
+    expect(body.servers[0].url).toBe("https://pulih-api.salmanabdurrahman.my.id");
+    expect(body.paths["/api/v1/auth/register"].post["x-codeSamples"][0].source).toBe("curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/auth/register");
   });
 });
 

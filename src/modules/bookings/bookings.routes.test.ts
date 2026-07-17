@@ -270,6 +270,27 @@ describe("booking routes", () => {
     expect(duplicate.status).toBe(409);
   });
 
+  test("returns empty booking list for patient with no bookings", async () => {
+    const authRepository = createMemoryAuthRepository([]);
+    const bookingsRepository = createMemoryBookingsRepository();
+    const app = createApp(baseEnv, {}, { authRepository, bookingsRepository });
+
+    const register = await app.request("http://localhost/api/v1/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "empty-bookings@example.com", username: "emptybookings", password: "password123", confirm_password: "password123" }),
+    });
+    const token = (await register.json()).data.session.access_token as string;
+
+    const response = await app.request("http://localhost/api/v1/bookings", {
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data).toEqual([]);
+  });
+
   test("rejects booking for non-approved psychologist slot", async () => {
     const authRepository = createMemoryAuthRepository([]);
     const bookingsRepository = createMemoryBookingsRepository({

@@ -15,7 +15,7 @@ function databaseEnv() {
     NODE_ENV: process.env.NODE_ENV ?? "development",
     PORT: process.env.PORT ?? "3000",
     API_PREFIX: process.env.API_PREFIX ?? "/api/v1",
-    APP_URL: process.env.APP_URL ?? "http://localhost:3000",
+    APP_URL: process.env.APP_URL ?? "https://pulih-api.salmanabdurrahman.my.id",
     PWA_URL: process.env.PWA_URL ?? "http://localhost:3001",
     DATABASE_URL: process.env.DATABASE_URL ?? requiredEnv("DIRECT_DATABASE_URL"),
     DIRECT_DATABASE_URL: process.env.DIRECT_DATABASE_URL ?? requiredEnv("DATABASE_URL"),

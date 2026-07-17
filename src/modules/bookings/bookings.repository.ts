@@ -287,10 +287,10 @@ async function loadBooking(database: NodePgDatabase, bookingId: string) {
   const [row] = await database
     .select({ booking: bookings, psychologistProfile: psychologistProfiles })
     .from(bookings)
-    .innerJoin(psychologistProfiles, eq(bookings.psychologistProfileId, psychologistProfiles.id))
+    .leftJoin(psychologistProfiles, eq(bookings.psychologistProfileId, psychologistProfiles.id))
     .where(eq(bookings.id, bookingId))
     .limit(1);
-  if (!row) return null;
+  if (!row || !row.psychologistProfile) return null;
   const patient = await loadUser(database, row.booking.patientUserId);
   const psychologist = await loadUser(database, row.psychologistProfile.userId);
   if (!patient || !psychologist) return null;
@@ -309,30 +309,19 @@ async function loadBooking(database: NodePgDatabase, bookingId: string) {
 }
 
 async function loadBookingList(database: NodePgDatabase, userId: string, role: "patient" | "psychologist") {
-  const rows = await database
-    .select({ booking: bookings, psychologistProfile: psychologistProfiles })
-    .from(bookings)
-    .innerJoin(psychologistProfiles, eq(bookings.psychologistProfileId, psychologistProfiles.id))
-    .where(role === "patient" ? eq(bookings.patientUserId, userId) : eq(psychologistProfiles.userId, userId))
-    .orderBy(bookings.createdAt);
+  const bookingIds = role === "patient"
+    ? await database.select({ id: bookings.id }).from(bookings).where(eq(bookings.patientUserId, userId)).orderBy(bookings.createdAt)
+    : await database
+      .select({ id: bookings.id })
+      .from(bookings)
+      .innerJoin(psychologistProfiles, eq(bookings.psychologistProfileId, psychologistProfiles.id))
+      .where(eq(psychologistProfiles.userId, userId))
+      .orderBy(bookings.createdAt);
 
   const result: BookingDetailRecord[] = [];
-  for (const row of rows) {
-    const patient = await loadUser(database, row.booking.patientUserId);
-    const psychologist = await loadUser(database, row.psychologistProfile.userId);
-    if (!patient || !psychologist) continue;
-    const ratingSummary = await loadRatingSummary(database, row.psychologistProfile.id);
-    const latestReviews = await loadLatestReviews(database, row.psychologistProfile.id);
-    result.push(mapBooking({
-      booking: row.booking,
-      patientEmail: patient.email,
-      psychologistEmail: psychologist.email,
-      psychologistFullName: row.psychologistProfile.fullName,
-      psychologistType: row.psychologistProfile.type as PsychologistType,
-      psychologistUserId: row.psychologistProfile.userId,
-      ratingSummary,
-      latestReviews,
-    }));
+  for (const row of bookingIds) {
+    const booking = await loadBooking(database, row.id);
+    if (booking) result.push(booking);
   }
   return result;
 }

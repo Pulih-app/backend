@@ -6,7 +6,7 @@ info:
   description: "Complete OpenAPI reference for Pulih MVP. Includes module-level docs, request payload schemas, response envelopes, examples for success and common error status codes, auth requirements, route inventory parity, and mental-health safety notes."
 servers:
   -
-    url: "https://pulih.salmanabdurrahman.my.id"
+    url: "https://pulih-api.salmanabdurrahman.my.id"
     description: "Production API server"
 tags:
   -
@@ -125,7 +125,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/health/live"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/health/live"
   "/health/ready":
     get:
       tags:
@@ -220,7 +220,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/health/ready"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/health/ready"
   "/validation-demo":
     post:
       tags:
@@ -328,7 +328,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/validation-demo"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/validation-demo"
       requestBody:
         required: true
         content:
@@ -431,7 +431,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/openapi.yaml"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/openapi.yaml"
   "/openapi.json":
     get:
       tags:
@@ -505,7 +505,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/openapi.json"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/openapi.json"
   "/docs/api":
     get:
       tags:
@@ -575,7 +575,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/docs/api"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/docs/api"
   "/docs/api/":
     get:
       tags:
@@ -645,7 +645,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/docs/api/"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/docs/api/"
   "/api/v1/auth/register":
     post:
       tags:
@@ -800,7 +800,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/register"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/auth/register"
       requestBody:
         required: true
         content:
@@ -997,7 +997,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/register/psychologist"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/auth/register/psychologist"
       requestBody:
         required: true
         content:
@@ -1194,7 +1194,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/login"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/auth/login"
       requestBody:
         required: true
         content:
@@ -1313,7 +1313,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/logout"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/auth/logout"
   "/api/v1/auth/me":
     get:
       tags:
@@ -1406,7 +1406,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/auth/me"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/auth/me"
       security:
         -
           bearerAuth:
@@ -1530,7 +1530,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/auth/onboarding"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/auth/onboarding"
       security:
         -
           bearerAuth:
@@ -1701,7 +1701,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/users/me"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/users/me"
       security:
         -
           bearerAuth:
@@ -1819,7 +1819,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X PUT https://pulih.salmanabdurrahman.my.id/api/v1/users/settings"
+          source: "curl -X PUT https://pulih-api.salmanabdurrahman.my.id/api/v1/users/settings"
       security:
         -
           bearerAuth:
@@ -2030,7 +2030,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/register"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/register"
       security:
         -
           bearerAuth:
@@ -2281,7 +2281,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me"
       security:
         -
           bearerAuth:
@@ -2469,7 +2469,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X PUT https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me"
+          source: "curl -X PUT https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me"
       security:
         -
           bearerAuth:
@@ -2675,7 +2675,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/credential-file"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/credential-file"
       security:
         -
           bearerAuth:
@@ -2874,7 +2874,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/submit-for-review"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/submit-for-review"
       security:
         -
           bearerAuth:
@@ -3006,7 +3006,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/credential-file/{fileId}/review-url"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/credential-file/{fileId}/review-url"
       parameters:
         -
           name: "fileId"
@@ -3204,7 +3204,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/bundles"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/bundles"
       security:
         -
           bearerAuth:
@@ -3436,7 +3436,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X PUT https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/bundles/{bundleId}"
+          source: "curl -X PUT https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/bundles/{bundleId}"
       parameters:
         -
           name: "bundleId"
@@ -3666,7 +3666,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X DELETE https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/me/bundles/{bundleId}"
+          source: "curl -X DELETE https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/me/bundles/{bundleId}"
       parameters:
         -
           name: "bundleId"
@@ -3813,7 +3813,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologists"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists"
   "/api/v1/psychologists/{psychologistId}":
     get:
       tags:
@@ -3943,7 +3943,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/{psychologistId}"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/{psychologistId}"
       parameters:
         -
           name: "psychologistId"
@@ -4073,7 +4073,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologists/{psychologistId}/sessions"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologists/{psychologistId}/sessions"
       parameters:
         -
           name: "psychologistId"
@@ -4226,7 +4226,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/psychologist-sessions"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/psychologist-sessions"
   "/api/v1/bookings":
     post:
       tags:
@@ -4439,7 +4439,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/bookings"
       security:
         -
           bearerAuth:
@@ -4668,7 +4668,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/bookings"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/bookings"
       security:
         -
           bearerAuth:
@@ -4869,7 +4869,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}"
       parameters:
         -
           name: "bookingId"
@@ -5080,7 +5080,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/confirm"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/confirm"
       parameters:
         -
           name: "bookingId"
@@ -5315,7 +5315,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/complete"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/complete"
       parameters:
         -
           name: "bookingId"
@@ -5497,7 +5497,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/messages"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/messages"
       parameters:
         -
           name: "bookingId"
@@ -5675,7 +5675,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/messages"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/messages"
       parameters:
         -
           name: "bookingId"
@@ -5877,7 +5877,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/review"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/review"
       parameters:
         -
           name: "bookingId"
@@ -6116,7 +6116,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/reschedule"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/bookings/{bookingId}/reschedule"
       parameters:
         -
           name: "bookingId"
@@ -6344,7 +6344,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/payments/{paymentId}/status"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/payments/{paymentId}/status"
       parameters:
         -
           name: "paymentId"
@@ -6541,7 +6541,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/payments/pakasir/webhook"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/payments/pakasir/webhook"
       requestBody:
         required: true
         content:
@@ -6765,7 +6765,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/routine/checkin"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/routine/checkin"
       security:
         -
           bearerAuth:
@@ -6960,7 +6960,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/routine/relapses"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/routine/relapses"
       security:
         -
           bearerAuth:
@@ -7118,7 +7118,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/routine/relapses"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/routine/relapses"
       security:
         -
           bearerAuth:
@@ -7265,7 +7265,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/routine/statistics"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/routine/statistics"
       security:
         -
           bearerAuth:
@@ -7367,7 +7367,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/routine/statistics/activity-summary"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/routine/statistics/activity-summary"
       security:
         -
           bearerAuth:
@@ -7534,7 +7534,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/routine/relapses/statistics"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/routine/relapses/statistics"
       security:
         -
           bearerAuth:
@@ -7706,7 +7706,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/journals"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/journals"
       security:
         -
           bearerAuth:
@@ -7874,7 +7874,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/journals"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/journals"
       security:
         -
           bearerAuth:
@@ -8037,7 +8037,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/community"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/community"
       security:
         -
           bearerAuth:
@@ -8176,7 +8176,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/community"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/community"
       security:
         -
           bearerAuth:
@@ -8391,7 +8391,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/community/{postId}/comments"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/community/{postId}/comments"
       parameters:
         -
           name: "postId"
@@ -8572,7 +8572,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/community/{postId}/comments"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/community/{postId}/comments"
       parameters:
         -
           name: "postId"
@@ -8768,7 +8768,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/community/{postId}/like"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/community/{postId}/like"
       parameters:
         -
           name: "postId"
@@ -8950,7 +8950,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/community/{postId}/comments/{commentId}/replies"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/community/{postId}/comments/{commentId}/replies"
       parameters:
         -
           name: "postId"
@@ -9110,7 +9110,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/education"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/education"
       security:
         -
           bearerAuth:
@@ -9228,7 +9228,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/content/daily"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/content/daily"
       security:
         -
           bearerAuth:
@@ -9345,7 +9345,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/achievements/catalog"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/achievements/catalog"
       security:
         -
           bearerAuth:
@@ -9462,7 +9462,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/achievements/progress"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/achievements/progress"
       security:
         -
           bearerAuth:
@@ -9579,7 +9579,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/achievements/unlocked"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/achievements/unlocked"
       security:
         -
           bearerAuth:
@@ -9745,7 +9745,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/ai/ask-coach"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/ai/ask-coach"
       security:
         -
           bearerAuth:
@@ -9932,7 +9932,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/ai/relapse-solution"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/ai/relapse-solution"
       security:
         -
           bearerAuth:
@@ -10138,7 +10138,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/ai/relapse-prevention-plan"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/ai/relapse-prevention-plan"
       security:
         -
           bearerAuth:
@@ -10346,7 +10346,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/ai/chat-history"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/ai/chat-history"
       security:
         -
           bearerAuth:
@@ -10511,7 +10511,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/ai/summary"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/ai/summary"
       security:
         -
           bearerAuth:
@@ -10680,7 +10680,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X POST https://pulih.salmanabdurrahman.my.id/api/v1/ai/onboarding-analysis"
+          source: "curl -X POST https://pulih-api.salmanabdurrahman.my.id/api/v1/ai/onboarding-analysis"
       security:
         -
           bearerAuth:
@@ -10870,7 +10870,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X GET https://pulih.salmanabdurrahman.my.id/api/v1/ai/persona-preferences"
+          source: "curl -X GET https://pulih-api.salmanabdurrahman.my.id/api/v1/ai/persona-preferences"
       security:
         -
           bearerAuth:
@@ -11035,7 +11035,7 @@ paths:
         -
           lang: "Shell"
           label: "cURL"
-          source: "curl -X PUT https://pulih.salmanabdurrahman.my.id/api/v1/ai/persona-preferences"
+          source: "curl -X PUT https://pulih-api.salmanabdurrahman.my.id/api/v1/ai/persona-preferences"
       security:
         -
           bearerAuth:
