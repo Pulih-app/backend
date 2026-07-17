@@ -211,7 +211,8 @@ describe("payment helpers", () => {
       projectSlug: "pulih",
       amount: 150000,
       orderId: "PLH-20260201T100000-ABCDEF12",
-    })).toBe("https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T100000-ABCDEF12");
+      redirectUrl: "http://localhost:3001/consultation/booking/success",
+    })).toBe("https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T100000-ABCDEF12&redirect=http%3A%2F%2Flocalhost%3A3001%2Fconsultation%2Fbooking%2Fsuccess");
   });
 });
 
@@ -286,6 +287,7 @@ describe("booking routes", () => {
     expect(createBody.data.booking.complaint).toBe("Sulit tidur dan mudah cemas.");
     expect(createBody.data.booking.meetLink).toBeNull();
     expect(createBody.data.paymentUrl).toContain("https://app.pakasir.com/pay/pulih/150000");
+    expect(createBody.data.paymentUrl).toContain("redirect=http%3A%2F%2Flocalhost%3A3001%2Fconsultation%2Fbooking%2Fsuccess");
 
     const list = await app.request("http://localhost/api/v1/bookings", {
       headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },

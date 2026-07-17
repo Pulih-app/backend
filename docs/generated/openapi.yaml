@@ -5192,12 +5192,12 @@ paths:
                         amount: 150000
                         status: "created"
                         paymentMethod: null
-                        paymentUrl: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12"
+                        paymentUrl: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12&redirect=http%3A%2F%2Flocalhost%3A3001%2Fconsultation%2Fbooking%2Fsuccess"
                         completedAt: null
                         expiresAt: "2026-07-16T17:00:00.000Z"
                         createdAt: "2026-07-16T16:00:00.000Z"
                         updatedAt: "2026-07-16T16:00:00.000Z"
-                      paymentUrl: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12"
+                      paymentUrl: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12&redirect=http%3A%2F%2Flocalhost%3A3001%2Fconsultation%2Fbooking%2Fsuccess"
                       instruction: "Pay via Pakasir using the link above."
                     meta: null
         "401":
@@ -7082,7 +7082,7 @@ paths:
                       amount: 150000
                       status: "created"
                       paymentMethod: null
-                      paymentUrl: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12"
+                      paymentUrl: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12&redirect=http%3A%2F%2Flocalhost%3A3001%2Fconsultation%2Fbooking%2Fsuccess"
                       completedAt: null
                       expiresAt: "2026-07-16T17:00:00.000Z"
                     meta: null
@@ -12711,7 +12711,7 @@ components:
           type:
             - "string"
             - "null"
-          example: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12"
+          example: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12&redirect=http%3A%2F%2Flocalhost%3A3001%2Fconsultation%2Fbooking%2Fsuccess"
           format: "uri"
         completedAt:
           type:
@@ -13054,7 +13054,7 @@ components:
           type:
             - "string"
             - "null"
-          example: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12"
+          example: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12&redirect=http%3A%2F%2Flocalhost%3A3001%2Fconsultation%2Fbooking%2Fsuccess"
           format: "uri"
         completedAt:
           type:
@@ -13341,7 +13341,7 @@ components:
         paymentUrl:
           type: "string"
           format: "uri"
-          example: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12"
+          example: "https://app.pakasir.com/pay/pulih/150000?order_id=PLH-20260201T070000-ABCDEF12&redirect=http%3A%2F%2Flocalhost%3A3001%2Fconsultation%2Fbooking%2Fsuccess"
         instruction:
           type: "string"
           example: "Pay via Pakasir using the link above."

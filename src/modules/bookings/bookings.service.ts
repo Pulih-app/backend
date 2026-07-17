@@ -10,6 +10,11 @@ function addHours(now: Date, hours: number) {
 }
 
 const CHAT_ALLOWED_STATUSES = new Set(["payment_completed", "confirmed", "rescheduled", "completed"]);
+const BOOKING_PAYMENT_SUCCESS_PATH = "/consultation/booking/success";
+
+function buildBookingPaymentSuccessUrl(pwaUrl: string) {
+  return `${pwaUrl.replace(/\/$/, "")}${BOOKING_PAYMENT_SUCCESS_PATH}`;
+}
 
 function localDateInJakarta(value: Date | string) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -83,6 +88,7 @@ export function createBookingsService(repository: BookingsRepository, config: Ap
           projectSlug: config.payment.pakasirProjectSlug,
           amount: booking.priceAmount,
           orderId,
+          redirectUrl: buildBookingPaymentSuccessUrl(config.app.pwaUrl),
         });
 
         const payment = await tx.createPayment({

@@ -15,13 +15,16 @@ export function buildPakasirPaymentUrl(input: {
   projectSlug: string;
   amount: number;
   orderId: string;
+  redirectUrl?: string;
 }) {
   const baseUrl = input.paymentBaseUrl.replace(/\/$/, "");
   const slug = encodeURIComponent(input.projectSlug);
   const amount = encodeURIComponent(String(Math.round(input.amount)));
-  const orderId = encodeURIComponent(input.orderId);
+  const url = new URL(`${baseUrl}/pay/${slug}/${amount}`);
+  url.searchParams.set("order_id", input.orderId);
+  if (input.redirectUrl) url.searchParams.set("redirect", input.redirectUrl);
 
-  return `${baseUrl}/pay/${slug}/${amount}?order_id=${orderId}`;
+  return url.toString();
 }
 
 export function buildPaymentInstruction(paymentUrl: string) {
