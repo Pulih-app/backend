@@ -212,6 +212,10 @@ export function handleGlobalError(error: Error | HTTPException | unknown, contex
   const requestId = context.get("requestId") || context.req.header("x-request-id") || crypto.randomUUID();
   const mapped = mapError(error);
 
+  if (mapped.code === "INTERNAL_ERROR") {
+    console.error("[INTERNAL_ERROR]", requestId, error instanceof Error ? error.stack ?? error.message : error);
+  }
+
   return context.json(
     createErrorResponse({
       code: mapped.code,
