@@ -1,6 +1,6 @@
 import { routeInventory, type RouteInventoryItem } from "../routes/api-route-inventory";
 
-const defaultApiServerUrl = "https://pulih.salmanabdurrahman.my.id";
+const defaultApiServerUrl = "http://localhost:3002";
 const json = "application/json";
 
 type Schema = Record<string, unknown>;

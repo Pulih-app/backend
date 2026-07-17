@@ -1,8 +1,7 @@
 /**
- * Safe migration runner: calls drizzle-kit up in a loop until all pending migrations are applied.
+ * Safe migration runner: applies pending SQL files one by one.
  * Avoids drizzle-kit migrate hang issue (observed with v0.31.10 pg driver).
  */
-import { $ } from "bun";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -97,15 +96,30 @@ async function main() {
       return;
     }
 
-    console.log(`Pending: ${files.length - applied} migration(s). Applying one at a time via drizzle-kit up...`);
+    console.log(`Pending: ${files.length - applied} migration(s). Applying one at a time...`);
+    await client.query("SELECT setval('drizzle.__drizzle_migrations_id_seq', COALESCE((SELECT MAX(id) FROM drizzle.__drizzle_migrations), 0) + 1, false)");
 
     for (let i = applied; i < files.length; i++) {
       console.log(`Applying ${files[i].tag}...`);
-      const result = await $`DATABASE_URL="${config.database.databaseUrl}" bunx drizzle-kit up`.nothrow().quiet();
-      if (result.exitCode !== 0) {
-        console.error(`Migration ${files[i].tag} failed.`);
-        console.error(result.stderr.toString());
-        process.exit(1);
+      const sql = readFileSync(files[i].path, "utf8");
+      const statements = sql
+        .split("--> statement-breakpoint")
+        .map((statement) => statement.trim())
+        .filter(Boolean);
+
+      await client.query("BEGIN");
+      try {
+        for (const statement of statements) {
+          await client.query(statement);
+        }
+        await client.query(
+          "INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ($1, $2)",
+          [files[i].hash, journal.find((entry) => entry.idx === files[i].idx)?.when ?? Date.now()],
+        );
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
       }
       console.log(`  ✓ ${files[i].tag}`);
     }
