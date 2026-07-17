@@ -3,7 +3,7 @@ FROM oven/bun:1-slim AS base
 FROM base AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
-RUN bun install --production --frozen-lockfile
+RUN bun install --frozen-lockfile
 
 FROM base AS runtime
 WORKDIR /app
