@@ -9,7 +9,7 @@ const baseEnv = {
   APP_NAME: "pulih-api",
   APP_ENV: "local",
   NODE_ENV: "development",
-  PORT: "3000",
+  PORT: "3002",
   API_PREFIX: "/api/v1",
   APP_URL: "http://localhost:3000",
   PWA_URL: "http://localhost:3001",

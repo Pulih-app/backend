@@ -645,6 +645,9 @@ describe("psychologist routes", () => {
     async put() {
       return undefined;
     },
+    async getSignedUrl() {
+      return "https://example.com/signed-url";
+    },
   };
 
   test("creates psychologist profile and derives consultation channel", async () => {

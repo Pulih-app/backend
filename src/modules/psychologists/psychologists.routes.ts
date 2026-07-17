@@ -7,7 +7,7 @@ import { createDatabaseHandle, type DatabaseSource } from "../../db/client";
 import { authGuard, type AuthVariables } from "../auth/auth.middleware";
 import { createAuthRepository, type AuthRepository } from "../auth/auth.repository";
 import { createAuthService, type AuthService } from "../auth/auth.service";
-import { createCredentialStorage, type CredentialStorage, type R2Like } from "./credential-storage";
+import type { CredentialStorage } from "./credential-storage";
 import {
   credentialFileParamsSchema,
   psychologistBundleParamsSchema,
@@ -26,19 +26,18 @@ export type PsychologistsRoutesOptions = {
   authService?: AuthService;
   psychologistsRepository?: PsychologistsRepository;
   credentialStorage?: CredentialStorage;
-  credentialBucket?: R2Like;
 };
 
 async function withService<T>(options: PsychologistsRoutesOptions, action: (service: PsychologistsService, authService: AuthService) => Promise<T>) {
   if (options.psychologistsRepository && (options.authService || options.authRepository)) {
     const authService = options.authService ?? createAuthService(options.authRepository!, options.config);
-    return action(createPsychologistsService(options.psychologistsRepository, options.credentialStorage ?? createCredentialStorage(options.credentialBucket)), authService);
+    return action(createPsychologistsService(options.psychologistsRepository, options.credentialStorage), authService);
   }
 
   const handle = await createDatabaseHandle(options.databaseSource ?? {}, options.config);
   try {
     const authService = createAuthService(createAuthRepository(handle.db), options.config);
-    return await action(createPsychologistsService(createPsychologistsRepository(handle.db), options.credentialStorage ?? createCredentialStorage(options.credentialBucket)), authService);
+    return await action(createPsychologistsService(createPsychologistsRepository(handle.db), options.credentialStorage), authService);
   } finally {
     await handle.close();
   }
@@ -105,7 +104,7 @@ export function createPsychologistsRoutes(options: PsychologistsRoutesOptions) {
   routes.get("/psychologists/me/credential-file/:fileId/review-url", async (context) => withService(options, async (service, authService) => {
     await requireAuth(context, options, authService);
     const params = validateParams(context, credentialFileParamsSchema);
-    const result = await service.getCredentialReviewFallback(context.get("auth").user.id, params.fileId);
+    const result = await service.getCredentialReviewUrl(context.get("auth").user.id, params.fileId);
     return context.json(createSuccessResponse({ data: result }));
   }));
 

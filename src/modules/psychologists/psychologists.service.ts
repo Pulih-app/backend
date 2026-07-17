@@ -206,15 +206,21 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
       await repository.updateApprovalStatus(profile.id, "pending_review");
       return { ...profile, approvalStatus: "pending_review" as const };
     },
-    async getCredentialReviewFallback(userId: string, fileId: string) {
+    async getCredentialReviewUrl(userId: string, fileId: string) {
       const file = await repository.findCredentialFileByOwner(userId, fileId);
       if (!file) throw new AppError(AppErrorCode.NotFound, "Credential file was not found.");
-      return {
-        fileId: file.id,
-        reviewUrl: null,
-        expiresAt: null,
-        message: "Signed review URL is not configured. Use Cloudflare R2 dashboard/manual operations for private review.",
-      };
+      if (!storage) {
+        return {
+          fileId: file.id,
+          reviewUrl: null,
+          expiresAt: null,
+          message: "Credential storage is not configured.",
+        };
+      }
+      const expiresInSeconds = 3600;
+      const reviewUrl = await storage.getSignedUrl(file.objectKey, expiresInSeconds);
+      const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+      return { fileId: file.id, reviewUrl, expiresAt };
     },
     async createBundle(userId: string, input: SessionBundleInput) {
       const profile = await repository.findByUserId(userId);

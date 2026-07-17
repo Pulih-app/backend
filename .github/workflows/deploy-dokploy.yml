@@ -1,0 +1,87 @@
+name: deploy-dokploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag to deploy (e.g., sha-abc1234). Default: sha-<commit>."
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-dokploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.API_URL || 'https://api.pulih.app' }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set IMAGE_TAG
+        run: |
+          if [ -z "${{ github.event.inputs.image_tag }}" ]; then
+            echo "IMAGE_TAG=sha-${{ github.sha }}" >> "$GITHUB_ENV"
+          else
+            echo "IMAGE_TAG=${{ github.event.inputs.image_tag }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/pulih-app/backend:${{ env.IMAGE_TAG }}
+            ghcr.io/pulih-app/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trigger Dokploy deploy
+        env:
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+        run: |
+          deploy_body=$(node -e 'process.stdout.write(JSON.stringify({
+            composeId: process.env.DOKPLOY_COMPOSE_ID,
+            title: "GitHub Actions deploy " + process.env.GITHUB_SHA,
+            description: "Run " + process.env.GITHUB_RUN_ID + "; image ghcr.io/pulih-app/backend:" + process.env.IMAGE_TAG
+          }))')
+
+          curl --fail-with-body -sSL --retry 3 --retry-delay 5 \
+            -X POST "${DOKPLOY_URL}/api/compose.deploy" \
+            -H "accept: application/json" \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${DOKPLOY_API_TOKEN}" \
+            -d "${deploy_body}"
+
+      - name: Smoke tests
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          base_url="${API_URL}"
+          curl -fsS --retry 6 --retry-delay 10 "${base_url}/health/live"
+          curl -fsS --retry 6 --retry-delay 10 "${base_url}/health/ready"
+          status=$(curl -sS -o /dev/null -w '%{http_code}' "${base_url}/api/v1/auth/me")
+          case "$status" in
+            401|403) echo "Auth guard ok: ${status}" ;;
+            *) echo "FAIL: expected 401/403, got ${status}"; exit 1 ;;
+          esac

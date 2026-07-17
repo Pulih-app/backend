@@ -2928,7 +2928,7 @@ paths:
                       fileId: "77777777-7777-4777-8777-777777777777"
                       reviewUrl: null
                       expiresAt: null
-                      message: "Signed review URL is not configured. Use Cloudflare R2 dashboard/manual operations for private review."
+                      message: "Signed review URL is not configured. Use storage dashboard/manual operations for private review."
                     meta: null
         "401":
           description: "Unauthenticated"
@@ -11902,7 +11902,7 @@ components:
             - "string"
             - "null"
           format: "uri"
-          example: "https://example-r2-signed-url.local/credential.pdf"
+          example: "https://storage.example.local/credential.pdf"
         expiresAt:
           type:
             - "string"
@@ -11911,7 +11911,7 @@ components:
           format: "date-time"
         message:
           type: "string"
-          example: "Signed review URL is not configured. Use Cloudflare R2 dashboard/manual operations for private review."
+          example: "Signed review URL is not configured. Use storage dashboard/manual operations for private review."
     SessionBundle:
       type: "object"
       required:

@@ -8,6 +8,14 @@ export class ConfigError extends Error {
   }
 }
 
+export type CredentialStorageConfig = {
+  endpoint: string;
+  region: string;
+  bucket: string;
+  accessKey: string;
+  secretKey: string;
+};
+
 export type AppConfig = {
   app: {
     appName: string;
@@ -21,6 +29,8 @@ export type AppConfig = {
   database: {
     databaseUrl: string;
     directDatabaseUrl: string;
+    poolMax: number;
+    poolIdleTimeoutMs: number;
   };
   security: {
     jwtAccessSecret: string;
@@ -48,6 +58,7 @@ export type AppConfig = {
     timeoutMs: number;
     maxTokens: number;
   };
+  credentialStorage?: CredentialStorageConfig;
 };
 
 function requireValue(issues: string[], key: string, value: string | undefined) {
@@ -109,6 +120,12 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
 
   const databaseUrl = parseUrl(issues, "DATABASE_URL", env.DATABASE_URL);
   const directDatabaseUrl = parseUrl(issues, "DIRECT_DATABASE_URL", env.DIRECT_DATABASE_URL);
+  const poolMax = env.DATABASE_POOL_MAX
+    ? parseNumber(issues, "DATABASE_POOL_MAX", env.DATABASE_POOL_MAX, 1, 100)
+    : 10;
+  const poolIdleTimeoutMs = env.DATABASE_POOL_IDLE_TIMEOUT_MS
+    ? parseNumber(issues, "DATABASE_POOL_IDLE_TIMEOUT_MS", env.DATABASE_POOL_IDLE_TIMEOUT_MS, 1000, 300000)
+    : 30000;
 
   const jwtAccessSecret = requireValue(issues, "JWT_ACCESS_SECRET", env.JWT_ACCESS_SECRET);
   const jwtAccessTtlSeconds = parseNumber(issues, "JWT_ACCESS_TTL_SECONDS", env.JWT_ACCESS_TTL_SECONDS, 300, 86400);
@@ -146,6 +163,23 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     issues.push("CORS_ALLOWED_ORIGINS must contain at least one origin");
   }
 
+  const credentialStorageEndpoint = env.CREDENTIAL_STORAGE_ENDPOINT?.trim();
+  const credentialStorageRegion = env.CREDENTIAL_STORAGE_REGION?.trim() || "auto";
+  const credentialStorageBucket = env.CREDENTIAL_STORAGE_BUCKET?.trim();
+  const credentialStorageAccessKey = env.CREDENTIAL_STORAGE_ACCESS_KEY?.trim();
+  const credentialStorageSecretKey = env.CREDENTIAL_STORAGE_SECRET_KEY?.trim();
+
+  const credentialStorage: CredentialStorageConfig | undefined =
+    credentialStorageEndpoint && credentialStorageBucket && credentialStorageAccessKey && credentialStorageSecretKey
+      ? {
+          endpoint: credentialStorageEndpoint,
+          region: credentialStorageRegion,
+          bucket: credentialStorageBucket,
+          accessKey: credentialStorageAccessKey,
+          secretKey: credentialStorageSecretKey,
+        }
+      : undefined;
+
   if (issues.length > 0) {
     throw new ConfigError(issues);
   }
@@ -163,6 +197,8 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     database: {
       databaseUrl: databaseUrl as string,
       directDatabaseUrl: directDatabaseUrl as string,
+      poolMax: poolMax as number,
+      poolIdleTimeoutMs: poolIdleTimeoutMs as number,
     },
     security: {
       jwtAccessSecret: jwtAccessSecret as string,
@@ -190,5 +226,6 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
       timeoutMs: aiTimeoutMs as number,
       maxTokens: aiMaxTokens as number,
     },
+    credentialStorage,
   };
 }

@@ -5,9 +5,9 @@ const baseEnv = {
   APP_NAME: "pulih-api",
   APP_ENV: "local",
   NODE_ENV: "development",
-  PORT: "3000",
+  PORT: "3002",
   API_PREFIX: "/api/v1",
-  APP_URL: "http://localhost:3000",
+  APP_URL: "http://localhost:3002",
   PWA_URL: "http://localhost:3001",
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable",
   DIRECT_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable",
@@ -85,7 +85,7 @@ describe("docs", () => {
   });
 
   test("uses production OpenAPI default when production app url is localhost", async () => {
-    const app = createApp({ ...baseEnv, APP_ENV: "production", APP_URL: "http://localhost:3001" });
+    const app = createApp({ ...baseEnv, APP_ENV: "production", APP_URL: "http://localhost:3002" });
 
     const response = await app.request("http://localhost/openapi.json");
 

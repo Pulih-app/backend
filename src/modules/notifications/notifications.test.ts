@@ -6,7 +6,7 @@ import { renderBookingConfirmedSessionReadyTemplate, renderBookingReceivedPsycho
 
 const config = {
   app: { appName: "pulih-api", appEnv: "local", nodeEnv: "test", port: 3000, apiPrefix: "/api/v1", appUrl: "http://localhost:3000", pwaUrl: "http://localhost:3001" },
-  database: { databaseUrl: "postgresql://localhost/test", directDatabaseUrl: "postgresql://localhost/test" },
+  database: { databaseUrl: "postgresql://localhost/test", directDatabaseUrl: "postgresql://localhost/test", poolMax: 10, poolIdleTimeoutMs: 30000 },
   security: { jwtAccessSecret: "secret", jwtAccessTtlSeconds: 86400, passwordHashCost: 4, corsAllowedOrigins: ["http://localhost:3001"], requestIdHeader: "x-request-id" },
   payment: { pakasirProjectSlug: "pulih", pakasirBaseUrl: "https://app.pakasir.com", pakasirPaymentBaseUrl: "https://app.pakasir.com", pakasirApiKey: "test-key", pakasirProviderTimeoutMs: 1000 },
   email: { resendApiKey: "test-resend-key", resendFromEmail: "no-reply@salmanabdurrahman.web.id", resendFromName: "Pulih" },

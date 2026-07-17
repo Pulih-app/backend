@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { createDatabaseHandle, type HyperdriveLike } from "./db/client";
+import { createDatabaseHandle } from "./db/client";
 import { createAuthRoutes } from "./modules/auth/auth.routes";
 import type { AuthRepository } from "./modules/auth/auth.repository";
 import { createUsersRoutes } from "./modules/users/users.routes";
 import type { UsersRepository } from "./modules/users/users.repository";
 import { createPsychologistsRoutes } from "./modules/psychologists/psychologists.routes";
-import type { CredentialStorage, R2Like } from "./modules/psychologists/credential-storage";
+import type { CredentialStorage } from "./modules/psychologists/credential-storage";
 import type { PsychologistsRepository } from "./modules/psychologists/psychologists.repository";
 import { createBookingsRoutes } from "./modules/bookings/bookings.routes";
 import type { BookingsRepository } from "./modules/bookings/bookings.repository";
@@ -38,9 +38,9 @@ const DEFAULT_ENV = {
   APP_NAME: "pulih-api",
   APP_ENV: "local",
   NODE_ENV: "development",
-  PORT: "3000",
+  PORT: "3002",
   API_PREFIX: "/api/v1",
-  APP_URL: "http://localhost:3000",
+  APP_URL: "http://localhost:3002",
   PWA_URL: "http://localhost:3001",
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable",
   DIRECT_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable",
@@ -59,10 +59,7 @@ const DEFAULT_ENV = {
 } as const;
 
 export type AppEnv = Record<string, string | undefined>;
-export type AppBindings = {
-  HYPERDRIVE?: HyperdriveLike;
-  CREDENTIAL_BUCKET?: R2Like;
-};
+export type AppBindings = Record<string, never>;
 export type AppOptions = {
   databaseHealthCheck?: () => Promise<void>;
   authRepository?: AuthRepository;
@@ -77,18 +74,13 @@ export type AppOptions = {
   notificationsService?: NotificationsService;
 };
 
-async function createDefaultDatabaseHealthCheck(env: AppEnv, bindings: AppBindings, config = loadConfig(env)) {
+async function createDefaultDatabaseHealthCheck(env: AppEnv, _bindings: AppBindings, config = loadConfig(env)) {
   const handle = await createDatabaseHandle({
-    hyperdrive: bindings.HYPERDRIVE,
     databaseUrl: env.DATABASE_URL,
     directDatabaseUrl: env.DIRECT_DATABASE_URL,
   }, config);
 
-  try {
-    await handle.ping();
-  } finally {
-    await handle.close();
-  }
+  await handle.ping();
 }
 
 function normalizeEnv(env: AppEnv = {}) {
@@ -126,7 +118,6 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   app.route("/api/v1", createAuthRoutes({
     config,
     databaseSource: {
-      hyperdrive: bindings.HYPERDRIVE,
       databaseUrl: runtimeEnv.DATABASE_URL,
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
@@ -144,7 +135,6 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   app.route("/api/v1", createUsersRoutes({
     config,
     databaseSource: {
-      hyperdrive: bindings.HYPERDRIVE,
       databaseUrl: runtimeEnv.DATABASE_URL,
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
@@ -155,19 +145,16 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   app.route("/api/v1", createPsychologistsRoutes({
     config,
     databaseSource: {
-      hyperdrive: bindings.HYPERDRIVE,
       databaseUrl: runtimeEnv.DATABASE_URL,
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
     authRepository: options.authRepository,
     psychologistsRepository: options.psychologistsRepository,
     credentialStorage: options.credentialStorage,
-    credentialBucket: bindings.CREDENTIAL_BUCKET,
   }));
   app.route("/api/v1", createBookingsRoutes({
     config,
     databaseSource: {
-      hyperdrive: bindings.HYPERDRIVE,
       databaseUrl: runtimeEnv.DATABASE_URL,
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
@@ -178,7 +165,6 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   app.route("/api/v1", createPaymentsRoutes({
     config,
     databaseSource: {
-      hyperdrive: bindings.HYPERDRIVE,
       databaseUrl: runtimeEnv.DATABASE_URL,
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
@@ -189,7 +175,6 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   app.route("/api/v1", createRoutineRoutes({
     config,
     databaseSource: {
-      hyperdrive: bindings.HYPERDRIVE,
       databaseUrl: runtimeEnv.DATABASE_URL,
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
@@ -199,7 +184,6 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   app.route("/api/v1", createContentRoutes({
     config,
     databaseSource: {
-      hyperdrive: bindings.HYPERDRIVE,
       databaseUrl: runtimeEnv.DATABASE_URL,
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },
@@ -209,7 +193,6 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   app.route("/api/v1", createAiRoutes({
     config,
     databaseSource: {
-      hyperdrive: bindings.HYPERDRIVE,
       databaseUrl: runtimeEnv.DATABASE_URL,
       directDatabaseUrl: runtimeEnv.DIRECT_DATABASE_URL,
     },

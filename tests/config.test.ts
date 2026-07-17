@@ -6,9 +6,9 @@ const validEnv = {
   APP_NAME: "pulih-api",
   APP_ENV: "local",
   NODE_ENV: "development",
-  PORT: "3000",
+  PORT: "3002",
   API_PREFIX: "/api/v1",
-  APP_URL: "http://localhost:3000",
+  APP_URL: "http://localhost:3002",
   PWA_URL: "http://localhost:3001",
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable",
   DIRECT_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable",
@@ -24,7 +24,7 @@ describe("loadConfig", () => {
     const config = loadConfig(validEnv);
 
     expect(config.app.appName).toBe("pulih-api");
-    expect(config.app.port).toBe(3000);
+    expect(config.app.port).toBe(3002);
     expect(config.app.apiPrefix).toBe("/api/v1");
     expect(config.security.corsAllowedOrigins).toEqual([
       "http://localhost:3001",
@@ -33,6 +33,8 @@ describe("loadConfig", () => {
     expect(config.database.directDatabaseUrl).toBe(
       "postgresql://postgres:postgres@localhost:5432/pulih_db?sslmode=disable",
     );
+    expect(config.database.poolMax).toBe(10);
+    expect(config.database.poolIdleTimeoutMs).toBe(30000);
   });
 
   test("fails fast when required env missing", () => {

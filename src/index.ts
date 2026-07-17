@@ -1,24 +1,21 @@
-import { createApp, type AppBindings, type AppEnv } from "./app";
+import { createApp } from "./app";
+import { loadConfig } from "./shared/config";
+import { createS3CredentialStorage } from "./modules/psychologists/credential-storage-s3";
 
-function buildRuntimeEnv(env: Record<string, string | undefined> = process.env) {
-  return env as AppEnv;
-}
+const env = process.env as Record<string, string | undefined>;
+const config = loadConfig(env);
+const credentialStorage = config.credentialStorage
+  ? createS3CredentialStorage(config.credentialStorage)
+  : undefined;
 
-function buildRuntimeBindings(env: Record<string, unknown> = {}) {
-  return env as AppBindings;
-}
+const app = createApp(env, {}, { credentialStorage });
+const host = env.HOST ?? "0.0.0.0";
+const port = Number(env.PORT ?? 3002);
 
-export default {
-  fetch(request: Request, env: Record<string, unknown>, executionContext: any) {
-    return createApp(buildRuntimeEnv(env as Record<string, string | undefined>), buildRuntimeBindings(env)).fetch(
-      request,
-      env,
-      executionContext,
-    );
-  },
-};
+const server = Bun.serve({
+  hostname: host,
+  port,
+  fetch: (request) => app.fetch(request),
+});
 
-if (import.meta.main) {
-  const port = Number(process.env.PORT ?? 3000);
-  console.log(`Pulih API running on http://localhost:${port}`);
-}
+console.log(`Pulih API running on http://${server.hostname}:${server.port}`);

@@ -1,0 +1,26 @@
+services:
+  api:
+    image: ghcr.io/pulih-app/backend:${IMAGE_TAG:?IMAGE_TAG is required. Use immutable sha-<commit> for production deploys.}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3002}
+      HOST: "0.0.0.0"
+    expose:
+      - "${PORT:-3002}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:${PORT:-3002}/health/live || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 512M
+        reservations:
+          memory: 128M

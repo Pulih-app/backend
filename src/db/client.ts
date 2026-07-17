@@ -1,46 +1,55 @@
-import { Client } from "pg";
+import { Pool } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { AppConfig } from "../shared/config";
 
-export type HyperdriveLike = {
-  connectionString: string;
-};
-
 export type DatabaseSource = {
-  hyperdrive?: HyperdriveLike;
   databaseUrl?: string;
   directDatabaseUrl?: string;
 };
 
 export type DatabaseHandle = {
-  client: Client;
+  pool: Pool;
   db: NodePgDatabase;
   ping: () => Promise<void>;
   close: () => Promise<void>;
 };
 
+let sharedPool: Pool | null = null;
+
 export function resolveDatabaseUrl(source: DatabaseSource, config?: AppConfig) {
-  return source.hyperdrive?.connectionString ?? source.directDatabaseUrl ?? source.databaseUrl ?? config?.database.directDatabaseUrl ?? config?.database.databaseUrl;
+  return source.databaseUrl ?? source.directDatabaseUrl ?? config?.database.databaseUrl ?? config?.database.directDatabaseUrl;
 }
 
 export async function createDatabaseHandle(source: DatabaseSource, config?: AppConfig): Promise<DatabaseHandle> {
-  const connectionString = resolveDatabaseUrl(source, config);
+  if (!sharedPool) {
+    const connectionString = resolveDatabaseUrl(source, config);
 
-  if (!connectionString) {
-    throw new Error("Database connection string is required.");
+    if (!connectionString) {
+      throw new Error("Database connection string is required.");
+    }
+
+    const poolMax = config?.database.poolMax ?? 10;
+    const poolIdleTimeoutMs = config?.database.poolIdleTimeoutMs ?? 30000;
+    const ssl = connectionString.includes("sslmode=require") || connectionString.includes("sslmode=verify-full")
+      ? { rejectUnauthorized: false }
+      : false;
+
+    sharedPool = new Pool({
+      connectionString,
+      max: poolMax,
+      idleTimeoutMillis: poolIdleTimeoutMs,
+      ssl,
+    });
   }
 
-  const client = new Client({ connectionString });
-  await client.connect();
-
   return {
-    client,
-    db: drizzle(client),
+    pool: sharedPool,
+    db: drizzle(sharedPool),
     ping: async () => {
-      await client.query("select 1");
+      await sharedPool!.query("select 1");
     },
     close: async () => {
-      await client.end();
+      // Pool is shared across route modules; only close on process exit.
     },
   };
 }

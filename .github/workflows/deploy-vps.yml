@@ -1,0 +1,123 @@
+name: deploy-vps
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag to deploy (e.g., sha-abc1234). Default: latest."
+        required: false
+        default: "latest"
+      run_migrations:
+        description: "Run database migrations before deploy?"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.API_URL || 'https://api.pulih.app' }}
+    steps:
+      - name: Set IMAGE_TAG
+        run: |
+          if [ "${{ github.event.inputs.image_tag }}" = "latest" ] || [ -z "${{ github.event.inputs.image_tag }}" ]; then
+            echo "IMAGE_TAG=latest" >> "$GITHUB_ENV"
+          else
+            echo "IMAGE_TAG=${{ github.event.inputs.image_tag }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Verify SSH connectivity
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "echo 'SSH connected'"
+
+      - name: Login VPS to GHCR
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "echo '${{ secrets.GHCR_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
+
+      - name: Pull image and restart
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s << 'REMOTE_SCRIPT'
+          set -euo pipefail
+
+          IMAGE_TAG="${IMAGE_TAG:-latest}"
+          APP_DIR="${APP_DIR:-/opt/pulih-api}"
+          COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.vps.yml}"
+
+          cd "$APP_DIR"
+          echo "Deploying image: ghcr.io/pulih-app/backend:${IMAGE_TAG}"
+
+          IMAGE_TAG="$IMAGE_TAG" docker compose -f "$COMPOSE_FILE" pull api
+          IMAGE_TAG="$IMAGE_TAG" docker compose -f "$COMPOSE_FILE" up -d --wait
+
+          echo "Deploy complete."
+          REMOTE_SCRIPT
+        env:
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+
+      - name: Run database migrations
+        if: github.event.inputs.run_migrations == 'true'
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s << 'REMOTE_SCRIPT'
+          set -euo pipefail
+
+          APP_DIR="${APP_DIR:-/opt/pulih-api}"
+          COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.vps.yml}"
+
+          cd "$APP_DIR"
+          echo "Running forward migrations..."
+          docker compose -f "$COMPOSE_FILE" exec -T api bun run scripts/migrate.ts
+          echo "Migrations complete."
+          REMOTE_SCRIPT
+
+      - name: Smoke checks
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s << 'REMOTE_SCRIPT'
+          set -euo pipefail
+
+          APP_DIR="${APP_DIR:-/opt/pulih-api}"
+          COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.vps.yml}"
+
+          cd "$APP_DIR"
+
+          echo "=== Health /live ==="
+          docker compose -f "$COMPOSE_FILE" exec -T api curl -sf http://127.0.0.1:3002/health/live
+          echo ""
+
+          echo "=== Health /ready ==="
+          docker compose -f "$COMPOSE_FILE" exec -T api curl -sf http://127.0.0.1:3002/health/ready
+          echo ""
+
+          echo "=== Auth guard check (expect 401) ==="
+          AUTH_STATUS=$(docker compose -f "$COMPOSE_FILE" exec -T api curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3002/api/v1/auth/me || echo "000")
+          echo "Auth guard status: $AUTH_STATUS"
+          if [ "$AUTH_STATUS" != "401" ]; then
+            echo "FAIL: Expected 401 UNAUTHENTICATED, got $AUTH_STATUS"
+            exit 1
+          fi
+
+          echo ""
+          echo "=== All smoke checks passed ==="
+          REMOTE_SCRIPT
+
+      - name: Logout VPS from GHCR
+        if: always()
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "docker logout ghcr.io" 2>/dev/null || true

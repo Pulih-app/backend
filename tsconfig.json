@@ -11,5 +11,5 @@
     "baseUrl": "."
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", ".wrangler", "references"]
+  "exclude": ["node_modules", "references"]
 }
