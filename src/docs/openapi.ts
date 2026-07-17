@@ -1,6 +1,6 @@
 import { routeInventory, type RouteInventoryItem } from "../routes/api-route-inventory";
 
-const apiServerUrl = "http://localhost:3000";
+const defaultApiServerUrl = "http://localhost:3000";
 const json = "application/json";
 
 type Schema = Record<string, unknown>;
@@ -169,8 +169,8 @@ const schemas = {
   },
   CredentialFile: {
     type: "object",
-    required: ["id", "profileId", "documentType", "objectKey", "fileName", "contentType", "sizeBytes"],
-    properties: { id: uuid(examples.fileId), profileId: uuid(examples.psychologistId), documentType: { type: "string", enum: ["sipp", "ijazah", "str", "strpk", "sippk"], example: "str" }, objectKey: { type: "string", example: "psychologist-credentials/demo/str/uuid-credential-str.pdf" }, fileName: { type: "string", example: "credential-str.pdf" }, contentType: { type: "string", enum: ["application/pdf", "image/jpeg", "image/png"], example: "application/pdf" }, sizeBytes: { type: "integer", maximum: 5242880, example: 248000 } },
+    required: ["id", "profileId", "documentType", "fileName", "contentType", "sizeBytes"],
+    properties: { id: uuid(examples.fileId), profileId: uuid(examples.psychologistId), documentType: { type: "string", enum: ["sipp", "ijazah", "str", "strpk", "sippk"], example: "str" }, fileName: { type: "string", example: "credential-str.pdf" }, contentType: { type: "string", enum: ["application/pdf", "image/jpeg", "image/png"], example: "application/pdf" }, sizeBytes: { type: "integer", maximum: 5242880, example: 248000 } },
   },
   CredentialReviewUrl: {
     type: "object",
@@ -548,7 +548,7 @@ const schemaExamples: Record<string, Example> = {
   UserProfile: { id: examples.userId, email: "patient@example.com", nickname: "Demo", recovery_reason: "Build a daily recovery streak", daily_checkin_time: "07:30", porn_free_goal: 30, onboarding_completed: false },
   OnboardingCompletion: { id: examples.userId, email: "patient@example.com", nickname: "Demo", recovery_reason: "Build a daily recovery streak", daily_checkin_time: "07:30", porn_free_goal: 30, onboarding_completed: true, onboarding_analysis: { level: "Moderate", title: "Your Recovery Profile", level_description: "You show moderate dependency patterns with stress as the primary trigger.", pattern_analysis: "Your late-night urges correlate with work stress. Consider evening grounding activities.", encouragement: "You have already taken an important step by starting this journey." } },
   PsychologistProfile: { id: examples.psychologistId, userId: examples.userId, type: "clinical", consultationChannel: "chat_and_meet", fullName: "Dr. Demo", approvalStatus: "draft", dateOfBirth: "1990-01-01", address: "Jl. Demo No. 1", photoUrl: "https://example.com/photo.jpg", bio: "Licensed clinical psychologist.", ratingSummary: { averageRating: 4.8, reviewCount: 12 }, latestReviews: [{ id: "review_001", bookingId: examples.bookingId, patientUserId: examples.userId, psychologistProfileId: examples.psychologistId, rating: 5, comment: "Helpful", createdAt: "2026-07-16T01:10:00.000Z", updatedAt: "2026-07-16T01:10:00.000Z" }], latestBundle: null },
-  CredentialFile: { id: examples.fileId, profileId: examples.psychologistId, documentType: "str", objectKey: "psychologist-credentials/demo/str/uuid-credential-str.pdf", fileName: "credential-str.pdf", contentType: "application/pdf", sizeBytes: 248000 },
+  CredentialFile: { id: examples.fileId, profileId: examples.psychologistId, documentType: "str", fileName: "credential-str.pdf", contentType: "application/pdf", sizeBytes: 248000 },
   CredentialReviewUrl: { fileId: examples.fileId, reviewUrl: null, expiresAt: null, message: "Signed review URL is not configured. Use Cloudflare R2 dashboard/manual operations for private review." },
   SessionBundle: { id: examples.bundleId, profileId: examples.psychologistId, packageName: "Clinical session bundle 2026-06-01 to 2026-06-07", packageDurationMinutes: 180, priceAmount: 150000, dateStart: "2026-06-01", dateEnd: "2026-06-07", dailyStartTime: "09:00:00", dailyEndTime: "12:00:00" },
   SessionBundleResult: { bundle: { id: examples.bundleId, profileId: examples.psychologistId, packageName: "Clinical session bundle 2026-06-01 to 2026-06-07", packageDurationMinutes: 180, priceAmount: 150000, dateStart: "2026-06-01", dateEnd: "2026-06-07", dailyStartTime: "09:00:00", dailyEndTime: "12:00:00" }, sessions: [{ id: examples.sessionSlotId, bundleId: examples.bundleId, profileId: examples.psychologistId, sessionDate: "2026-06-03", startsAt: "2026-06-03T09:00:00.000Z", endsAt: "2026-06-03T12:00:00.000Z", status: "available", heldUntil: null, packageName: "Paket 3 Jam", packageDurationMinutes: 180, priceAmount: 150000 }] },
@@ -958,7 +958,7 @@ function responses(item: RouteInventoryItem, contract: OperationContract) {
 function buildOperation(item: RouteInventoryItem) {
   const key = operationKey(item.method, item.path);
   const contract = contracts[key] ?? { summary: `${item.method} ${item.path}`, description: moduleDoc("Endpoint contract is generated from route inventory."), successSchema: { type: "object", additionalProperties: true }, successExample: { id: "resource_123" } };
-  const operation: Record<string, unknown> = { tags: [getTag(item.path)], summary: contract.summary, description: contract.description, operationId: toOperationId(item.method, item.path), responses: responses(item, contract), "x-codeSamples": [{ lang: "Shell", label: "cURL", source: `curl -X ${item.method} ${apiServerUrl}${toOpenApiPath(item.path)}` }] };
+  const operation: Record<string, unknown> = { tags: [getTag(item.path)], summary: contract.summary, description: contract.description, operationId: toOperationId(item.method, item.path), responses: responses(item, contract), "x-codeSamples": [{ lang: "Shell", label: "cURL", source: `curl -X ${item.method} ${defaultApiServerUrl}${toOpenApiPath(item.path)}` }] };
   const params = pathParameters(item.path);
   if (params.length) operation.parameters = params;
   if (item.auth === "bearer") operation.security = [{ bearerAuth: [] }];
@@ -981,7 +981,7 @@ export const pulihOpenApi = {
     summary: "Recovery support, psychologist booking, payments, content, achievements, and safe AI coach API.",
     description: "Complete OpenAPI reference for Pulih MVP. Includes module-level docs, request payload schemas, response envelopes, examples for success and common error status codes, auth requirements, route inventory parity, and mental-health safety notes.",
   },
-  servers: [{ url: apiServerUrl, description: "Local development server" }],
+  servers: [{ url: defaultApiServerUrl, description: "Local development server" }],
   tags: [
     { name: "platform", description: "Health probes, validation demo, OpenAPI artifacts, and Scalar docs." },
     { name: "auth", description: "Email/password registration, login, logout, current principal, and onboarding." },
@@ -1013,8 +1013,23 @@ export const pulihOpenApi = {
   },
 } as const;
 
-export function getOpenApiJson() {
-  return pulihOpenApi;
+export function getOpenApiJson(options: { serverUrl?: string } = {}) {
+  const serverUrl = (options.serverUrl?.trim() || defaultApiServerUrl).replace(/\/+$/, "");
+  if (serverUrl === defaultApiServerUrl) return pulihOpenApi;
+
+  const document = structuredClone(pulihOpenApi) as typeof pulihOpenApi;
+  (document as unknown as { servers: { url: string; description: string }[] }).servers = [{ url: serverUrl, description: "Configured API server" }];
+
+  for (const methods of Object.values(document.paths) as Record<string, Record<string, unknown>>[]) {
+    for (const operation of Object.values(methods) as Record<string, unknown>[]) {
+      const codeSamples = operation["x-codeSamples"] as { source?: string }[] | undefined;
+      codeSamples?.forEach((sample) => {
+        if (sample.source) sample.source = sample.source.replace(defaultApiServerUrl, serverUrl);
+      });
+    }
+  }
+
+  return document;
 }
 export function getOpenApiPaths() {
   return Object.keys(pulihOpenApi.paths);

@@ -107,7 +107,7 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   app.use("*", requestBaseline({
     allowedOrigins: config.security.corsAllowedOrigins,
     requestIdHeader: config.security.requestIdHeader,
-    bodyLimitBytes: 1024 * 1024,
+    bodyLimitBytes: 6 * 1024 * 1024,
   }));
 
   app.get("/health/live", (context) => {
@@ -122,7 +122,7 @@ function buildApp(env: AppEnv = DEFAULT_ENV, bindings: AppBindings = {}, options
   });
 
   app.route("/health", createHealthRoutes({ checkDatabase }));
-  app.route("/", createDocsRoutes());
+  app.route("/", createDocsRoutes(config));
   app.route("/api/v1", createAuthRoutes({
     config,
     databaseSource: {

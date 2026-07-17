@@ -72,6 +72,19 @@ describe("request baseline", () => {
   });
 });
 
+describe("docs", () => {
+  test("uses configured app url in OpenAPI server and curl samples", async () => {
+    const app = createApp({ ...baseEnv, APP_URL: "https://pulih.salmanabdurrahman.my.id" });
+
+    const response = await app.request("http://localhost/openapi.json");
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.servers[0].url).toBe("https://pulih.salmanabdurrahman.my.id");
+    expect(body.paths["/health/live"].get["x-codeSamples"][0].source).toBe("curl -X GET https://pulih.salmanabdurrahman.my.id/health/live");
+  });
+});
+
 describe("validation helper", () => {
   test("returns validation error for invalid body", async () => {
     const app = createApp(baseEnv);

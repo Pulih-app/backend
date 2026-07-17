@@ -6,6 +6,11 @@ import type { PsychologistProfileInput, SessionBundleInput } from "./psychologis
 import type { PsychologistsRepository, PsychologistSessionRecord } from "./psychologists.repository";
 
 const ALLOWED_CONTENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
+const FILE_EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+};
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const MIN_PRICE = 100000;
 const MAX_PRICE = 300000;
@@ -104,12 +109,29 @@ async function ensureBundleHasNoLockedSessions(repository: PsychologistsReposito
   }
 }
 
-export function validateCredentialFile(file: File) {
+function hasExpectedMagicBytes(contentType: string, bytes: Uint8Array) {
+  if (contentType === "application/pdf") {
+    return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 && bytes[4] === 0x2d;
+  }
+  if (contentType === "image/jpeg") {
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+  if (contentType === "image/png") {
+    return bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  }
+  return false;
+}
+
+export async function validateCredentialFile(file: File) {
   if (!ALLOWED_CONTENT_TYPES.has(file.type)) {
     throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["file: Credential file must be PDF, JPG, JPEG, or PNG."]);
   }
   if (file.size > MAX_FILE_SIZE_BYTES) {
     throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["file: Credential file must be at most 5 MB."]);
+  }
+  const bytes = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  if (!hasExpectedMagicBytes(file.type, bytes)) {
+    throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["file: Credential file content does not match the declared file type."]);
   }
 }
 
@@ -153,13 +175,14 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
       if (!REQUIRED_DOCUMENTS_BY_TYPE[profile.type].includes(documentType)) {
         throw new AppError(AppErrorCode.ValidationError, "Request validation failed.", ["documentType: Document type is not allowed for this psychologist type."]);
       }
-      validateCredentialFile(file);
+      await validateCredentialFile(file);
       if (!storage) throw new AppError(AppErrorCode.ServiceUnavailable, "Credential storage is not configured.");
 
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const objectKey = `psychologist-credentials/${profile.id}/${documentType}/${crypto.randomUUID()}-${safeName}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 255) || `${documentType}.${FILE_EXTENSION_BY_CONTENT_TYPE[file.type]}`;
+      const extension = FILE_EXTENSION_BY_CONTENT_TYPE[file.type];
+      const objectKey = `psychologist-credentials/${profile.id}/${documentType}/${crypto.randomUUID()}.${extension}`;
       await storage.put({ key: objectKey, file, metadata: { profileId: profile.id, documentType } });
-      return repository.createCredentialFile({
+      const record = await repository.createCredentialFile({
         profileId: profile.id,
         documentType,
         objectKey,
@@ -167,6 +190,8 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
         contentType: file.type,
         sizeBytes: file.size,
       });
+      const { objectKey: _objectKey, ...publicRecord } = record;
+      return publicRecord;
     },
     async submitForReview(userId: string) {
       const profile = await repository.findByUserId(userId);

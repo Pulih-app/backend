@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { getOpenApiJson } from "../docs/openapi";
+import type { AppConfig } from "../shared/config";
 
 const scalarHtml = `<!doctype html>
 <html lang="en">
@@ -93,15 +94,16 @@ function scalarYaml(value: unknown, indent = 0): string {
   return JSON.stringify(value);
 }
 
-function toYamlDocument() {
-  return `${scalarYaml(getOpenApiJson()).replace(/[ \t]+$/gm, "")}\n`;
+function toYamlDocument(serverUrl?: string) {
+  return `${scalarYaml(getOpenApiJson({ serverUrl })).replace(/[ \t]+$/gm, "")}\n`;
 }
 
-export function createDocsRoutes() {
+export function createDocsRoutes(config?: AppConfig) {
   const routes = new Hono();
+  const serverUrl = config?.app.appUrl;
 
-  routes.get("/openapi.yaml", (context) => context.text(toYamlDocument(), 200, { "Content-Type": "application/yaml; charset=utf-8" }));
-  routes.get("/openapi.json", (context) => context.json(getOpenApiJson()));
+  routes.get("/openapi.yaml", (context) => context.text(toYamlDocument(serverUrl), 200, { "Content-Type": "application/yaml; charset=utf-8" }));
+  routes.get("/openapi.json", (context) => context.json(getOpenApiJson({ serverUrl })));
   routes.get("/docs/api", (context) => context.html(scalarHtml));
   routes.get("/docs/api/", (context) => context.html(scalarHtml));
 

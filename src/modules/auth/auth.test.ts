@@ -716,7 +716,7 @@ describe("psychologist routes", () => {
 
     const form = new FormData();
     form.set("documentType", "sipp");
-    form.set("file", new File([new Uint8Array([1, 2, 3])], "license.pdf", { type: "application/pdf" }));
+    form.set("file", new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31])], "license.pdf", { type: "application/pdf" }));
 
     const upload = await app.request("http://localhost/api/v1/psychologists/me/credential-file", {
       method: "POST",
@@ -724,6 +724,8 @@ describe("psychologist routes", () => {
       body: form,
     });
     expect(upload.status).toBe(201);
+    const uploadBody = await upload.json();
+    expect(uploadBody.data.objectKey).toBeUndefined();
 
     const submit = await app.request("http://localhost/api/v1/psychologists/me/submit-for-review", {
       method: "POST",
@@ -732,9 +734,11 @@ describe("psychologist routes", () => {
     expect(submit.status).toBe(409);
   });
 
-  test("rejects invalid credential file type and size", () => {
-    expect(() => validateCredentialFile(new File([new Uint8Array([1])], "note.txt", { type: "text/plain" }))).toThrow("Request validation failed.");
-    expect(() => validateCredentialFile(new File([new Uint8Array(5 * 1024 * 1024 + 1)], "large.pdf", { type: "application/pdf" }))).toThrow("Request validation failed.");
+  test("rejects invalid credential file type, size, and spoofed content", async () => {
+    await expect(validateCredentialFile(new File([new Uint8Array([1])], "note.txt", { type: "text/plain" }))).rejects.toThrow("Request validation failed.");
+    await expect(validateCredentialFile(new File([new Uint8Array(5 * 1024 * 1024 + 1)], "large.pdf", { type: "application/pdf" }))).rejects.toThrow("Request validation failed.");
+    await expect(validateCredentialFile(new File([new Uint8Array([1, 2, 3])], "license.pdf", { type: "application/pdf" }))).rejects.toThrow("Request validation failed.");
+    await expect(validateCredentialFile(new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d])], "license.pdf", { type: "application/pdf" }))).resolves.toBeUndefined();
   });
 
   test("returns review url only for owner", async () => {
@@ -768,7 +772,7 @@ describe("psychologist routes", () => {
 
     const form = new FormData();
     form.set("documentType", "sipp");
-    form.set("file", new File([new Uint8Array([1, 2, 3])], "license.pdf", { type: "application/pdf" }));
+    form.set("file", new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31])], "license.pdf", { type: "application/pdf" }));
     const upload = await app.request("http://localhost/api/v1/psychologists/me/credential-file", {
       method: "POST",
       headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${login1Body.data.session.access_token}` },

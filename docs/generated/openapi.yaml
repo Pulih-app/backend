@@ -2576,7 +2576,6 @@ paths:
                       id: "77777777-7777-4777-8777-777777777777"
                       profileId: "22222222-2222-4222-8222-222222222222"
                       documentType: "str"
-                      objectKey: "psychologist-credentials/demo/str/uuid-credential-str.pdf"
                       fileName: "credential-str.pdf"
                       contentType: "application/pdf"
                       sizeBytes: 248000
@@ -11851,7 +11850,6 @@ components:
         - "id"
         - "profileId"
         - "documentType"
-        - "objectKey"
         - "fileName"
         - "contentType"
         - "sizeBytes"
@@ -11873,9 +11871,6 @@ components:
             - "strpk"
             - "sippk"
           example: "str"
-        objectKey:
-          type: "string"
-          example: "psychologist-credentials/demo/str/uuid-credential-str.pdf"
         fileName:
           type: "string"
           example: "credential-str.pdf"
