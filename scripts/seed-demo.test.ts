@@ -7,6 +7,9 @@ import {
   demoDailyChallenges,
   demoDailyMotivations,
   demoEducationContents,
+  demoCredentialFiles,
+  demoPsychologistProfiles,
+  demoSessionBundles,
   demoSessionSlots,
 } from "./seed-demo-data";
 
@@ -19,7 +22,11 @@ describe("demo seed data", () => {
     expect(demoCommunityPosts).toHaveLength(6);
     expect(demoCommunityComments).toHaveLength(12);
     expect(demoCommunityLikes).toHaveLength(10);
-    expect(demoSessionSlots).toHaveLength(3);
+    expect(demoPsychologistProfiles).toHaveLength(12);
+    expect(demoCredentialFiles).toHaveLength(42);
+    expect(demoCredentialFiles.every((file) => file.id)).toBe(true);
+    expect(demoSessionBundles).toHaveLength(24);
+    expect(demoSessionSlots).toHaveLength(168);
   });
 
   test("uses Recova-aligned English content", () => {
@@ -27,5 +34,7 @@ describe("demo seed data", () => {
     expect(demoDailyMotivations[0]).toContain("better version");
     expect(demoDailyChallenges[0].description).toContain("Wake up");
     expect(demoCommunityPosts[0]?.content).toContain("routine");
+    expect(demoPsychologistProfiles[0]?.bio).toContain("addiction recovery");
+    expect(demoPsychologistProfiles.some((profile) => profile.consultationChannel === "chat_and_meet")).toBe(true);
   });
 });

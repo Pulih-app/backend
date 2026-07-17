@@ -5,6 +5,8 @@ import { Client } from "pg";
 import { loadConfig } from "../src/shared/config";
 import {
   achievements,
+  bookingReviews,
+  bookings,
   communityComments,
   communityPostLikes,
   communityPosts,
@@ -25,7 +27,8 @@ import {
   DEMO_NOW,
   DEMO_PASSWORD,
   demoAchievements,
-  demoBundle,
+  demoBookingReviews,
+  demoBookings,
   demoCommunityComments,
   demoCommunityLikes,
   demoCommunityPosts,
@@ -35,8 +38,9 @@ import {
   demoEducationContents,
   demoPhysicalChallenges,
   demoProfiles,
-  demoPsychologistProfile,
+  demoPsychologistProfiles,
   demoPracticePlaces,
+  demoSessionBundles,
   demoSessionSlots,
   demoUsers,
 } from "./seed-demo-data";
@@ -88,13 +92,15 @@ async function main() {
       await tx.delete(dailyChallenges).where(inArray(dailyChallenges.id, DEMO_IDS.challenges));
       await tx.delete(dailyMotivations).where(inArray(dailyMotivations.id, DEMO_IDS.motivations));
       await tx.delete(educationContents).where(inArray(educationContents.id, DEMO_IDS.education));
-      await tx.delete(psychologistSessionSlots).where(inArray(psychologistSessionSlots.id, [DEMO_IDS.slotOne, DEMO_IDS.slotTwo, DEMO_IDS.slotThree]));
-      await tx.delete(psychologistSessionBundles).where(eq(psychologistSessionBundles.id, demoBundle.id));
-      await tx.delete(psychologistCredentialFiles).where(inArray(psychologistCredentialFiles.id, [DEMO_IDS.credentialSipp, DEMO_IDS.credentialIjazah, DEMO_IDS.credentialStr]));
-      await tx.delete(psychologistPracticePlaces).where(eq(psychologistPracticePlaces.id, DEMO_IDS.practicePlace));
+      await tx.delete(bookingReviews).where(inArray(bookingReviews.id, DEMO_IDS.reviews));
+      await tx.delete(bookings).where(inArray(bookings.id, DEMO_IDS.bookings));
+      await tx.delete(psychologistSessionSlots).where(inArray(psychologistSessionSlots.id, DEMO_IDS.slots));
+      await tx.delete(psychologistSessionBundles).where(inArray(psychologistSessionBundles.id, DEMO_IDS.bundles));
+      await tx.delete(psychologistCredentialFiles).where(inArray(psychologistCredentialFiles.id, DEMO_IDS.credentialFiles));
+      await tx.delete(psychologistPracticePlaces).where(inArray(psychologistPracticePlaces.id, DEMO_IDS.practicePlaces));
       await tx.delete(profiles).where(eq(profiles.id, DEMO_IDS.patientProfile));
-      await tx.delete(psychologistProfiles).where(eq(psychologistProfiles.id, DEMO_IDS.psychologistProfile));
-      await tx.delete(users).where(inArray(users.id, [DEMO_IDS.patientUser, DEMO_IDS.psychologistUser]));
+      await tx.delete(psychologistProfiles).where(inArray(psychologistProfiles.id, DEMO_IDS.psychologistProfiles));
+      await tx.delete(users).where(inArray(users.id, [DEMO_IDS.patientUser, ...DEMO_IDS.psychologistUsers]));
 
       await tx.insert(users).values(demoUsers.map((user) => ({
         id: user.id,
@@ -109,27 +115,32 @@ async function main() {
       await tx.insert(profiles).values(demoProfiles.map((profile) => ({
         id: profile.id,
         userId: profile.userId,
-        displayName: profile.displayName,
         nickname: profile.nickname,
-        recoveryGoal: profile.recoveryGoal,
-        checkInTime: profile.checkInTime,
+        recoveryReason: profile.recoveryReason,
+        dailyCheckinTime: profile.dailyCheckinTime,
+        answers: profile.answers,
+        dependencyLevel: profile.dependencyLevel,
+        aiSummary: profile.aiSummary,
         onboardingCompletedAt: profile.onboardingCompletedAt,
         createdAt: DEMO_NOW,
         updatedAt: DEMO_NOW,
       })));
 
-      await tx.insert(psychologistProfiles).values({
-        id: demoPsychologistProfile.id,
-        userId: demoPsychologistProfile.userId,
-        type: demoPsychologistProfile.type,
-        consultationChannel: demoPsychologistProfile.consultationChannel,
-        approvalStatus: demoPsychologistProfile.approvalStatus,
-        fullName: demoPsychologistProfile.fullName,
-        licenseNumber: demoPsychologistProfile.licenseNumber,
-        bio: demoPsychologistProfile.bio,
+      await tx.insert(psychologistProfiles).values(demoPsychologistProfiles.map((profile) => ({
+        id: profile.id,
+        userId: profile.userId,
+        type: profile.type,
+        consultationChannel: profile.consultationChannel,
+        approvalStatus: profile.approvalStatus,
+        fullName: profile.fullName,
+        dateOfBirth: profile.dateOfBirth,
+        address: profile.address,
+        photoUrl: profile.photoUrl,
+        bio: profile.bio,
         createdAt: DEMO_NOW,
         updatedAt: DEMO_NOW,
-      });
+      })));
+
 
       await tx.insert(psychologistPracticePlaces).values(demoPracticePlaces.map((place) => ({
         id: place.id,
@@ -152,19 +163,20 @@ async function main() {
         createdAt: DEMO_NOW,
       })));
 
-      await tx.insert(psychologistSessionBundles).values({
-        id: demoBundle.id,
-        profileId: demoBundle.profileId,
-        packageName: demoBundle.packageName,
-        packageDurationMinutes: demoBundle.packageDurationMinutes,
-        priceAmount: demoBundle.priceAmount,
-        dateStart: demoBundle.dateStart,
-        dateEnd: demoBundle.dateEnd,
-        dailyStartTime: demoBundle.dailyStartTime,
-        dailyEndTime: demoBundle.dailyEndTime,
+      await tx.insert(psychologistSessionBundles).values(demoSessionBundles.map((bundle) => ({
+        id: bundle.id,
+        profileId: bundle.profileId,
+        packageName: bundle.packageName,
+        packageDurationMinutes: bundle.packageDurationMinutes,
+        priceAmount: bundle.priceAmount,
+        dateStart: bundle.dateStart,
+        dateEnd: bundle.dateEnd,
+        dailyStartTime: bundle.dailyStartTime,
+        dailyEndTime: bundle.dailyEndTime,
         createdAt: DEMO_NOW,
         updatedAt: DEMO_NOW,
-      });
+      })));
+
 
       await tx.insert(psychologistSessionSlots).values(demoSessionSlots.map((slot) => ({
         id: slot.id,
@@ -174,6 +186,39 @@ async function main() {
         startsAt: slot.startsAt,
         endsAt: slot.endsAt,
         status: slot.status,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      })));
+
+      await tx.insert(bookings).values(demoBookings.map((booking) => ({
+        id: booking.id,
+        patientUserId: booking.patientUserId,
+        psychologistProfileId: booking.psychologistProfileId,
+        sessionSlotId: booking.sessionSlotId,
+        consultationChannel: booking.consultationChannel,
+        status: booking.status,
+        scheduledStartAt: booking.scheduledStartAt,
+        scheduledEndAt: booking.scheduledEndAt,
+        priceAmount: booking.priceAmount,
+        packageNameSnapshot: booking.packageNameSnapshot,
+        packageDurationMinutesSnapshot: booking.packageDurationMinutesSnapshot,
+        paymentExpiresAt: booking.paymentExpiresAt,
+        complaint: booking.complaint,
+        meetLink: booking.meetLink,
+        confirmedAt: booking.confirmedAt,
+        rescheduledAt: booking.rescheduledAt,
+        rescheduleReason: booking.rescheduleReason,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      })));
+
+      await tx.insert(bookingReviews).values(demoBookingReviews.map((review) => ({
+        id: review.id,
+        bookingId: review.bookingId,
+        patientUserId: review.patientUserId,
+        psychologistProfileId: review.psychologistProfileId,
+        rating: review.rating,
+        comment: review.comment,
         createdAt: DEMO_NOW,
         updatedAt: DEMO_NOW,
       })));
@@ -210,9 +255,8 @@ async function main() {
         isActive: true,
         createdAt: DEMO_NOW,
       }))).onConflictDoUpdate({
-        target: dailyMotivations.id,
+        target: dailyMotivations.content,
         set: {
-          content: sql`excluded.content`,
           isActive: sql`excluded.is_active`,
         },
       });
@@ -225,11 +269,10 @@ async function main() {
         isActive: true,
         createdAt: DEMO_NOW,
       }))).onConflictDoUpdate({
-        target: dailyChallenges.id,
+        target: dailyChallenges.content,
         set: {
           title: sql`excluded.title`,
           description: sql`excluded.description`,
-          content: sql`excluded.content`,
           isActive: sql`excluded.is_active`,
         },
       });
@@ -309,8 +352,8 @@ async function main() {
 
     console.log("Demo seed complete.");
     console.log("Patient: patient.demo@pulih.local / PulihDemo123!");
-    console.log("Psychologist: psychologist.demo@pulih.local / PulihDemo123!");
-    console.log(`Seeded content: ${demoEducationContents.length} education, ${demoDailyMotivations.length} motivations, ${demoDailyChallenges.length} challenges, ${demoPhysicalChallenges.length} physical challenges, ${demoAchievements.length} achievements, ${demoCommunityPosts.length} community posts.`);
+    console.log("Psychologists: maya.prameswari@pulih.local and 11 more / PulihDemo123!");
+    console.log(`Seeded content: ${demoPsychologistProfiles.length} psychologists, ${demoSessionBundles.length} session bundles, ${demoSessionSlots.length} session slots, ${demoBookings.length} bookings, ${demoBookingReviews.length} reviews, ${demoEducationContents.length} education, ${demoDailyMotivations.length} motivations, ${demoDailyChallenges.length} challenges, ${demoPhysicalChallenges.length} physical challenges, ${demoAchievements.length} achievements, ${demoCommunityPosts.length} community posts.`);
   } finally {
     await client.end();
   }

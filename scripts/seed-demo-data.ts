@@ -2,19 +2,20 @@ export const DEMO_PASSWORD = "PulihDemo123!";
 export const DEMO_NOW = new Date("2026-07-16T02:00:00.000Z");
 export const DEMO_LOCAL_START_DATE = "2026-07-16";
 
+const demoUuid = (group: string, index: number) => `${group}-${String(index).padStart(12, "0")}`;
+
 export const DEMO_IDS = {
   patientUser: "11111111-1111-4111-8111-111111111111",
   patientProfile: "11111111-1111-4111-8111-111111111112",
-  psychologistUser: "22222222-2222-4222-8222-222222222221",
-  psychologistProfile: "22222222-2222-4222-8222-222222222222",
-  practicePlace: "22222222-2222-4222-8222-222222222223",
-  credentialSipp: "22222222-2222-4222-8222-222222222224",
-  credentialIjazah: "22222222-2222-4222-8222-222222222225",
-  credentialStr: "22222222-2222-4222-8222-222222222226",
-  bundle: "33333333-3333-4333-8333-333333333331",
-  slotOne: "33333333-3333-4333-8333-333333333332",
-  slotTwo: "33333333-3333-4333-8333-333333333333",
-  slotThree: "33333333-3333-4333-8333-333333333334",
+  psychologistUser: demoUuid("22222222-2222-4222-8222", 1),
+  psychologistUsers: Array.from({ length: 12 }, (_, index) => demoUuid("22222222-2222-4222-8222", index + 1)),
+  psychologistProfiles: Array.from({ length: 12 }, (_, index) => demoUuid("22222222-2222-4222-8333", index + 1)),
+  practicePlaces: Array.from({ length: 12 }, (_, index) => demoUuid("22222222-2222-4222-8444", index + 1)),
+  credentialFiles: Array.from({ length: 48 }, (_, index) => demoUuid("22222222-2222-4222-8555", index + 1)),
+  bundles: Array.from({ length: 24 }, (_, index) => demoUuid("33333333-3333-4333-8333", index + 1)),
+  slots: Array.from({ length: 168 }, (_, index) => demoUuid("33333333-3333-4333-8444", index + 1)),
+  bookings: Array.from({ length: 12 }, (_, index) => demoUuid("33333333-3333-4333-8555", index + 1)),
+  reviews: Array.from({ length: 12 }, (_, index) => demoUuid("33333333-3333-4333-8666", index + 1)),
   education: [
     "44444444-4444-4444-8444-444444444431",
     "44444444-4444-4444-8444-444444444432",
@@ -48,164 +49,27 @@ export const DEMO_IDS = {
     "44444444-4444-4444-8444-44444444444e",
     "44444444-4444-4444-8444-44444444444f",
   ],
-  motivations: [
-    "55555555-5555-4555-8555-555555555531",
-    "55555555-5555-4555-8555-555555555532",
-    "55555555-5555-4555-8555-555555555533",
-    "55555555-5555-4555-8555-555555555534",
-    "55555555-5555-4555-8555-555555555535",
-    "55555555-5555-4555-8555-555555555536",
-    "55555555-5555-4555-8555-555555555537",
-    "55555555-5555-4555-8555-555555555538",
-    "55555555-5555-4555-8555-555555555539",
-    "55555555-5555-4555-8555-55555555553a",
-    "55555555-5555-4555-8555-55555555553b",
-    "55555555-5555-4555-8555-55555555553c",
-    "55555555-5555-4555-8555-55555555553d",
-    "55555555-5555-4555-8555-55555555553e",
-    "55555555-5555-4555-8555-55555555553f",
-    "55555555-5555-4555-8555-555555555540",
-    "55555555-5555-4555-8555-555555555541",
-    "55555555-5555-4555-8555-555555555542",
-    "55555555-5555-4555-8555-555555555543",
-    "55555555-5555-4555-8555-555555555544",
-    "55555555-5555-4555-8555-555555555545",
-    "55555555-5555-4555-8555-555555555546",
-    "55555555-5555-4555-8555-555555555547",
-    "55555555-5555-4555-8555-555555555548",
-    "55555555-5555-4555-8555-555555555549",
-    "55555555-5555-4555-8555-55555555554a",
-    "55555555-5555-4555-8555-55555555554b",
-    "55555555-5555-4555-8555-55555555554c",
-    "55555555-5555-4555-8555-55555555554d",
-    "55555555-5555-4555-8555-55555555554e",
-    "55555555-5555-4555-8555-55555555554f",
-    "55555555-5555-4555-8555-555555555550",
-    "55555555-5555-4555-8555-555555555551",
-    "55555555-5555-4555-8555-555555555552",
-    "55555555-5555-4555-8555-555555555553",
-  ],
-  challenges: [
-    "66666666-6666-4666-8666-666666666631",
-    "66666666-6666-4666-8666-666666666632",
-    "66666666-6666-4666-8666-666666666633",
-    "66666666-6666-4666-8666-666666666634",
-    "66666666-6666-4666-8666-666666666635",
-    "66666666-6666-4666-8666-666666666636",
-    "66666666-6666-4666-8666-666666666637",
-    "66666666-6666-4666-8666-666666666638",
-    "66666666-6666-4666-8666-666666666639",
-    "66666666-6666-4666-8666-66666666663a",
-    "66666666-6666-4666-8666-66666666663b",
-    "66666666-6666-4666-8666-66666666663c",
-    "66666666-6666-4666-8666-66666666663d",
-    "66666666-6666-4666-8666-66666666663e",
-    "66666666-6666-4666-8666-66666666663f",
-    "66666666-6666-4666-8666-666666666640",
-    "66666666-6666-4666-8666-666666666641",
-    "66666666-6666-4666-8666-666666666642",
-    "66666666-6666-4666-8666-666666666643",
-    "66666666-6666-4666-8666-666666666644",
-    "66666666-6666-4666-8666-666666666645",
-    "66666666-6666-4666-8666-666666666646",
-    "66666666-6666-4666-8666-666666666647",
-    "66666666-6666-4666-8666-666666666648",
-    "66666666-6666-4666-8666-666666666649",
-    "66666666-6666-4666-8666-66666666664a",
-    "66666666-6666-4666-8666-66666666664b",
-    "66666666-6666-4666-8666-66666666664c",
-    "66666666-6666-4666-8666-66666666664d",
-    "66666666-6666-4666-8666-66666666664e",
-    "66666666-6666-4666-8666-66666666664f",
-    "66666666-6666-4666-8666-666666666650",
-    "66666666-6666-4666-8666-666666666651",
-    "66666666-6666-4666-8666-666666666652",
-    "66666666-6666-4666-8666-666666666653",
-    "66666666-6666-4666-8666-666666666654",
-    "66666666-6666-4666-8666-666666666655",
-    "66666666-6666-4666-8666-666666666656",
-    "66666666-6666-4666-8666-666666666657",
-    "66666666-6666-4666-8666-666666666658",
-    "66666666-6666-4666-8666-666666666659",
-    "66666666-6666-4666-8666-66666666665a",
-    "66666666-6666-4666-8666-66666666665b",
-    "66666666-6666-4666-8666-66666666665c",
-    "66666666-6666-4666-8666-66666666665d",
-    "66666666-6666-4666-8666-66666666665e",
-    "66666666-6666-4666-8666-66666666665f",
-    "66666666-6666-4666-8666-666666666660",
-    "66666666-6666-4666-8666-666666666661",
-    "66666666-6666-4666-8666-666666666662",
-    "66666666-6666-4666-8666-666666666663",
-    "66666666-6666-4666-8666-666666666664",
-    "66666666-6666-4666-8666-666666666665",
-    "66666666-6666-4666-8666-666666666666",
-    "66666666-6666-4666-8666-666666666667",
-    "66666666-6666-4666-8666-666666666668",
-    "66666666-6666-4666-8666-666666666669",
-    "66666666-6666-4666-8666-66666666666a",
-    "66666666-6666-4666-8666-66666666666b",
-    "66666666-6666-4666-8666-66666666666c",
-    "66666666-6666-4666-8666-66666666666d",
-    "66666666-6666-4666-8666-66666666666e",
-    "66666666-6666-4666-8666-66666666666f",
-    "66666666-6666-4666-8666-666666666670",
-    "66666666-6666-4666-8666-666666666671",
-    "66666666-6666-4666-8666-666666666672",
-    "66666666-6666-4666-8666-666666666673",
-    "66666666-6666-4666-8666-666666666674",
-    "66666666-6666-4666-8666-666666666675",
-    "66666666-6666-4666-8666-666666666676",
-  ],
-  achievements: [
-    "77777777-7777-4777-8777-777777777731",
-    "77777777-7777-4777-8777-777777777732",
-    "77777777-7777-4777-8777-777777777733",
-    "77777777-7777-4777-8777-777777777734",
-    "77777777-7777-4777-8777-777777777735",
-    "77777777-7777-4777-8777-777777777736",
-    "77777777-7777-4777-8777-777777777737",
-    "77777777-7777-4777-8777-777777777738",
-    "77777777-7777-4777-8777-777777777739",
-    "77777777-7777-4777-8777-77777777773a",
-    "77777777-7777-4777-8777-77777777773b",
-    "77777777-7777-4777-8777-77777777773c",
-  ],
-  posts: [
-    "88888888-8888-4888-8888-888888888831",
-    "88888888-8888-4888-8888-888888888832",
-    "88888888-8888-4888-8888-888888888833",
-    "88888888-8888-4888-8888-888888888834",
-    "88888888-8888-4888-8888-888888888835",
-    "88888888-8888-4888-8888-888888888836",
-  ],
-  comments: [
-    "99999999-9999-4999-8999-999999999931",
-    "99999999-9999-4999-8999-999999999932",
-    "99999999-9999-4999-8999-999999999933",
-    "99999999-9999-4999-8999-999999999934",
-    "99999999-9999-4999-8999-999999999935",
-    "99999999-9999-4999-8999-999999999936",
-    "99999999-9999-4999-8999-999999999937",
-    "99999999-9999-4999-8999-999999999938",
-    "99999999-9999-4999-8999-999999999939",
-    "99999999-9999-4999-8999-99999999993a",
-    "99999999-9999-4999-8999-99999999993b",
-    "99999999-9999-4999-8999-99999999993c",
-  ],
-  likes: [
-    { postId: "88888888-8888-4888-8888-888888888831", userId: "11111111-1111-4111-8111-111111111111" },
-    { postId: "88888888-8888-4888-8888-888888888831", userId: "22222222-2222-4222-8222-222222222221" },
-    { postId: "88888888-8888-4888-8888-888888888832", userId: "11111111-1111-4111-8111-111111111111" },
-    { postId: "88888888-8888-4888-8888-888888888832", userId: "22222222-2222-4222-8222-222222222221" },
-    { postId: "88888888-8888-4888-8888-888888888833", userId: "11111111-1111-4111-8111-111111111111" },
-    { postId: "88888888-8888-4888-8888-888888888833", userId: "22222222-2222-4222-8222-222222222221" },
-    { postId: "88888888-8888-4888-8888-888888888834", userId: "11111111-1111-4111-8111-111111111111" },
-    { postId: "88888888-8888-4888-8888-888888888834", userId: "22222222-2222-4222-8222-222222222221" },
-    { postId: "88888888-8888-4888-8888-888888888835", userId: "11111111-1111-4111-8111-111111111111" },
-    { postId: "88888888-8888-4888-8888-888888888836", userId: "22222222-2222-4222-8222-222222222221" },
-  ],
+  motivations: Array.from({ length: 35 }, (_, index) => demoUuid("55555555-5555-4555-8555", index + 31)),
+  challenges: Array.from({ length: 70 }, (_, index) => demoUuid("66666666-6666-4666-8666", index + 31)),
+  achievements: Array.from({ length: 12 }, (_, index) => demoUuid("77777777-7777-4777-8777", index + 31)),
+  posts: Array.from({ length: 6 }, (_, index) => demoUuid("88888888-8888-4888-8888", index + 31)),
+  comments: Array.from({ length: 12 }, (_, index) => demoUuid("99999999-9999-4999-8999", index + 31)),
 } as const;
+
+const demoPsychologists = [
+  { name: "Dr. Maya Prameswari, M.Psi., Psikolog", email: "maya.prameswari@pulih.local", type: "general", channel: "chat", birth: "1988-04-12", city: "Jakarta", photo: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=800&q=80", focus: ["addiction recovery", "habit building", "self-regulation"], price: 150000, duration: 60, start: "09:00:00" },
+  { name: "Dr. Arga Wicaksana, M.Psi., Psikolog", email: "arga.wicaksana@pulih.local", type: "clinical", channel: "chat_and_meet", birth: "1984-11-03", city: "Bandung", photo: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=800&q=80", focus: ["clinical anxiety", "compulsive behavior", "relapse prevention"], price: 275000, duration: 60, start: "10:00:00" },
+  { name: "Nadia Salsabila, M.Psi., Psikolog", email: "nadia.salsabila@pulih.local", type: "general", channel: "chat", birth: "1991-02-18", city: "Surabaya", photo: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=800&q=80", focus: ["stress management", "self-esteem", "daily routines"], price: 140000, duration: 45, start: "13:00:00" },
+  { name: "Raka Mahendra, M.Psi., Psikolog Klinis", email: "raka.mahendra@pulih.local", type: "clinical", channel: "chat_and_meet", birth: "1986-07-25", city: "Yogyakarta", photo: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=800&q=80", focus: ["trauma-informed care", "depression", "behavioral addiction"], price: 300000, duration: 75, start: "15:00:00" },
+  { name: "Clara Winata, M.Psi., Psikolog", email: "clara.winata@pulih.local", type: "general", channel: "chat", birth: "1990-09-09", city: "Semarang", photo: "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=800&q=80", focus: ["relationship boundaries", "mindfulness", "urge surfing"], price: 160000, duration: 60, start: "08:00:00" },
+  { name: "Dimas Adhitama, M.Psi., Psikolog Klinis", email: "dimas.adhitama@pulih.local", type: "clinical", channel: "chat_and_meet", birth: "1982-01-30", city: "Denpasar", photo: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=800&q=80", focus: ["mood regulation", "CBT", "compulsion cycles"], price: 325000, duration: 60, start: "11:00:00" },
+  { name: "Sinta Ayuningtyas, M.Psi., Psikolog", email: "sinta.ayuningtyas@pulih.local", type: "general", channel: "chat", birth: "1993-05-14", city: "Malang", photo: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80", focus: ["young adult adjustment", "confidence", "healthy coping"], price: 135000, duration: 45, start: "16:00:00" },
+  { name: "Faris Nugroho, M.Psi., Psikolog Klinis", email: "faris.nugroho@pulih.local", type: "clinical", channel: "chat_and_meet", birth: "1987-12-21", city: "Makassar", photo: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=800&q=80", focus: ["addiction counseling", "anxiety", "family systems"], price: 290000, duration: 60, start: "14:00:00" },
+  { name: "Alya Kirana, M.Psi., Psikolog", email: "alya.kirana@pulih.local", type: "general", channel: "chat", birth: "1992-08-07", city: "Medan", photo: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80", focus: ["self-compassion", "accountability", "habit recovery"], price: 145000, duration: 60, start: "12:00:00" },
+  { name: "Bima Satriya, M.Psi., Psikolog Klinis", email: "bima.satriya@pulih.local", type: "clinical", channel: "chat_and_meet", birth: "1985-06-16", city: "Depok", photo: "https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?auto=format&fit=crop&w=800&q=80", focus: ["OCD spectrum", "relapse planning", "emotional regulation"], price: 310000, duration: 75, start: "17:00:00" },
+  { name: "Meisya Hartono, M.Psi., Psikolog", email: "meisya.hartono@pulih.local", type: "general", channel: "chat", birth: "1989-03-28", city: "Tangerang", photo: "https://images.unsplash.com/photo-1551601651-2a8555f1a136?auto=format&fit=crop&w=800&q=80", focus: ["burnout", "healthy boundaries", "support systems"], price: 155000, duration: 60, start: "18:00:00" },
+  { name: "Kenzo Pratama, M.Psi., Psikolog Klinis", email: "kenzo.pratama@pulih.local", type: "clinical", channel: "chat_and_meet", birth: "1983-10-10", city: "Bekasi", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80", focus: ["clinical assessment", "CBT", "addiction recovery"], price: 330000, duration: 60, start: "19:00:00" },
+] as const;
 
 export const demoUsers = [
   {
@@ -214,118 +78,132 @@ export const demoUsers = [
     role: "patient" as const,
     status: "active",
   },
-  {
-    id: DEMO_IDS.psychologistUser,
-    email: "psychologist.demo@pulih.local",
+  ...demoPsychologists.map((psychologist, index) => ({
+    id: DEMO_IDS.psychologistUsers[index],
+    email: psychologist.email,
     role: "psychologist" as const,
     status: "active",
-  },
+  })),
 ] as const;
 
 export const demoProfiles = [
   {
     id: DEMO_IDS.patientProfile,
     userId: DEMO_IDS.patientUser,
-    displayName: "Demo Patient",
     nickname: "Demo",
-    recoveryGoal: "Build a steady recovery routine.",
-    checkInTime: "20:00:00",
+    recoveryReason: "Build a steady recovery routine and reduce compulsive behavior.",
+    dailyCheckinTime: "20:00:00",
+    answers: { goal: "90 clean days", supportNeed: "Daily structure and professional support" },
+    dependencyLevel: "moderate",
+    aiSummary: "Demo patient is focused on routine rebuilding, trigger awareness, and healthier coping habits.",
     onboardingCompletedAt: DEMO_NOW,
   },
 ] as const;
 
-export const demoPsychologistProfile = {
-  id: DEMO_IDS.psychologistProfile,
-  userId: DEMO_IDS.psychologistUser,
-  type: "general" as const,
-  consultationChannel: "chat" as const,
+export const demoPsychologistProfiles = demoPsychologists.map((psychologist, index) => ({
+  id: DEMO_IDS.psychologistProfiles[index],
+  userId: DEMO_IDS.psychologistUsers[index],
+  type: psychologist.type as "general" | "clinical",
+  consultationChannel: psychologist.channel as "chat" | "chat_and_meet",
   approvalStatus: "approved" as const,
-  fullName: "Dr. Maya Pulih",
-  licenseNumber: "SIPP-DEMO-001",
-  bio: "General psychologist for demo counseling sessions.",
-};
+  fullName: psychologist.name,
+  dateOfBirth: psychologist.birth,
+  address: `${psychologist.city}, Indonesia`,
+  photoUrl: psychologist.photo,
+  bio: `${psychologist.name} supports ${psychologist.focus.join(", ")} with a warm, structured, evidence-informed counseling style. Sessions focus on practical recovery steps, trigger mapping, emotional regulation, and sustainable routines.`,
+})) as const;
 
-export const demoPracticePlaces = [
-  {
-    id: DEMO_IDS.practicePlace,
-    profileId: DEMO_IDS.psychologistProfile,
-    name: "Pulih Demo Clinic",
-    address: "Jakarta",
-    isActive: true,
-  },
+export const demoPracticePlaces = demoPsychologists.map((psychologist, index) => ({
+  id: DEMO_IDS.practicePlaces[index],
+  profileId: DEMO_IDS.psychologistProfiles[index],
+  name: `${psychologist.city} Pulih Counseling Center`,
+  address: `${psychologist.city}, Indonesia`,
+  isActive: true,
+})) as const;
+
+export const demoCredentialFiles = demoPsychologists.flatMap((psychologist, index) => {
+  const required = psychologist.type === "clinical" ? ["sipp", "ijazah", "strpk", "sippk"] : ["sipp", "ijazah", "str"];
+  return required.map((documentType, offset) => ({
+    id: DEMO_IDS.credentialFiles[index * 4 + offset],
+    profileId: DEMO_IDS.psychologistProfiles[index],
+    documentType: documentType as "sipp" | "ijazah" | "str" | "strpk" | "sippk",
+    objectKey: `demo/psychologists/${psychologist.email.split("@")[0]}/${documentType}.pdf`,
+    fileName: `${psychologist.email.split("@")[0]}-${documentType}.pdf`,
+    contentType: "application/pdf",
+    sizeBytes: 128000 + index * 4096 + offset * 512,
+  }));
+}) as const;
+
+const sessionDate = (dayOffset: number, hour: number) => new Date(Date.UTC(2026, 6, 16 + dayOffset, hour - 7, 0, 0));
+const timePlusMinutes = (date: Date, minutes: number) => new Date(date.getTime() + minutes * 60_000);
+
+export const demoSessionBundles = demoPsychologists.flatMap((psychologist, index) => [0, 1].map((bundleOffset) => ({
+  id: DEMO_IDS.bundles[index * 2 + bundleOffset],
+  profileId: DEMO_IDS.psychologistProfiles[index],
+  packageName: `${psychologist.duration}-minute ${psychologist.type === "clinical" ? "Clinical" : "General"} Counseling ${bundleOffset === 0 ? "Morning" : "Follow-up"}`,
+  packageDurationMinutes: psychologist.duration,
+  priceAmount: `${psychologist.price + bundleOffset * 25000}.00`,
+  dateStart: sessionDate(bundleOffset * 7, 0),
+  dateEnd: sessionDate(bundleOffset * 7 + 6, 0),
+  dailyStartTime: bundleOffset === 0 ? psychologist.start : "19:00:00",
+  dailyEndTime: bundleOffset === 0 ? timePlusMinutes(new Date(`2026-07-16T${psychologist.start}.000Z`), psychologist.duration).toISOString().slice(11, 19) : "21:00:00",
+}))) as const;
+
+export const demoSessionSlots = demoSessionBundles.flatMap((bundle, bundleIndex) => {
+  const hour = Number(bundle.dailyStartTime.slice(0, 2));
+  return Array.from({ length: 7 }, (_, dayOffset) => {
+    const startsAt = sessionDate(dayOffset + (bundleIndex % 2) * 7, hour);
+    return {
+      id: DEMO_IDS.slots[bundleIndex * 7 + dayOffset],
+      bundleId: bundle.id,
+      profileId: bundle.profileId,
+      sessionDate: sessionDate(dayOffset + (bundleIndex % 2) * 7, 0),
+      startsAt,
+      endsAt: timePlusMinutes(startsAt, bundle.packageDurationMinutes),
+      status: "available" as const,
+    };
+  });
+}) as const;
+
+export const demoBookings = demoPsychologists.map((psychologist, index) => {
+  const bundle = demoSessionBundles[index * 2];
+  const slot = demoSessionSlots[index * 14];
+  return {
+    id: DEMO_IDS.bookings[index],
+    patientUserId: DEMO_IDS.patientUser,
+    psychologistProfileId: DEMO_IDS.psychologistProfiles[index],
+    sessionSlotId: slot.id,
+    consultationChannel: psychologist.channel as "chat" | "chat_and_meet",
+    status: "completed" as const,
+    scheduledStartAt: slot.startsAt,
+    scheduledEndAt: slot.endsAt,
+    priceAmount: bundle.priceAmount,
+    packageNameSnapshot: bundle.packageName,
+    packageDurationMinutesSnapshot: bundle.packageDurationMinutes,
+    paymentExpiresAt: timePlusMinutes(DEMO_NOW, 60),
+    complaint: "Demo consultation for recovery routine and relapse prevention planning.",
+    meetLink: psychologist.channel === "chat_and_meet" ? "https://meet.google.com/demo-pulih" : null,
+    confirmedAt: timePlusMinutes(slot.startsAt, -30),
+    rescheduledAt: null,
+    rescheduleReason: null,
+  };
+}) as const;
+
+const demoReviewComments = [
+  "Sesi sangat membantu, arahan praktis dan mudah diikuti.",
+  "Psikolog mendengarkan dengan baik dan memberi rencana pemulihan yang jelas.",
+  "Pendekatannya hangat, terstruktur, dan membuat saya lebih tenang.",
+  "Saya jadi lebih paham pola trigger dan cara mengelolanya.",
 ] as const;
 
-export const demoCredentialFiles = [
-  {
-    id: DEMO_IDS.credentialSipp,
-    profileId: DEMO_IDS.psychologistProfile,
-    documentType: "sipp" as const,
-    objectKey: "demo/psychologist/sipp.pdf",
-    fileName: "sipp-demo.pdf",
-    contentType: "application/pdf",
-    sizeBytes: 128000,
-  },
-  {
-    id: DEMO_IDS.credentialIjazah,
-    profileId: DEMO_IDS.psychologistProfile,
-    documentType: "ijazah" as const,
-    objectKey: "demo/psychologist/ijazah.pdf",
-    fileName: "ijazah-demo.pdf",
-    contentType: "application/pdf",
-    sizeBytes: 128000,
-  },
-  {
-    id: DEMO_IDS.credentialStr,
-    profileId: DEMO_IDS.psychologistProfile,
-    documentType: "str" as const,
-    objectKey: "demo/psychologist/str.pdf",
-    fileName: "str-demo.pdf",
-    contentType: "application/pdf",
-    sizeBytes: 128000,
-  },
-] as const;
-
-export const demoBundle = {
-  id: DEMO_IDS.bundle,
-  profileId: DEMO_IDS.psychologistProfile,
-  packageName: "Paket 1 Jam",
-  packageDurationMinutes: 60,
-  priceAmount: "150000.00",
-  dateStart: new Date("2026-07-16T00:00:00.000Z"),
-  dateEnd: new Date("2026-07-18T00:00:00.000Z"),
-  dailyStartTime: "09:00:00",
-  dailyEndTime: "10:00:00",
-};
-
-export const demoSessionSlots = [
-  {
-    id: DEMO_IDS.slotOne,
-    bundleId: DEMO_IDS.bundle,
-    profileId: DEMO_IDS.psychologistProfile,
-    sessionDate: new Date("2026-07-16T00:00:00.000Z"),
-    startsAt: new Date("2026-07-16T02:00:00.000Z"),
-    endsAt: new Date("2026-07-16T03:00:00.000Z"),
-    status: "available" as const,
-  },
-  {
-    id: DEMO_IDS.slotTwo,
-    bundleId: DEMO_IDS.bundle,
-    profileId: DEMO_IDS.psychologistProfile,
-    sessionDate: new Date("2026-07-17T00:00:00.000Z"),
-    startsAt: new Date("2026-07-17T02:00:00.000Z"),
-    endsAt: new Date("2026-07-17T03:00:00.000Z"),
-    status: "available" as const,
-  },
-  {
-    id: DEMO_IDS.slotThree,
-    bundleId: DEMO_IDS.bundle,
-    profileId: DEMO_IDS.psychologistProfile,
-    sessionDate: new Date("2026-07-18T00:00:00.000Z"),
-    startsAt: new Date("2026-07-18T02:00:00.000Z"),
-    endsAt: new Date("2026-07-18T03:00:00.000Z"),
-    status: "available" as const,
-  },
-] as const;
+export const demoBookingReviews = demoPsychologists.map((_, index) => ({
+  id: DEMO_IDS.reviews[index],
+  bookingId: DEMO_IDS.bookings[index],
+  patientUserId: DEMO_IDS.patientUser,
+  psychologistProfileId: DEMO_IDS.psychologistProfiles[index],
+  rating: index % 4 === 0 ? 4 : 5,
+  comment: demoReviewComments[index % demoReviewComments.length],
+})) as const;
 
 export const demoEducationContents = [
   { id: DEMO_IDS.education[0], title: "Pornography Addiction: Causes, Symptoms, and Treatment", description: "Discusses addiction signs, brain changes, and medical and psychological treatment options.", url: "https://www.alodokter.com/kecanduan-pornografi-penyebab-gejala-dan-perawatan", thumbnail_url: null, type: "artikel" as const, category: "Impact of Pornography" },

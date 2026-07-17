@@ -134,7 +134,7 @@ function parseProfile(input: unknown) {
     fullName: parseRequiredText(value.fullName, "fullName", 255, issues),
     dateOfBirth: parseDate(value.dateOfBirth, "dateOfBirth", issues),
     address: parseRequiredText(value.address, "address", 1000, issues),
-    photoUrl: parseRequiredText(value.photoUrl, "photoUrl", 2000, issues),
+    photoUrl: parseRequiredText(value.photoUrl, "photoUrl", 500_000, issues),
     bio: parseOptionalText(value.bio, "bio", 2000, issues),
   };
 
