@@ -6,7 +6,7 @@ export type PsychologistProfileInput = {
   fullName: string;
   dateOfBirth: string;
   address: string;
-  photoUrl: string;
+  photoUrl?: string | null;
   bio?: string | null;
 };
 export type CredentialFileParams = { fileId: string };
@@ -65,13 +65,10 @@ function parseOptionalText(value: unknown, field: string, max: number, issues: V
   return normalized.length > 0 ? normalized : null;
 }
 
-function parseOptionalBoolean(value: unknown, field: string, issues: ValidationIssue[]) {
-  if (value === undefined) return undefined;
-  if (typeof value !== "boolean") {
-    issues.push({ field, message: "Must be a boolean." });
-    return undefined;
-  }
-  return value;
+function parseOptionalPhotoUrl(value: unknown) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
 }
 
 function parseDate(value: unknown, field: string, issues: ValidationIssue[]) {
@@ -134,7 +131,7 @@ function parseProfile(input: unknown) {
     fullName: parseRequiredText(value.fullName, "fullName", 255, issues),
     dateOfBirth: parseDate(value.dateOfBirth, "dateOfBirth", issues),
     address: parseRequiredText(value.address, "address", 1000, issues),
-    photoUrl: parseRequiredText(value.photoUrl, "photoUrl", 500_000, issues),
+    photoUrl: parseOptionalPhotoUrl(value.photoUrl),
     bio: parseOptionalText(value.bio, "bio", 2000, issues),
   };
 

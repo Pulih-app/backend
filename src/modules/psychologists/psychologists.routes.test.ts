@@ -190,6 +190,38 @@ describe("psychologist directory and bundles", () => {
     expect(hidden.status).toBe(404);
   });
 
+  test("accepts psychologist profile without valid photo url", async () => {
+    const authRepository = createMemoryAuthRepository([]);
+    const psychologistsRepository = createMemoryPsychologistsRepository();
+    const app = createApp(baseEnv, {}, { authRepository, psychologistsRepository });
+
+    const register = await app.request("http://localhost/api/v1/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001" },
+      body: JSON.stringify({ email: "optional-photo@example.com", username: "optionalphoto", password: "password123", confirm_password: "password123" }),
+    });
+    const registerBody = await register.json();
+    const token = registerBody.data.session.access_token as string;
+
+    const missingPhoto = await app.request("http://localhost/api/v1/psychologists/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: "clinical", fullName: "Dr. Optional", dateOfBirth: "1990-01-01", address: "Jl. Demo" }),
+    });
+    expect(missingPhoto.status).toBe(201);
+    const missingPhotoBody = await missingPhoto.json();
+    expect(missingPhotoBody.data.photoUrl).toBeNull();
+
+    const invalidPhoto = await app.request("http://localhost/api/v1/psychologists/me", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: "clinical", fullName: "Dr. Optional", dateOfBirth: "1990-01-01", address: "Jl. Demo", photoUrl: { url: "https://example.com/photo.jpg" } }),
+    });
+    expect(invalidPhoto.status).toBe(200);
+    const invalidPhotoBody = await invalidPhoto.json();
+    expect(invalidPhotoBody.data.photoUrl).toBeNull();
+  });
+
   test("creates bundle, derives package name, and exposes generated sessions", async () => {
     const authRepository = createMemoryAuthRepository([]);
     const psychologistsRepository = createMemoryPsychologistsRepository();

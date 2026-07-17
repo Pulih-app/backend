@@ -215,7 +215,7 @@ export function createPsychologistsService(repository: PsychologistsRepository, 
         fullName: input.fullName,
         dateOfBirth: input.dateOfBirth,
         address: input.address,
-        photoUrl: input.photoUrl,
+        photoUrl: input.photoUrl ?? null,
         bio: input.bio ?? null,
       });
     },

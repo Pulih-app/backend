@@ -2884,8 +2884,7 @@
                   "type",
                   "fullName",
                   "dateOfBirth",
-                  "address",
-                  "photoUrl"
+                  "address"
                 ],
                 "properties": {
                   "type": {
@@ -2912,10 +2911,14 @@
                     "example": "Jl. Demo No. 1"
                   },
                   "photoUrl": {
-                    "type": "string",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": "https://example.com/photo.jpg",
                     "format": "uri",
-                    "maxLength": 2000,
-                    "example": "https://example.com/photo.jpg"
+                    "maxLength": 500000,
+                    "description": "Optional. Invalid or non-string values are ignored and stored as null."
                   },
                   "bio": {
                     "type": [
@@ -2946,7 +2949,6 @@
                     "fullName": "Konselor Demo",
                     "dateOfBirth": "1991-01-01",
                     "address": "Jl. Demo No. 2",
-                    "photoUrl": "https://example.com/photo2.jpg",
                     "bio": "General counseling support."
                   }
                 }
@@ -3499,8 +3501,7 @@
                   "type",
                   "fullName",
                   "dateOfBirth",
-                  "address",
-                  "photoUrl"
+                  "address"
                 ],
                 "properties": {
                   "type": {
@@ -3527,10 +3528,14 @@
                     "example": "Jl. Demo No. 1"
                   },
                   "photoUrl": {
-                    "type": "string",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "example": "https://example.com/photo.jpg",
                     "format": "uri",
-                    "maxLength": 2000,
-                    "example": "https://example.com/photo.jpg"
+                    "maxLength": 500000,
+                    "description": "Optional. Invalid or non-string values are ignored and stored as null."
                   },
                   "bio": {
                     "type": [

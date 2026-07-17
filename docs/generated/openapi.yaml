@@ -2047,7 +2047,6 @@ paths:
                 - "fullName"
                 - "dateOfBirth"
                 - "address"
-                - "photoUrl"
               properties:
                 type:
                   type: "string"
@@ -2068,10 +2067,13 @@ paths:
                   maxLength: 1000
                   example: "Jl. Demo No. 1"
                 photoUrl:
-                  type: "string"
-                  format: "uri"
-                  maxLength: 2000
+                  type:
+                    - "string"
+                    - "null"
                   example: "https://example.com/photo.jpg"
+                  format: "uri"
+                  maxLength: 500000
+                  description: "Optional. Invalid or non-string values are ignored and stored as null."
                 bio:
                   type:
                     - "string"
@@ -2095,7 +2097,6 @@ paths:
                   fullName: "Konselor Demo"
                   dateOfBirth: "1991-01-01"
                   address: "Jl. Demo No. 2"
-                  photoUrl: "https://example.com/photo2.jpg"
                   bio: "General counseling support."
   "/api/v1/psychologists/me":
     get:
@@ -2486,7 +2487,6 @@ paths:
                 - "fullName"
                 - "dateOfBirth"
                 - "address"
-                - "photoUrl"
               properties:
                 type:
                   type: "string"
@@ -2507,10 +2507,13 @@ paths:
                   maxLength: 1000
                   example: "Jl. Demo No. 1"
                 photoUrl:
-                  type: "string"
-                  format: "uri"
-                  maxLength: 2000
+                  type:
+                    - "string"
+                    - "null"
                   example: "https://example.com/photo.jpg"
+                  format: "uri"
+                  maxLength: 500000
+                  description: "Optional. Invalid or non-string values are ignored and stored as null."
                 bio:
                   type:
                     - "string"
