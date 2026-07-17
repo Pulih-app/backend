@@ -20,7 +20,7 @@ describe("AI provider", () => {
 
   test("maps provider error", async () => {
     const provider = createAiProvider({ baseUrl: "https://ai.example/v1", apiKey: "test-key", model: "gpt-4o-mini", timeoutMs: 1000, maxTokens: 800, fetcher: (async () => new Response("", { status: 500 })) as unknown as typeof fetch });
-    await expect(provider.complete({ messages: [{ role: "user", content: "hi" }] })).rejects.toMatchObject({ code: AppErrorCode.DownstreamError });
+    await expect(provider.complete({ messages: [{ role: "user", content: "hi" }] })).rejects.toMatchObject({ code: AppErrorCode.ServiceUnavailable });
   });
 
   test("maps timeout", async () => {

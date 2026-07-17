@@ -74,7 +74,7 @@ describe("AI provider", () => {
     await provider.complete({ messages: [{ role: "user", content: "hello" }] });
 
     expect(headers?.get("HTTP-Referer")).toBe("https://pulih.app");
-    expect(headers?.get("X-Title")).toBe("Pulih API");
+    expect(headers?.get("X-OpenRouter-Title")).toBe("Pulih API");
   });
 });
 

@@ -52,7 +52,7 @@ function buildProviderHeaders(baseUrl: string, apiKey: string) {
 
   if (baseUrl.includes("openrouter.ai")) {
     headers["HTTP-Referer"] = "https://pulih.app";
-    headers["X-Title"] = "Pulih API";
+    headers["X-OpenRouter-Title"] = "Pulih API";
   }
 
   return headers;

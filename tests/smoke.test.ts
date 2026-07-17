@@ -415,7 +415,7 @@ describe("smoke path", () => {
     const booking = await app.request("http://localhost/api/v1/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ sessionSlotId: "11111111-1111-4111-8111-111111111111" }),
+      body: JSON.stringify({ sessionSlotId: "11111111-1111-4111-8111-111111111111", complaint: "Sulit tidur dan mudah cemas." }),
     });
     expect(booking.status).toBe(201);
     const bookingBody = await booking.json();
