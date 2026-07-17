@@ -220,6 +220,13 @@ describe("psychologist directory and bundles", () => {
     expect(invalidPhoto.status).toBe(200);
     const invalidPhotoBody = await invalidPhoto.json();
     expect(invalidPhotoBody.data.photoUrl).toBeNull();
+
+    const me = await app.request("http://localhost/api/v1/psychologists/me", {
+      headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${token}` },
+    });
+    expect(me.status).toBe(200);
+    const meBody = await me.json();
+    expect(meBody.data.email).toBe("optional-photo@example.com");
   });
 
   test("creates bundle, derives package name, and exposes generated sessions", async () => {

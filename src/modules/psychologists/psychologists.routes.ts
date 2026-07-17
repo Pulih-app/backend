@@ -77,9 +77,9 @@ export function createPsychologistsRoutes(options: PsychologistsRoutesOptions) {
   }));
 
   routes.get("/psychologists/me", async (context) => withService(options, async (service, authService) => {
-    await requireAuth(context, options, authService);
-    const profile = await service.getProfile(context.get("auth").user.id);
-    return context.json(createSuccessResponse({ data: profile }));
+    const user = await requireAuth(context, options, authService);
+    const profile = await service.getProfile(user.id);
+    return context.json(createSuccessResponse({ data: profile ? { ...profile, email: user.email } : null }));
   }));
 
   routes.put("/psychologists/me", async (context) => withService(options, async (service, authService) => {
