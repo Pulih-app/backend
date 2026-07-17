@@ -245,6 +245,18 @@ describe("content routes", () => {
       expect(thread.data.comments[0].replies[0].content).toBe("How did it go?");
     });
 
+    test("empty comment thread returns empty comments array", async () => {
+      const repository = memoryRepository();
+      const { app, headers } = await authedApp(repository);
+
+      const post = await (await app.request("/api/v1/community", { method: "POST", headers, body: JSON.stringify({ category: "story", content: "This is a story post with enough length." }) })).json() as any;
+      const response = await app.request(`/api/v1/community/${post.data.id}/comments`, { headers });
+      const thread = await response.json() as any;
+      expect(response.status).toBe(200);
+      expect(thread.data.postId).toBe(post.data.id);
+      expect(thread.data.comments).toEqual([]);
+    });
+
     test("rejects reply exceeding max thread depth", async () => {
       const repository = memoryRepository();
       const { app, headers } = await authedApp(repository);

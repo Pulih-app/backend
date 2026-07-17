@@ -1,5 +1,6 @@
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { AppError, AppErrorCode } from "../../shared/errors";
 import { achievements, checkIns, communityComments, communityPostLikes, communityPosts, dailyChallenges, dailyMotivations, dailyPhysicalChallenges, educationContents, journals, streaks, userAchievementProgress, users } from "../../db/schema";
 
 export type JournalRecord = { id: string; userId: string; content: string; createdAt: string; updatedAt: string };
@@ -109,7 +110,6 @@ export function createContentRepository(db: NodePgDatabase): ContentRepository {
     },
 
     async listCommentThread(postId, rootLimit = 200) {
-      // Recursive CTE for threaded comments
       const rows = await db.execute(sql`
         WITH RECURSIVE root_comments AS (
           SELECT id
@@ -138,15 +138,16 @@ export function createContentRepository(db: NodePgDatabase): ContentRepository {
         ORDER BY created_at ASC, id ASC
       `);
 
-      const flatRows = (rows as unknown as any[]).map((r: any) => ({
-        id: r.id as string,
-        postId: r.post_id as string,
-        userId: r.user_id as string,
-        parentCommentId: (r.parent_comment_id as string) ?? null,
-        content: r.content as string,
+      const rawRows = Array.isArray(rows) ? rows : (rows && typeof rows === "object" && "rows" in rows && Array.isArray((rows as { rows?: unknown[] }).rows) ? (rows as { rows: unknown[] }).rows : []);
+      const flatRows = rawRows.map((r: any) => ({
+        id: String(r.id),
+        postId: String(r.post_id),
+        userId: String(r.user_id),
+        parentCommentId: r.parent_comment_id == null ? null : String(r.parent_comment_id),
+        content: String(r.content),
         depth: Number(r.depth),
         replyCount: Number(r.reply_count),
-        createdAt: (r.created_at as Date).toISOString(),
+        createdAt: new Date(r.created_at).toISOString(),
       })) as CommunityCommentRecord[];
 
       return { postId, comments: buildCommentTree(flatRows) };
@@ -156,11 +157,11 @@ export function createContentRepository(db: NodePgDatabase): ContentRepository {
       const MAX_DEPTH = 2;
       return await db.transaction(async (tx) => {
         const [parent] = await tx.select().from(communityComments).where(eq(communityComments.id, input.parentCommentId));
-        if (!parent) throw new Error("Parent comment not found");
-        if (parent.postId !== input.postId) throw new Error("Parent comment does not belong to this post");
+        if (!parent) throw new AppError(AppErrorCode.NotFound, "Parent comment not found.");
+        if (parent.postId !== input.postId) throw new AppError(AppErrorCode.ValidationError, "Parent comment does not belong to this post.", ["comment_id: Parent comment must belong to the same post."]);
 
         const depth = parent.depth + 1;
-        if (depth > MAX_DEPTH) throw new Error(`Maximum thread depth of ${MAX_DEPTH} exceeded`);
+        if (depth > MAX_DEPTH) throw new AppError(AppErrorCode.ValidationError, "Maximum thread depth exceeded.", ["comment_id: Maximum reply depth is 2."]);
 
         const [row] = await tx.insert(communityComments).values({
           postId: input.postId, userId: input.userId, parentCommentId: input.parentCommentId,
@@ -247,16 +248,20 @@ export function createContentRepository(db: NodePgDatabase): ContentRepository {
 
 function buildCommentTree(flatRows: CommunityCommentRecord[]): CommunityCommentNode[] {
   const byId = new Map<string, CommunityCommentNode>();
+  const order: string[] = [];
   const roots: CommunityCommentNode[] = [];
 
   for (const row of flatRows) {
-    byId.set(row.id, { ...row, replies: [] });
+    const node = { ...row, replies: [] };
+    byId.set(row.id, node);
+    order.push(row.id);
   }
 
-  for (const row of flatRows) {
-    const node = byId.get(row.id)!;
-    if (row.parentCommentId && byId.has(row.parentCommentId)) {
-      byId.get(row.parentCommentId)!.replies.push(node);
+  for (const id of order) {
+    const node = byId.get(id);
+    if (!node) continue;
+    if (node.parentCommentId && byId.has(node.parentCommentId)) {
+      byId.get(node.parentCommentId)!.replies.push(node);
     } else {
       roots.push(node);
     }
