@@ -66,7 +66,7 @@ function createMemoryPsychologistsRepository(seed: PsychologistProfileRecord[] =
         userId: input.userId,
         type: input.type,
         consultationChannel: input.consultationChannel,
-        approvalStatus: existing?.approvalStatus ?? "draft",
+        approvalStatus: "approved",
         fullName: input.fullName,
         dateOfBirth: input.dateOfBirth,
         address: input.address,
@@ -447,7 +447,7 @@ describe("psychologist directory and bundles", () => {
     expect(deleteForbidden.status).toBe(403);
   });
 
-  test("approves psychologist automatically after all required credentials are uploaded", async () => {
+  test("approves psychologist automatically after profile registration", async () => {
     const authRepository = createMemoryAuthRepository([]);
     const psychologistsRepository = createMemoryPsychologistsRepository();
     const storedKeys: string[] = [];
@@ -485,10 +485,10 @@ describe("psychologist directory and bundles", () => {
       });
     };
 
-    expect((await upload("sipp")).status).toBe(201);
     let profile = await app.request("http://localhost/api/v1/psychologists/me", { headers: { Origin: "http://localhost:3001", Authorization: `Bearer ${token}` } });
-    expect((await profile.json()).data.approvalStatus).toBe("draft");
+    expect((await profile.json()).data.approvalStatus).toBe("approved");
 
+    expect((await upload("sipp")).status).toBe(201);
     expect((await upload("ijazah")).status).toBe(201);
     expect((await upload("str")).status).toBe(201);
 

@@ -45,11 +45,10 @@ export function requestBaseline(config: RequestBaselineConfig) {
     const requestOrigin = new URL(context.req.url).origin;
     const isSameOrigin = origin === requestOrigin;
 
-    // CORS origin check disabled for development
-    // const hasWildcard = config.allowedOrigins.includes("*");
-    // if (origin && !isSameOrigin && !hasWildcard && !config.allowedOrigins.includes(origin)) {
-    //   throw new AppError("FORBIDDEN", "Origin is not allowed.");
-    // }
+    const hasWildcard = config.allowedOrigins.includes("*");
+    if (origin && !isSameOrigin && !hasWildcard && !config.allowedOrigins.includes(origin)) {
+      throw new AppError("FORBIDDEN", "Origin is not allowed.");
+    }
 
     const contentLength = context.req.header("content-length");
     if (contentLength) {

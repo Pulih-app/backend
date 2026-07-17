@@ -10,7 +10,7 @@ function addHours(now: Date, hours: number) {
 }
 
 const CHAT_ALLOWED_STATUSES = new Set(["payment_completed", "confirmed", "rescheduled", "completed"]);
-const BOOKING_PAYMENT_SUCCESS_PATH = "/consultation/booking/success";
+const BOOKING_PAYMENT_SUCCESS_PATH = "/help/consultation/bookings/success";
 
 function buildBookingPaymentSuccessUrl(pwaUrl: string) {
   return `${pwaUrl.replace(/\/$/, "")}${BOOKING_PAYMENT_SUCCESS_PATH}`;

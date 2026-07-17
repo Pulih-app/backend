@@ -2694,7 +2694,7 @@
                         "type": "clinical",
                         "consultationChannel": "chat_and_meet",
                         "fullName": "Dr. Demo",
-                        "approvalStatus": "draft",
+                        "approvalStatus": "approved",
                         "dateOfBirth": "1990-01-01",
                         "address": "Jl. Demo No. 1",
                         "photoUrl": "https://example.com/photo.jpg",
@@ -3018,7 +3018,7 @@
                         "type": "clinical",
                         "consultationChannel": "chat_and_meet",
                         "fullName": "Dr. Demo",
-                        "approvalStatus": "draft",
+                        "approvalStatus": "approved",
                         "dateOfBirth": "1990-01-01",
                         "address": "Jl. Demo No. 1",
                         "photoUrl": "https://example.com/photo.jpg",
@@ -3284,7 +3284,7 @@
                         "type": "clinical",
                         "consultationChannel": "chat_and_meet",
                         "fullName": "Dr. Demo",
-                        "approvalStatus": "draft",
+                        "approvalStatus": "approved",
                         "dateOfBirth": "1990-01-01",
                         "address": "Jl. Demo No. 1",
                         "photoUrl": "https://example.com/photo.jpg",
@@ -3832,7 +3832,7 @@
           "psychologists"
         ],
         "summary": "Submit psychologist profile for review",
-        "description": "Validates required profile fields and credential file metadata, then returns an approved profile when requirements are complete.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
+        "description": "Kept for client compatibility. Demo registration already approves profiles; this endpoint validates required profile fields and credential file metadata, then returns an approved profile when requirements are complete.\n\nCommon contract: all JSON responses use Pulih envelope. Protected routes require Bearer JWT. Validation failures return 422 with field-level details. Error messages stay safe and English.",
         "operationId": "post_api_v1_psychologists_me_submit_for_review",
         "responses": {
           "201": {
@@ -3886,7 +3886,7 @@
                         "type": "clinical",
                         "consultationChannel": "chat_and_meet",
                         "fullName": "Dr. Demo",
-                        "approvalStatus": "draft",
+                        "approvalStatus": "approved",
                         "dateOfBirth": "1990-01-01",
                         "address": "Jl. Demo No. 1",
                         "photoUrl": "https://example.com/photo.jpg",
@@ -17411,7 +17411,7 @@
               "rejected",
               "suspended"
             ],
-            "example": "draft"
+            "example": "approved"
           },
           "dateOfBirth": {
             "type": "string",

@@ -254,6 +254,7 @@ export function createPsychologistsRepository(db: NodePgDatabase): Psychologists
         address: input.address,
         photoUrl: input.photoUrl,
         bio: input.bio,
+        approvalStatus: "approved",
       }).onConflictDoUpdate({
         target: psychologistProfiles.userId,
         set: {
@@ -264,7 +265,7 @@ export function createPsychologistsRepository(db: NodePgDatabase): Psychologists
           address: input.address,
           photoUrl: input.photoUrl,
           bio: input.bio,
-          approvalStatus: "draft",
+          approvalStatus: "approved",
           updatedAt: new Date(),
         },
       }).returning();
